@@ -116,6 +116,26 @@ const MovementsView = ({ plants }) => {
   const totalEgresosMes = movementsThisMonth.filter(m => m.type === 'egreso').reduce((sum, m) => sum + (m.total || 0), 0);
   const productosVendidosMes = movementsThisMonth.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
 
+  // --- TOTALES PERSONALIZADOS CORREGIDOS ---
+  // Ingresos en efectivo
+  const ingresosEfectivo = movementsThisMonth.filter(m => m.type === 'ingreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
+  // Ingresos en Mercado Pago
+  const ingresosMP = movementsThisMonth.filter(m => m.type === 'ingreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
+  // Ventas en efectivo
+  const ventasEfectivo = movementsThisMonth.filter(m => m.type === 'venta' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
+  // Ventas Mercado Pago
+  const ventasMP = movementsThisMonth.filter(m => m.type === 'venta' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
+  // Caja física: ingresos efectivo + ventas efectivo
+  const cajaFisica = ingresosEfectivo + ventasEfectivo;
+  // Caja Mercado Pago: ingresos MP + ventas MP
+  const cajaMP = ingresosMP + ventasMP;
+  // Gastos: suma de compras
+  const gastosMes = totalComprasMes;
+  // Total general (caja física + MP)
+  const totalGeneral = cajaFisica + cajaMP;
+  // Diferencia entre total general y gastos
+  const diferenciaTotalGastos = totalGeneral - gastosMes;
+
   // Render sugerencia de alta de planta
   return (
     <div className="space-y-6">
@@ -142,6 +162,48 @@ const MovementsView = ({ plants }) => {
         <div className="bg-gray-50 rounded p-2 text-center">
           <div className="text-xs text-gray-500">Productos vendidos</div>
           <div className="text-lg font-bold text-gray-700">{productosVendidosMes}</div>
+        </div>
+      </div>
+      {/* BLOQUE 1: TOTALES DE CAJA */}
+      <div className="mb-6">
+        <h3 className="text-lg font-bold mb-2 text-gray-800">Totales de Caja</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-green-50 rounded p-4 text-center border border-green-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Caja física</div>
+            <div className="text-2xl font-bold text-green-700">${cajaFisica.toFixed(2)}</div>
+            <div className="text-xs text-gray-500">Ingresos y ventas en efectivo</div>
+          </div>
+          <div className="bg-purple-50 rounded p-4 text-center border border-purple-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Caja Mercado Pago</div>
+            <div className="text-2xl font-bold text-purple-700">${cajaMP.toFixed(2)}</div>
+            <div className="text-xs text-gray-500">Ingresos y ventas por Mercado Pago</div>
+          </div>
+          <div className="bg-orange-100 rounded p-4 text-center border-2 border-orange-400 shadow-md">
+            <div className="text-xs text-gray-700 font-semibold">Total disponible</div>
+            <div className="text-3xl font-extrabold text-orange-700">${diferenciaTotalGastos.toFixed(2)}</div>
+            <div className="text-xs text-gray-600">Total de ingresos y ventas menos gastos del mes (incluye efectivo y Mercado Pago)</div>
+          </div>
+        </div>
+      </div>
+      {/* BLOQUE 2: DETALLE DE VENTAS Y GASTOS */}
+      <div className="mb-8">
+        <h3 className="text-lg font-bold mb-2 text-gray-800">Detalle de Ventas y Gastos</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-blue-50 rounded p-4 text-center border border-blue-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Ventas en Efectivo</div>
+            <div className="text-xl font-bold text-blue-700">${ventasEfectivo.toFixed(2)}</div>
+            <div className="text-xs text-gray-500">Solo ventas cobradas en efectivo</div>
+          </div>
+          <div className="bg-purple-50 rounded p-4 text-center border border-purple-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Ventas Mercado Pago</div>
+            <div className="text-xl font-bold text-purple-700">${ventasMP.toFixed(2)}</div>
+            <div className="text-xs text-gray-500">Solo ventas cobradas por Mercado Pago</div>
+          </div>
+          <div className="bg-red-50 rounded p-4 text-center border border-red-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Gastos del Mes</div>
+            <div className="text-xl font-bold text-red-700">${gastosMes.toFixed(2)}</div>
+            <div className="text-xs text-gray-500">Suma de compras/egresos</div>
+          </div>
         </div>
       </div>
       <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4">
@@ -253,7 +315,7 @@ const MovementsView = ({ plants }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {movementsThisMonth.map(mov => (
                 <tr key={mov.id} className={mov.type === 'compra' ? 'bg-red-50' : mov.type === 'egreso' ? 'bg-yellow-50' : mov.type === 'ingreso' ? 'bg-green-50' : ''}>
-                  <td className="px-2 py-1">{mov.date ? new Date(mov.date).toLocaleDateString() : ''}</td>
+                  <td className="px-2 py-1">{mov.date ? new Date(mov.date).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }) : ''}</td>
                   <td className="px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
                   <td className="px-2 py-1">{mov.detail}</td>
                   <td className="px-2 py-1">{plants && mov.plantId ? (plants.find(p => p.id === Number(mov.plantId))?.name || '-') : '-'}</td>
@@ -277,3 +339,6 @@ const MovementsView = ({ plants }) => {
 };
 
 export default MovementsView;
+
+// NOTA: El campo 'date' almacena fecha y hora completa en formato ISO. Si en el futuro se requiere un reporte o gráfico por horario de ventas, se puede usar new Date(mov.date).getHours() para agrupar por hora.
+// En la sección de caja solo se muestra la fecha (día/mes/año) para mayor simplicidad visual.
