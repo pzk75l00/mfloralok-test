@@ -129,6 +129,13 @@ const App = () => {
               const updated = { ...plant, stock: plant.stock - amount };
               await setDoc(doc(collection(db, 'plants'), String(plant.id)), updated);
             }}
+            onQuickMovement={async (movement) => {
+              // Guardar movimiento en la colección 'movements'
+              await setDoc(doc(collection(db, 'movements')), {
+                ...movement,
+                date: new Date().toISOString(),
+              });
+            }}
           />
         );
       default:
