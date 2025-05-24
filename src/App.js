@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import salesData from './mock/sales';
 import purchasesData from './mock/purchases';
@@ -38,20 +38,23 @@ const App = () => {
     localStorage.setItem('purchases', JSON.stringify(purchases));
   }, [purchases]);
 
-  const handleAddPlant = (newPlant) => {
+  const handleAddPlant = async (newPlant) => {
     const plantWithId = {
       ...newPlant,
       id: Math.max(0, ...plants.map(p => p.id)) + 1
     };
-    setPlants([...plants, plantWithId]);
+    await setDoc(doc(collection(db, 'plants'), plantWithId.id.toString()), plantWithId);
+    // El onSnapshot actualizará el estado automáticamente
   };
 
-  const handleUpdatePlant = (updatedPlant) => {
-    setPlants(plants.map(p => p.id === updatedPlant.id ? updatedPlant : p));
+  const handleUpdatePlant = async (updatedPlant) => {
+    await setDoc(doc(collection(db, 'plants'), updatedPlant.id.toString()), updatedPlant);
+    // El onSnapshot actualizará el estado automáticamente
   };
 
-  const handleDeletePlant = (plantId) => {
-    setPlants(plants.filter(p => p.id !== plantId));
+  const handleDeletePlant = async (plantId) => {
+    await deleteDoc(doc(collection(db, 'plants'), plantId.toString()));
+    // El onSnapshot actualizará el estado automáticamente
   };
 
   const handleCompleteSale = (newSale) => {

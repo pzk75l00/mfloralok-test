@@ -33,13 +33,20 @@ const MovementsView = ({ plants }) => {
   const [suggestedPlantName, setSuggestedPlantName] = useState('');
   const [showPlantForm, setShowPlantForm] = useState(false);
 
+  // --- FILTRO MENSUAL ---
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'movements'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMovements(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
     });
     return () => unsubscribe();
-  }, []);
+  }, [reloadKey]);
+
+  const handleReload = () => {
+    setReloadKey(k => k + 1);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,17 +56,29 @@ const MovementsView = ({ plants }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     let total = form.total;
-    if (!total && form.price && form.quantity) {
-      total = Number(form.price) * Number(form.quantity);
+    if ((form.type === 'venta' || form.type === 'compra')) {
+      if (!total && form.price && form.quantity) {
+        total = Number(form.price) * Number(form.quantity);
+      }
+    } else {
+      // Para ingreso/egreso: si total está vacío y hay precio, usar precio como total
+      if (!total && form.price) {
+        total = Number(form.price);
+      }
     }
-    await addDoc(collection(db, 'movements'), {
+    let movementData = {
       ...form,
-      quantity: Number(form.quantity),
-      price: Number(form.price),
-      total: Number(total),
+      total: Number(total) || 0,
       date: new Date(form.date).toISOString()
-    });
-    // Sugerir alta de planta si corresponde
+    };
+    if (form.type === 'venta' || form.type === 'compra') {
+      movementData.quantity = Number(form.quantity);
+      movementData.price = Number(form.price);
+    } else {
+      delete movementData.quantity;
+      delete movementData.price;
+    }
+    await addDoc(collection(db, 'movements'), movementData);
     if ((form.type === 'venta' || form.type === 'compra') && !form.plantId && form.detail) {
       setSuggestedPlantName(form.detail);
       setShowSuggestPlant(true);
@@ -84,8 +103,10 @@ const MovementsView = ({ plants }) => {
   const currentYear = now.getFullYear();
   const movementsThisMonth = movements.filter(mov => {
     if (!mov.date) return false;
+    // Comparar mes y año en UTC para evitar problemas de huso horario
     const d = new Date(mov.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    if (isNaN(d.getTime())) return false;
+    return d.getUTCMonth() === now.getUTCMonth() && d.getUTCFullYear() === now.getUTCFullYear();
   });
 
   // --- TOTALES DEL MES ---
@@ -98,7 +119,9 @@ const MovementsView = ({ plants }) => {
   // Render sugerencia de alta de planta
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Movimientos de Caja - {now.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}</h2>
+      <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">Movimientos de Caja - {now.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
+        <button onClick={handleReload} className="ml-2 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 rounded border border-blue-300">Recargar</button>
+      </h2>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
         <div className="bg-green-50 rounded p-2 text-center">
           <div className="text-xs text-gray-500">Ventas del mes</div>
@@ -209,6 +232,9 @@ const MovementsView = ({ plants }) => {
       <div className="bg-white rounded-lg shadow p-6 mt-6">
         <h3 className="text-lg font-medium mb-4">Histórico de Movimientos del Mes</h3>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
+          {movementsThisMonth.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">No hay movimientos registrados este mes.</div>
+          ) : (
           <table className="min-w-full divide-y divide-gray-200 text-xs">
             <thead className="bg-gray-50">
               <tr>
@@ -243,6 +269,7 @@ const MovementsView = ({ plants }) => {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </div>
