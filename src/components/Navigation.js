@@ -5,7 +5,8 @@ const Navigation = ({ currentView, setCurrentView }) => {
     { id: 'plants', label: 'Plantas', icon: '🌱' },
     { id: 'movements', label: 'Caja', icon: '💼' },
     { id: 'stats', label: 'Estadísticas', icon: '📊' },
-    { id: 'reportes', label: 'Reportes', icon: '📈' }
+    { id: 'reportes', label: 'Reportes', icon: '📈' },
+    { id: 'carga-movil', label: 'Carga Móvil', icon: '📲' } // NUEVO
   ];
 
   return (

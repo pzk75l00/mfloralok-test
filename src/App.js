@@ -10,6 +10,7 @@ import StatsView from './components/StatsView'; // ¡Este import faltaba!
 import Navigation from './components/Navigation';
 import MovementsView from './components/MovementsView';
 import ReportesView from './components/ReportesView';
+import CargaMovilView from './components/CargaMovilView';
 
 const App = () => {
   const [currentView, setCurrentView] = useState('plants');
@@ -114,6 +115,20 @@ const App = () => {
             plants={plants}
             sales={sales}
             purchases={purchases}
+          />
+        );
+      case 'carga-movil':
+        return (
+          <CargaMovilView
+            plants={plants}
+            onQuickAddStock={async (plant, amount) => {
+              const updated = { ...plant, stock: plant.stock + amount };
+              await setDoc(doc(collection(db, 'plants'), String(plant.id)), updated);
+            }}
+            onQuickSale={async (plant, amount) => {
+              const updated = { ...plant, stock: plant.stock - amount };
+              await setDoc(doc(collection(db, 'plants'), String(plant.id)), updated);
+            }}
           />
         );
       default:
