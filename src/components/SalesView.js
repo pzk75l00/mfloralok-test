@@ -57,12 +57,18 @@ const SalesView = ({ plants }) => {
   const salesThisMonth = sales.filter(sale => {
     if (!sale.date) return false;
     const d = new Date(sale.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    if (isNaN(d.getTime())) return false;
+    const fechaArg = d.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    const nowArg = now.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    return fechaArg === nowArg;
   });
   const purchasesThisMonth = purchases.filter(purchase => {
     if (!purchase.date) return false;
     const d = new Date(purchase.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    if (isNaN(d.getTime())) return false;
+    const fechaArg = d.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    const nowArg = now.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    return fechaArg === nowArg;
   });
   const totalMonthSales = salesThisMonth.reduce((sum, sale) => sum + sale.total, 0);
   const totalMonthPurchases = purchasesThisMonth.reduce((sum, purchase) => sum + (purchase.purchasePrice * purchase.quantity), 0);
@@ -200,7 +206,7 @@ const SalesView = ({ plants }) => {
                           {sale.quantity} x ${sale.salePrice} = ${sale.total}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Fecha: {sale.date ? new Date(sale.date).toLocaleString() : '-'}
+                          Fecha: {sale.date ? new Date(sale.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }) : '-'}
                           {sale.location ? ` | Lugar: ${sale.location}` : ''}
                         </p>
                       </div>

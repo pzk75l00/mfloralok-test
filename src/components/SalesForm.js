@@ -41,10 +41,23 @@ const SalesForm = ({ plants, onCompleteSale }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Si el usuario selecciona una fecha (YYYY-MM-DD), forzar a medianoche de Argentina
+    let dateStr = saleData.date;
+    let dateArg;
+    if (dateStr && dateStr.length === 10) { // Solo fecha, sin hora
+      dateArg = new Date(dateStr + 'T00:00:00-03:00');
+    } else if (dateStr && dateStr.length === 16) { // datetime-local (YYYY-MM-DDTHH:mm)
+      dateArg = new Date(dateStr + ':00-03:00');
+    } else {
+      const now = new Date();
+      dateArg = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+    }
+    const isoArgentina = dateArg.toISOString().slice(0, 19) + '-03:00';
     onCompleteSale({
       ...saleData,
       plantId: Number(saleData.plantId),
-      total: saleData.quantity * saleData.salePrice
+      total: saleData.quantity * saleData.salePrice,
+      date: isoArgentina
     });
     setSaleData({
       plantId: '',

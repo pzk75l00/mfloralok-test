@@ -16,13 +16,18 @@ const PurchasesForm = ({ plants, onCompletePurchase }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.plantId || !form.quantity || !form.purchasePrice) return;
+    // Ajustar fecha a hora local de Argentina (UTC-3)
+    let localDate = form.date ? new Date(form.date) : new Date();
+    const offset = -3 * 60; // minutos
+    const tzDate = new Date(localDate.getTime() - (localDate.getTimezoneOffset() - offset) * 60000);
+    const isoArgentina = tzDate.toISOString().slice(0, 19) + '-03:00';
     onCompletePurchase({
       ...form,
       plantId: isNaN(Number(form.plantId)) ? form.plantId : Number(form.plantId),
       quantity: Number(form.quantity),
       purchasePrice: Number(form.purchasePrice),
       paymentMethod: form.paymentMethod,
-      date: new Date().toISOString(),
+      date: isoArgentina,
     });
     setForm({ plantId: '', quantity: 1, purchasePrice: '', paymentMethod: 'efectivo' });
   };

@@ -61,15 +61,28 @@ const MovementsView = ({ plants }) => {
         total = Number(form.price) * Number(form.quantity);
       }
     } else {
-      // Para ingreso/egreso: si total está vacío y hay precio, usar precio como total
       if (!total && form.price) {
         total = Number(form.price);
       }
     }
+    // Si el usuario selecciona una fecha (YYYY-MM-DD), forzar a medianoche de Argentina
+    let dateStr = form.date;
+    let dateArg;
+    if (dateStr && dateStr.length === 10) { // Solo fecha, sin hora
+      // YYYY-MM-DD a Date en Argentina
+      dateArg = new Date(dateStr + 'T00:00:00-03:00');
+    } else if (dateStr && dateStr.length === 16) { // datetime-local (YYYY-MM-DDTHH:mm)
+      dateArg = new Date(dateStr + ':00-03:00');
+    } else {
+      // Si no, usar la fecha actual en Argentina
+      const now = new Date();
+      dateArg = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+    }
+    const isoArgentina = dateArg.toISOString().slice(0, 19) + '-03:00';
     let movementData = {
       ...form,
       total: Number(total) || 0,
-      date: new Date(form.date).toISOString()
+      date: isoArgentina
     };
     if (form.type === 'venta' || form.type === 'compra') {
       movementData.quantity = Number(form.quantity);
@@ -103,10 +116,13 @@ const MovementsView = ({ plants }) => {
   const currentYear = now.getFullYear();
   const movementsThisMonth = movements.filter(mov => {
     if (!mov.date) return false;
-    // Comparar mes y año en UTC para evitar problemas de huso horario
+    // Comparar mes y año en horario de Argentina
     const d = new Date(mov.date);
     if (isNaN(d.getTime())) return false;
-    return d.getUTCMonth() === now.getUTCMonth() && d.getUTCFullYear() === now.getUTCFullYear();
+    // Convertir a string local de Argentina y extraer mes y año
+    const fechaArg = d.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    const nowArg = now.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
+    return fechaArg === nowArg;
   });
 
   // --- TOTALES DEL MES ---
@@ -315,7 +331,15 @@ const MovementsView = ({ plants }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {movementsThisMonth.map(mov => (
                 <tr key={mov.id} className={mov.type === 'compra' ? 'bg-red-50' : mov.type === 'egreso' ? 'bg-yellow-50' : mov.type === 'ingreso' ? 'bg-green-50' : ''}>
-                  <td className="px-2 py-1">{mov.date ? new Date(mov.date).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' }) : ''}</td>
+                  <td className="px-2 py-1">{mov.date ? new Date(mov.date).toLocaleString('es-AR', {
+                    timeZone: 'America/Argentina/Buenos_Aires',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  }) : ''}</td>
                   <td className="px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
                   <td className="px-2 py-1">{mov.detail}</td>
                   <td className="px-2 py-1">{plants && mov.plantId ? (plants.find(p => p.id === Number(mov.plantId))?.name || '-') : '-'}</td>
