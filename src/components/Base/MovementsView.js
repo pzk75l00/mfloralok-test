@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../../firebase/firebaseConfig';
 import PlantForm from './PlantForm';
+import PlantAutocomplete from './PlantAutocomplete';
 
 const MOVEMENT_TYPES = [
   { value: 'venta', label: 'Venta' },
@@ -15,6 +16,7 @@ const PAYMENT_METHODS = [
   { value: 'mercadoPago', label: 'Mercado Pago (MP)' }
 ];
 
+// Este componente se moverá a la carpeta Base
 const MovementsView = ({ plants }) => {
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({
@@ -32,9 +34,19 @@ const MovementsView = ({ plants }) => {
   const [showSuggestPlant, setShowSuggestPlant] = useState(false);
   const [suggestedPlantName, setSuggestedPlantName] = useState('');
   const [showPlantForm, setShowPlantForm] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // --- FILTRO MENSUAL ---
   const [reloadKey, setReloadKey] = useState(0);
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const movementsThisMonth = movements.filter(mov => {
+    if (!mov.date) return false;
+    const d = new Date(mov.date);
+    if (isNaN(d.getTime())) return false;
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'movements'), (snapshot) => {
@@ -110,20 +122,108 @@ const MovementsView = ({ plants }) => {
     });
   };
 
-  // --- FILTRO MENSUAL ---
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const movementsThisMonth = movements.filter(mov => {
+  // --- FILTRO DEL DÍA (para móvil) ---
+  const currentDay = now.getDate();
+  const movementsToday = movements.filter(mov => {
     if (!mov.date) return false;
-    // Comparar mes y año en horario de Argentina
     const d = new Date(mov.date);
     if (isNaN(d.getTime())) return false;
-    // Convertir a string local de Argentina y extraer mes y año
-    const fechaArg = d.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
-    const nowArg = now.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit' });
-    return fechaArg === nowArg;
+    return d.getDate() === currentDay && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
+  // --- TOTALES DEL DÍA (para móvil) ---
+  const totalVentasDia = movementsToday.filter(m => m.type === 'venta').reduce((sum, m) => sum + (m.total || 0), 0);
+  const totalComprasDia = movementsToday.filter(m => m.type === 'compra').reduce((sum, m) => sum + (m.total || 0), 0);
+  const ventasEfectivoDia = movementsToday.filter(m => m.type === 'venta' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
+  const ventasMPDia = movementsToday.filter(m => m.type === 'venta' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
+  const ingresosEfectivoDia = movementsToday.filter(m => m.type === 'ingreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
+  const ingresosMPDia = movementsToday.filter(m => m.type === 'ingreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
+  const cajaFisicaDia = ingresosEfectivoDia + ventasEfectivoDia;
+  const cajaMPDia = ingresosMPDia + ventasMPDia;
+  const totalGeneralDia = cajaFisicaDia + cajaMPDia;
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  if (isMobile) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">Caja - Totales del Día</h2>
+        <div className="bg-orange-100 rounded p-4 text-center border-2 border-orange-400 shadow-md mb-2">
+          <div className="text-xs text-gray-700 font-semibold">Total General</div>
+          <div className="text-3xl font-extrabold text-orange-700">${totalGeneralDia.toFixed(2)}</div>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1 bg-green-50 rounded p-3 text-center border border-green-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Efectivo</div>
+            <div className="text-xl font-bold text-green-700">${cajaFisicaDia.toFixed(2)}</div>
+          </div>
+          <div className="flex-1 bg-purple-50 rounded p-3 text-center border border-purple-200 shadow-sm">
+            <div className="text-xs text-gray-700 font-semibold">Mercado Pago</div>
+            <div className="text-xl font-bold text-purple-700">${cajaMPDia.toFixed(2)}</div>
+          </div>
+        </div>
+        {/* Formulario simplificado: sin selector de fecha */}
+        <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4 mt-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Tipo</label>
+              <select name="type" value={form.type} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Detalle</label>
+              <input name="detail" value={form.detail} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+            {(form.type === 'venta' || form.type === 'compra') && (
+              <div>
+                {/* Reemplazo: input+select sincronizados */}
+                <PlantAutocomplete
+                  plants={plants}
+                  value={form.plantId}
+                  onChange={val => setForm(f => ({ ...f, plantId: val }))}
+                  required
+                />
+              </div>
+            )}
+            {(form.type === 'venta' || form.type === 'compra') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Cantidad</label>
+                <input type="number" name="quantity" min="1" value={form.quantity} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Precio</label>
+              <input type="number" name="price" min="0" value={form.price} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Total</label>
+              <input type="number" name="total" min="0" value={form.total} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="Se calcula automáticamente" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+              <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lugar</label>
+              <input name="location" value={form.location} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Notas</label>
+              <input name="notes" value={form.notes} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            </div>
+          </div>
+          <button type="submit" className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Registrar Movimiento</button>
+        </form>
+      </div>
+    );
+  }
 
   // --- TOTALES DEL MES ---
   const totalVentasMes = movementsThisMonth.filter(m => m.type === 'venta').reduce((sum, m) => sum + (m.total || 0), 0);
@@ -236,13 +336,13 @@ const MovementsView = ({ plants }) => {
           </div>
           {(form.type === 'venta' || form.type === 'compra') && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Planta</label>
-              <select name="plantId" value={form.plantId} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                <option value="">Selecciona una planta</option>
-                {plants && plants.slice().sort((a, b) => a.name.localeCompare(b.name)).map(plant => (
-                  <option key={plant.id} value={plant.id}>{plant.name}</option>
-                ))}
-              </select>
+              {/* Reemplazo: input+select sincronizados */}
+              <PlantAutocomplete
+                plants={plants}
+                value={form.plantId}
+                onChange={val => setForm(f => ({ ...f, plantId: val }))}
+                required
+              />
             </div>
           )}
           {(form.type === 'venta' || form.type === 'compra') && (

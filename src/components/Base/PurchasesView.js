@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../../firebase/firebaseConfig';
 import StatsCard from './StatsCard';
 import PurchasesForm from './PurchasesForm';
 

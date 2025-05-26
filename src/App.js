@@ -3,14 +3,14 @@ import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firesto
 import { db } from './firebaseConfig';
 import salesData from './mock/sales';
 import purchasesData from './mock/purchases';
-import PlantsView from './components/PlantsView';
-import SalesView from './components/SalesView';
-import { PurchasesView } from './components/PurchasesView';
-import StatsView from './components/StatsView'; // ¡Este import faltaba!
-import Navigation from './components/Navigation';
-import MovementsView from './components/MovementsView';
-import ReportesView from './components/ReportesView';
-import CargaMovilView from './components/CargaMovilView';
+import PlantsView from './components/Base/PlantsView';
+import SalesView from './components/Base/SalesView';
+import { PurchasesView } from './components/Base/PurchasesView';
+import StatsView from './components/Base/StatsView';
+import Navigation from './components/Base/Navigation';
+import MovementsView from './components/Base/MovementsView';
+import ReportesView from './components/Base/ReportesView';
+import CargaMovilView from './components/Movil/CargaMovilView';
 
 const App = () => {
   const [currentView, setCurrentView] = useState('plants');
@@ -22,10 +22,34 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'plants'), (snapshot) => {
       const plantsFromFirestore = snapshot.docs.map(doc => ({
-        id: Number(doc.id), // Asegura que el id sea número
+        id: Number(doc.id),
         ...doc.data()
       }));
       setPlants(plantsFromFirestore);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Cargar ventas desde Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'sales'), (snapshot) => {
+      const salesFromFirestore = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSales(salesFromFirestore);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Cargar compras desde Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'purchases'), (snapshot) => {
+      const purchasesFromFirestore = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPurchases(purchasesFromFirestore);
     });
     return () => unsubscribe();
   }, []);
@@ -59,6 +83,11 @@ const App = () => {
   };
 
   const handleCompleteSale = (newSale) => {
+    // Validar que el precio no sea cero
+    if (!newSale.salePrice || newSale.salePrice <= 0) {
+      alert('No se puede registrar una venta con precio en cero.');
+      return;
+    }
     // Actualizar stock
     const updatedPlants = plants.map(p => {
       if (p.id === newSale.plantId) {
@@ -122,15 +151,26 @@ const App = () => {
           <CargaMovilView
             plants={plants}
             onQuickAddStock={async (plant, amount) => {
+              if (!plant.basePrice || plant.basePrice <= 0) {
+                alert('No se puede cargar stock con precio en cero.');
+                return;
+              }
               const updated = { ...plant, stock: plant.stock + amount };
               await setDoc(doc(collection(db, 'plants'), String(plant.id)), updated);
             }}
             onQuickSale={async (plant, amount) => {
+              if (!plant.basePrice || plant.basePrice <= 0) {
+                alert('No se puede registrar una venta con precio en cero.');
+                return;
+              }
               const updated = { ...plant, stock: plant.stock - amount };
               await setDoc(doc(collection(db, 'plants'), String(plant.id)), updated);
             }}
             onQuickMovement={async (movement) => {
-              // Guardar movimiento en la colección 'movements'
+              if (!movement.total || movement.total <= 0) {
+                alert('El monto debe ser mayor a cero.');
+                return;
+              }
               await setDoc(doc(collection(db, 'movements')), {
                 ...movement,
                 date: new Date().toISOString(),

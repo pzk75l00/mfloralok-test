@@ -1,4 +1,4 @@
-import { PurchasesView } from "../components/PurchasesView";
+import { PurchasesView } from "../components/Base/PurchasesView";
 
 const purchases = [{
     id: 1,

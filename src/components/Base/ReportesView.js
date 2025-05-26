@@ -52,9 +52,42 @@ const ReportesView = ({ plants, sales, purchases }) => {
     .sort((a, b) => b.qty - a.qty)
     .slice(0, 10);
 
+  // --- Progreso del mes actual ---
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const salesThisMonth = sales.filter(sale => {
+    if (!sale.date) return false;
+    const d = new Date(sale.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+  const purchasesThisMonth = purchases.filter(purchase => {
+    if (!purchase.date) return false;
+    const d = new Date(purchase.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+  const totalSalesThisMonth = salesThisMonth.reduce((sum, sale) => sum + (sale.total || 0), 0);
+  const totalPurchasesThisMonth = purchasesThisMonth.reduce((sum, purchase) => sum + ((purchase.purchasePrice || 0) * (purchase.quantity || 0)), 0);
+  const netThisMonth = totalSalesThisMonth - totalPurchasesThisMonth;
+
   return (
     <div className="space-y-8">
       <h2 className="text-2xl font-bold text-gray-800">Reportes y Gráficos</h2>
+      {/* Resumen del mes actual */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
+          <span className="text-gray-500 text-sm">Ventas del mes</span>
+          <span className="text-2xl font-bold text-green-600">${totalSalesThisMonth.toFixed(2)}</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
+          <span className="text-gray-500 text-sm">Compras del mes</span>
+          <span className="text-2xl font-bold text-red-600">${totalPurchasesThisMonth.toFixed(2)}</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
+          <span className="text-gray-500 text-sm">Resultado neto</span>
+          <span className={`text-2xl font-bold ${netThisMonth >= 0 ? 'text-green-700' : 'text-red-700'}`}>{netThisMonth >= 0 ? '+' : ''}${netThisMonth.toFixed(2)}</span>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="font-semibold mb-2">Ventas vs Compras por Mes</h3>

@@ -79,13 +79,14 @@ const PlantForm = ({ initialData, onSubmit, onCancel }) => {
           <select
             name="type"
             value={formData.type}
-            onChange={handleChange}
+            onChange={e => setFormData(prev => ({ ...prev, type: e.target.value }))}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            required
           >
             <option value="interior">Interior</option>
             <option value="exterior">Exterior</option>
-            <option value="suculenta">Suculenta</option>
-            <option value="cactus">Cactus</option>
+            <option value="macetas">Macetas</option>
+            <option value="otros">Otros</option>
           </select>
         </div>
       </div>

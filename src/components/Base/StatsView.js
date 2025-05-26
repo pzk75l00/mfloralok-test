@@ -4,14 +4,14 @@ import StatsCard from './StatsCard';
 const StatsView = ({ plants, sales, purchases }) => {
   // Ventas
   const totalCashSales = sales.filter(s => s.paymentMethod === 'efectivo')
-    .reduce((sum, s) => sum + (s.salePrice * s.quantity), 0);
+    .reduce((sum, s) => sum + (Number(s.total) || (Number(s.salePrice) * Number(s.quantity)) || 0), 0);
   const totalMPSales = sales.filter(s => s.paymentMethod === 'mercadoPago')
-    .reduce((sum, s) => sum + (s.salePrice * s.quantity), 0);
+    .reduce((sum, s) => sum + (Number(s.total) || (Number(s.salePrice) * Number(s.quantity)) || 0), 0);
   // Compras
   const totalCashPurchases = purchases.filter(p => p.paymentMethod === 'efectivo')
-    .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
+    .reduce((sum, p) => sum + (Number(p.purchasePrice) * Number(p.quantity) || 0), 0);
   const totalMPPurchases = purchases.filter(p => p.paymentMethod === 'mercadoPago')
-    .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
+    .reduce((sum, p) => sum + (Number(p.purchasePrice) * Number(p.quantity) || 0), 0);
 
   return (
     <div className="space-y-6">

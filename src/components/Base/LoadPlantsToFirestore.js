@@ -1,6 +1,6 @@
 import React from 'react';
 import { collection, setDoc, doc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../../firebase/firebaseConfig';
 import plantsData from '../mock/plants_full.json';
 
 const LoadPlantsToFirestore = () => {

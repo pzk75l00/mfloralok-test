@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PlantAutocomplete from './PlantAutocomplete';
 
 const SalesForm = ({ plants, onCompleteSale }) => {
   const [saleData, setSaleData] = useState({
@@ -49,8 +50,11 @@ const SalesForm = ({ plants, onCompleteSale }) => {
     } else if (dateStr && dateStr.length === 16) { // datetime-local (YYYY-MM-DDTHH:mm)
       dateArg = new Date(dateStr + ':00-03:00');
     } else {
+      // Siempre usar la hora actual de Argentina
       const now = new Date();
-      dateArg = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+      // Obtener la hora actual en Argentina (UTC-3)
+      const argNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+      dateArg = argNow;
     }
     const isoArgentina = dateArg.toISOString().slice(0, 19) + '-03:00';
     onCompleteSale({
@@ -89,20 +93,13 @@ const SalesForm = ({ plants, onCompleteSale }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Planta</label>
-              <select
-                name="plantId"
+              {/* Reemplazo: input+select sincronizados */}
+              <PlantAutocomplete
+                plants={plants}
                 value={saleData.plantId}
-                onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                onChange={val => setSaleData(prev => ({ ...prev, plantId: val }))}
                 required
-              >
-                <option value="">Seleccionar planta</option>
-                {plants.slice().sort((a, b) => a.name.localeCompare(b.name)).map(plant => (
-                  <option key={plant.id} value={plant.id}>
-                    {plant.name} (Stock: {plant.stock})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 

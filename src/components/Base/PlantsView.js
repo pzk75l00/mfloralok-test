@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlantCard from './PlantCard';
 import PlantForm from './PlantForm';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db } from '../../firebase/firebaseConfig';
 
 const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
   const [showForm, setShowForm] = useState(false);
@@ -10,6 +10,14 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
   const [search, setSearch] = useState('');
   const [orderBy, setOrderBy] = useState('name');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' o 'table'
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleAdd = () => {
     setCurrentPlant(null);
@@ -85,41 +93,45 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
             placeholder="Buscar planta..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+            className="border border-gray-300 rounded-md px-2 py-2 text-base flex-1 min-w-0"
           />
-          <select
-            value={orderBy}
-            onChange={e => setOrderBy(e.target.value)}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-          >
-            <option value="name">Nombre</option>
-            <option value="stock">Stock</option>
-            <option value="basePrice">Precio venta</option>
-          </select>
-          <button
-            onClick={handleExportCSV}
-            className="px-2 py-1 border rounded-md text-sm bg-blue-100 hover:bg-blue-200"
-          >
-            Exportar CSV
-          </button>
-          <button
-            onClick={handleDeleteAllMovements}
-            className="px-2 py-1 border rounded-md text-sm bg-red-100 hover:bg-red-200"
-          >
-            Vaciar Caja
-          </button>
-          <button
-            onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
-            className="px-2 py-1 border rounded-md text-sm bg-gray-100 hover:bg-gray-200"
-          >
-            {viewMode === 'cards' ? 'Ver como tabla' : 'Ver como tarjetas'}
-          </button>
           <button
             onClick={handleAdd}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-base"
           >
             + Nueva Planta
           </button>
+          {!isMobile && (
+            <>
+              <select
+                value={orderBy}
+                onChange={e => setOrderBy(e.target.value)}
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+              >
+                <option value="name">Nombre</option>
+                <option value="stock">Stock</option>
+                <option value="basePrice">Precio venta</option>
+              </select>
+              <button
+                onClick={handleExportCSV}
+                className="px-2 py-1 border rounded-md text-sm bg-blue-100 hover:bg-blue-200"
+              >
+                Exportar CSV
+              </button>
+              <button
+                onClick={handleDeleteAllMovements}
+                className="px-2 py-1 border rounded-md text-sm bg-red-100 hover:bg-red-200"
+              >
+                Vaciar Caja
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
+                className="px-2 py-1 border rounded-md text-sm bg-gray-100 hover:bg-gray-200"
+              >
+                {viewMode === 'cards' ? 'Ver como tabla' : 'Ver como tarjetas'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -130,7 +142,8 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
           onCancel={() => setShowForm(false)}
         />
       ) : (
-        viewMode === 'cards' ? (
+        // Solo mostrar tarjetas en móvil, tabla o tarjetas en desktop
+        (isMobile || viewMode === 'cards') ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPlants.map(plant => (
               <PlantCard

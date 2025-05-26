@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PlantAutocomplete from './PlantAutocomplete';
 
 const PurchasesForm = ({ plants, onCompletePurchase }) => {
   const [form, setForm] = useState({
@@ -35,19 +36,13 @@ const PurchasesForm = ({ plants, onCompletePurchase }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Planta</label>
-        <select
-          name="plantId"
+        {/* Reemplazo: input+select sincronizados */}
+        <PlantAutocomplete
+          plants={plants}
           value={form.plantId}
-          onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          onChange={val => setForm(f => ({ ...f, plantId: val }))}
           required
-        >
-          <option value="">Selecciona una planta</option>
-          {plants.slice().sort((a, b) => a.name.localeCompare(b.name)).map((plant) => (
-            <option key={plant.id} value={plant.id}>{plant.name}</option>
-          ))}
-        </select>
+        />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
