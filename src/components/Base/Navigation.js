@@ -13,22 +13,33 @@ const Navigation = ({ currentView, setCurrentView }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <nav className="bg-white shadow-sm rounded-lg overflow-hidden">
-      <ul className="flex divide-x divide-gray-200 overflow-x-auto">
-        {views
-          .filter(view => isMobile ? (view.mobileOnly || view.id === 'carga-movil' || view.id === 'plants' || view.id === 'movements') : view.id !== 'carga-movil' || view.mobileOnly)
-          .map(view => (
-            <li key={view.id} className="flex-1 min-w-[80px]">
-              <button
-                onClick={() => setCurrentView(view.id)}
-                className={`w-full py-3 px-4 text-center font-medium ${currentView === view.id ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                <span className="block text-lg">{view.icon}</span>
-                <span>{view.label}</span>
-              </button>
-            </li>
-          ))}
-      </ul>
+    <nav className="flex flex-wrap gap-2 justify-center mb-6">
+      <button
+        className={`px-4 py-2 rounded-md font-semibold ${currentView === 'plants' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+        onClick={() => setCurrentView('plants')}
+      >
+        Plantas
+      </button>
+      <button
+        className={`px-4 py-2 rounded-md font-semibold ${currentView === 'movements' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+        onClick={() => setCurrentView('movements')}
+      >
+        Caja
+      </button>
+      <button
+        className={`px-4 py-2 rounded-md font-semibold ${currentView === 'stats' ? 'bg-yellow-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+        onClick={() => setCurrentView('stats')}
+      >
+        Estadísticas
+      </button>
+      {isMobile && (
+        <button
+          className={`px-4 py-2 rounded-md font-semibold ${currentView === 'carga-movil' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          onClick={() => setCurrentView('carga-movil')}
+        >
+          Carga Móvil
+        </button>
+      )}
     </nav>
   );
 };

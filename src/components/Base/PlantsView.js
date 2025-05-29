@@ -86,11 +86,11 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-        <h2 className="text-2xl font-bold text-gray-800">Inventario de Plantas</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Inventario de Productos</h2>
         <div className="flex gap-2 items-center">
           <input
             type="text"
-            placeholder="Buscar planta..."
+            placeholder="Buscar producto..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="border border-gray-300 rounded-md px-2 py-2 text-base flex-1 min-w-0"
@@ -99,7 +99,7 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
             onClick={handleAdd}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-base"
           >
-            + Nueva Planta
+            + Nuevo Producto
           </button>
           {!isMobile && (
             <>

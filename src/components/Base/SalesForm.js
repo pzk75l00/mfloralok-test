@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import PlantAutocomplete from './PlantAutocomplete';
+import { registrarVenta } from './saleUtils';
+
+// La fecha se registra automáticamente con la hora local de Argentina, pero no se muestra el campo al usuario
+const getArgentinaNowISOString = () => {
+  const now = new Date();
+  const argNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  return argNow.toISOString();
+};
 
 const SalesForm = ({ plants, onCompleteSale }) => {
   const [saleData, setSaleData] = useState({
@@ -7,12 +15,13 @@ const SalesForm = ({ plants, onCompleteSale }) => {
     quantity: 1,
     salePrice: '',
     paymentMethod: 'efectivo',
-    date: new Date().toISOString(),
+    date: getArgentinaNowISOString(), // fecha local Argentina
     location: '',
     notes: ''
   });
 
   const [selectedPlant, setSelectedPlant] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (saleData.plantId) {
@@ -33,42 +42,38 @@ const SalesForm = ({ plants, onCompleteSale }) => {
     }));
   };
 
-  const handleDateChange = (date) => {
-    setSaleData(prev => ({
-      ...prev,
-      date: new Date(date).toISOString()
-    }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Si el usuario selecciona una fecha (YYYY-MM-DD), forzar a medianoche de Argentina
-    let dateStr = saleData.date;
-    let dateArg;
-    if (dateStr && dateStr.length === 10) { // Solo fecha, sin hora
-      dateArg = new Date(dateStr + 'T00:00:00-03:00');
-    } else if (dateStr && dateStr.length === 16) { // datetime-local (YYYY-MM-DDTHH:mm)
-      dateArg = new Date(dateStr + ':00-03:00');
-    } else {
-      // Siempre usar la hora actual de Argentina
-      const now = new Date();
-      // Obtener la hora actual en Argentina (UTC-3)
-      const argNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
-      dateArg = argNow;
+    setErrorMsg('');
+    if (!saleData.salePrice || Number(saleData.salePrice) <= 0) {
+      setErrorMsg('Debe ingresar un precio válido para la venta.');
+      return;
     }
-    const isoArgentina = dateArg.toISOString().slice(0, 19) + '-03:00';
-    onCompleteSale({
-      ...saleData,
-      plantId: Number(saleData.plantId),
-      total: saleData.quantity * saleData.salePrice,
-      date: isoArgentina
+    if (!saleData.plantId) {
+      setErrorMsg('Debe seleccionar un producto (planta, maceta u otro) para la venta.');
+      return;
+    }
+    // Al registrar, siempre usar la hora local de Argentina
+    const nowISO = getArgentinaNowISOString();
+    const result = await registrarVenta({
+      plantId: saleData.plantId,
+      quantity: saleData.quantity,
+      price: saleData.salePrice,
+      paymentMethod: saleData.paymentMethod,
+      date: nowISO,
+      location: saleData.location,
+      notes: saleData.notes
     });
+    if (!result.ok) {
+      setErrorMsg(result.error || 'Error al registrar la venta');
+      return;
+    }
     setSaleData({
       plantId: '',
       quantity: 1,
       salePrice: '',
       paymentMethod: 'efectivo',
-      date: new Date().toISOString(),
+      date: getArgentinaNowISOString(),
       location: '',
       notes: ''
     });
@@ -80,17 +85,6 @@ const SalesForm = ({ plants, onCompleteSale }) => {
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Fecha</label>
-              <input
-                type="datetime-local"
-                name="date"
-                value={saleData.date.slice(0, 16)}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                required
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Planta</label>
               {/* Reemplazo: input+select sincronizados */}
@@ -170,6 +164,22 @@ const SalesForm = ({ plants, onCompleteSale }) => {
             <p className="text-lg font-medium">
               Total: ${(saleData.quantity * saleData.salePrice).toFixed(2) || '0.00'}
             </p>
+          </div>
+
+          {errorMsg && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2 text-center">{errorMsg}</div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Producto</label>
+              {/* Reemplazo: input+select sincronizados */}
+              <PlantAutocomplete
+                plants={plants}
+                value={saleData.plantId}
+                onChange={val => setSaleData(prev => ({ ...prev, plantId: val }))}
+                required
+              />
+            </div>
           </div>
         </div>
         <div className="mt-6">

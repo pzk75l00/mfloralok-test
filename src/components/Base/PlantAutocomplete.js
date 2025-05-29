@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // Componente reutilizable de input+select sincronizados para plantas
-const PlantAutocomplete = ({ plants, value, onChange, label = 'Planta', required = false, disabled = false }) => {
+const PlantAutocomplete = ({ plants = [], value, onChange, label = 'Producto', required = false, disabled = false }) => {
   const [inputValue, setInputValue] = useState('');
   const [filtered, setFiltered] = useState(plants);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const wrapperRef = useRef();
   const selectRef = useRef();
 
   useEffect(() => {
@@ -22,39 +24,62 @@ const PlantAutocomplete = ({ plants, value, onChange, label = 'Planta', required
     }
   }, [inputValue, plants]);
 
+  // Cerrar sugerencias al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleInput = e => {
     setInputValue(e.target.value);
+    setShowSuggestions(true);
     // No cambiar value aún, solo filtrar
   };
 
   const handleSelect = e => {
     const val = e.target.value;
     onChange(val);
+    setShowSuggestions(false);
   };
 
   const handleSuggestionClick = (plant) => {
     setInputValue(plant.name);
     onChange(plant.id);
+    setShowSuggestions(false);
     // Opcional: enfocar el select
     selectRef.current && selectRef.current.focus();
   };
 
+  const handleBlur = (e) => {
+    // Timeout para permitir onMouseDown de sugerencia antes de cerrar
+    setTimeout(() => setShowSuggestions(false), 100);
+  };
+
   return (
-    <div>
+    <div ref={wrapperRef} className="relative">
       <label className="block text-sm font-medium text-gray-700">{label}</label>
       <input
         type="text"
         value={inputValue}
         onChange={handleInput}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={handleBlur}
         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-        placeholder="Buscar planta..."
+        placeholder="Buscar producto..."
         disabled={disabled}
         autoComplete="off"
         required={required}
       />
       {/* Sugerencias tipo autocompletar */}
-      {inputValue && filtered.length > 0 && (
-        <ul className="border border-gray-200 rounded bg-white max-h-40 overflow-y-auto mt-1 absolute z-10 w-full">
+      {showSuggestions && inputValue && filtered.length > 0 && (
+        <ul className="border border-gray-200 rounded bg-white max-h-40 overflow-y-auto mt-1 absolute z-10 w-full shadow-lg">
           {filtered.slice(0, 8).map(plant => (
             <li
               key={plant.id}
@@ -75,7 +100,7 @@ const PlantAutocomplete = ({ plants, value, onChange, label = 'Planta', required
         required={required}
         disabled={disabled}
       >
-        <option value="">Seleccionar planta</option>
+        <option value="">Seleccionar producto</option>
         {filtered.map(plant => (
           <option key={plant.id} value={plant.id}>{plant.name} (Stock: {plant.stock})</option>
         ))}
