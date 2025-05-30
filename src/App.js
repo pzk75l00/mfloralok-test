@@ -7,14 +7,13 @@ import NavigationMovil from './components/Movil/NavigationMovil';
 
 const App = () => {
   const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+  const [currentView, setCurrentView] = React.useState('inventory');
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   if (isMobile) return <NavigationMovil />;
-
-  const [currentView, setCurrentView] = React.useState('inventory');
 
   const renderView = () => {
     switch (currentView) {

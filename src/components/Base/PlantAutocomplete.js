@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 
 // Componente reutilizable de input+select sincronizados para plantas
 const PlantAutocomplete = ({ plants = [], value, onChange, label = 'Producto', required = false, disabled = false }) => {
@@ -107,6 +108,15 @@ const PlantAutocomplete = ({ plants = [], value, onChange, label = 'Producto', r
       </select>
     </div>
   );
+};
+
+PlantAutocomplete.propTypes = {
+  plants: PropTypes.array,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func,
+  label: PropTypes.string,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool,
 };
 
 export default PlantAutocomplete;

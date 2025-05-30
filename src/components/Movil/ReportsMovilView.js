@@ -149,12 +149,12 @@ const ReportsMovilView = () => {
       <div className="rounded-lg shadow bg-white p-3">
         <div className="font-semibold text-green-700 mb-2">Totales del día</div>
         <div className="flex flex-wrap gap-2 justify-center text-sm">
-          <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>${totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-red-100 rounded px-3 py-1">Compras: <b>${totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>${totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>${totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-blue-100 rounded px-3 py-1">Caja Efectivo: <b>${cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-purple-100 rounded px-3 py-1">Caja MP: <b>${cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-blue-100 rounded px-3 py-1">Caja Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+          <div className="bg-purple-100 rounded px-3 py-1">Caja MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
           <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos: <b>{cantidadProductosVendidos}</b></div>
         </div>
       </div>

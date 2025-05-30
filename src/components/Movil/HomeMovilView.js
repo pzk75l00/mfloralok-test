@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 // Importamos el logo desde assets
 import logo from '../../assets/images/logo.png';
@@ -73,6 +74,13 @@ const HomeMovilView = ({ onModuleClick, businessName = 'Mundo Floral', logoUrl =
       </footer>
     </div>
   );
+};
+
+HomeMovilView.propTypes = {
+  onModuleClick: PropTypes.func,
+  businessName: PropTypes.string,
+  logoUrl: PropTypes.string,
+  modulesConfig: PropTypes.array,
 };
 
 export default HomeMovilView;

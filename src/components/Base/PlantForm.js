@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const PlantForm = ({ initialData, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState(initialData || {
@@ -103,6 +104,12 @@ const PlantForm = ({ initialData, onSubmit, onCancel }) => {
       </div>
     </form>
   );
+};
+
+PlantForm.propTypes = {
+  initialData: PropTypes.object,
+  onSubmit: PropTypes.func,
+  onCancel: PropTypes.func,
 };
 
 export default PlantForm;

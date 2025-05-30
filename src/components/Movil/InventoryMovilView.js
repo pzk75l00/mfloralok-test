@@ -10,6 +10,7 @@ const InventoryMovilView = () => {
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState('cards'); // 'cards' o 'table'
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'plants'), (snapshot) => {
@@ -70,9 +71,33 @@ const InventoryMovilView = () => {
     await deleteDoc(doc(collection(db, 'plants'), id));
   };
 
+  // Filtro de plantas según búsqueda
+  const filteredPlants = plants.filter(plant => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      plant.name?.toLowerCase().includes(q) ||
+      plant.type?.toLowerCase().includes(q) ||
+      String(plant.stock).includes(q) ||
+      String(plant.basePrice).includes(q) ||
+      String(plant.purchasePrice).includes(q) ||
+      (plant.supplier?.toLowerCase().includes(q) || "")
+    );
+  });
+
   return (
     <div className="relative min-h-screen bg-gray-50 pb-24">
       <div className="rounded-lg shadow bg-white p-3">
+        {/* Barra de búsqueda */}
+        <div className="mb-4 max-w-md mx-auto">
+          <input
+            type="text"
+            className="border rounded p-2 w-full"
+            placeholder="Buscar por nombre, tipo, proveedor..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
         <div className="flex justify-center mb-2 gap-2">
           <button
             className={`px-3 py-1 rounded font-semibold text-sm ${viewMode === 'cards' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
@@ -124,7 +149,7 @@ const InventoryMovilView = () => {
         )}
         {viewMode === 'cards' ? (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {plants
+            {filteredPlants
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(plant => {
@@ -160,7 +185,7 @@ const InventoryMovilView = () => {
                 </tr>
               </thead>
               <tbody>
-                {plants
+                {filteredPlants
                   .slice()
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map(plant => (

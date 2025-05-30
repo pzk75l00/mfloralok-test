@@ -3,17 +3,10 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 // import MovementsView from '../Base/MovementsView'; // Solo para el formulario y totales
 import MovementsView from '../Base/MovementsView';
+import PropTypes from 'prop-types';
 
 // Vista móvil para Caja: muestra totales del día y formulario
 const CashMovilView = (props) => {
-  // Obtener totales del día desde MovementsView
-  const [totales, setTotales] = useState({
-    cajaFisicaDia: 0,
-    cajaMPDia: 0,
-    totalGeneralDia: 0,
-    cantidadProductosVendidosDia: 0
-  });
-
   // --- BLOQUE SUTIL DE COMPRAS/EGRESOS DEL DÍA ---
   const [comprasEgresosHoy, setComprasEgresosHoy] = useState([]);
   useEffect(() => {
@@ -56,40 +49,39 @@ const CashMovilView = (props) => {
         <MovementsView
           {...props}
           showOnlyForm={true}
-          renderTotals={(tot) => {
-            setTotales(tot);
-            return null;
-          }}
+          renderTotals={(tot) => (
+            <>
+              <div className="mt-6 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
+                <div className="flex-1 bg-green-100 rounded-lg shadow p-4 flex flex-col items-center border border-green-300">
+                  <span className="text-gray-500 text-sm">Efectivo</span>
+                  <span className="text-2xl font-bold text-green-700">
+                    ${tot.cajaFisicaDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex-1 bg-blue-100 rounded-lg shadow p-4 flex flex-col items-center border border-blue-300">
+                  <span className="text-gray-500 text-sm">Mercado Pago</span>
+                  <span className="text-2xl font-bold text-blue-700">
+                    ${tot.cajaMPDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex-1 bg-yellow-100 rounded-lg shadow p-4 flex flex-col items-center border border-yellow-300">
+                  <span className="text-gray-500 text-sm">Total</span>
+                  <span className="text-2xl font-bold text-yellow-700">
+                    ${tot.totalGeneralDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
+                <div className="flex-1 bg-purple-100 rounded-lg shadow p-4 flex flex-col items-center border border-purple-300">
+                  <span className="text-gray-500 text-sm">Artículos vendidos hoy</span>
+                  <span className="text-2xl font-bold text-purple-700">
+                    {tot.cantidadProductosVendidosDia}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         />
-        {/* Totales de caja debajo del formulario, con el formato clásico de cajas de totales */}
-        <div className="mt-6 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
-          <div className="flex-1 bg-green-100 rounded-lg shadow p-4 flex flex-col items-center border border-green-300">
-            <span className="text-gray-500 text-sm">Efectivo</span>
-            <span className="text-2xl font-bold text-green-700">
-              ${totales.cajaFisicaDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex-1 bg-blue-100 rounded-lg shadow p-4 flex flex-col items-center border border-blue-300">
-            <span className="text-gray-500 text-sm">Mercado Pago</span>
-            <span className="text-2xl font-bold text-blue-700">
-              ${totales.cajaMPDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex-1 bg-yellow-100 rounded-lg shadow p-4 flex flex-col items-center border border-yellow-300">
-            <span className="text-gray-500 text-sm">Total</span>
-            <span className="text-2xl font-bold text-yellow-700">
-              ${totales.totalGeneralDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
-        <div className="mt-4 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
-          <div className="flex-1 bg-purple-100 rounded-lg shadow p-4 flex flex-col items-center border border-purple-300">
-            <span className="text-gray-500 text-sm">Artículos vendidos hoy</span>
-            <span className="text-2xl font-bold text-purple-700">
-              {totales.cantidadProductosVendidosDia}
-            </span>
-          </div>
-        </div>
         {/* Bloque sutil de compras y egresos del día, directo, sin MovementsView */}
         <div className="mt-8 w-full max-w-xl mx-auto">
           {comprasEgresosHoy.length > 0 && (
@@ -119,6 +111,11 @@ const CashMovilView = (props) => {
       </div>
     </div>
   );
+};
+
+CashMovilView.propTypes = {
+  lugar: PropTypes.string,
+  location: PropTypes.string,
 };
 
 export default CashMovilView;

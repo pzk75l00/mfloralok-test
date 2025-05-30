@@ -5,6 +5,7 @@ import PlantForm from './PlantForm';
 import PlantAutocomplete from './PlantAutocomplete';
 import { toZonedTime } from 'date-fns-tz';
 import { registrarVenta } from './saleUtils';
+import PropTypes from 'prop-types';
 
 const MOVEMENT_TYPES = [
   { value: 'venta', label: 'Venta' },
@@ -307,9 +308,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           <div>
             <PlantAutocomplete
               plants={plants}
-              value={form.plantId}
+              value={form.plantId ? String(form.plantId) : ''}
               onChange={val => {
-                setForm(f => ({ ...f, plantId: val }));
+                // Solo guardar si es un id válido
+                if (val && plants.some(p => String(p.id) === String(val))) {
+                  setForm(f => ({ ...f, plantId: String(val) }));
+                } else {
+                  setForm(f => ({ ...f, plantId: '' }));
+                }
                 setShowSuggestPlant(false);
                 setSuggestedPlantName('');
               }}
@@ -431,6 +437,21 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       setTimeout(() => setToastMsg(null), 4000); // 4 segundos
     }
   };
+
+  // Limpiar plantId si el tipo de movimiento deja de ser venta o compra
+  useEffect(() => {
+    if (form.type !== 'venta' && form.type !== 'compra' && form.plantId) {
+      setForm(f => ({ ...f, plantId: '' }));
+    }
+  }, [form.type]);
+
+  // DEBUG: Log para ver qué valor se guarda al seleccionar producto
+  // useEffect(() => {
+  //   if (form.plantId) {
+  //     const selected = plants.find(p => String(p.id) === String(form.plantId));
+  //     console.log('DEBUG plantId:', form.plantId, 'selected:', selected);
+  //   }
+  // }, [form.plantId, plants]);
 
   if (showOnlyForm) {
     // Solo mostrar el formulario de carga de caja
@@ -609,6 +630,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       </div>
     </div>
   );
+};
+
+MovementsView.propTypes = {
+  plants: PropTypes.array,
+  hideForm: PropTypes.bool,
+  showOnlyForm: PropTypes.bool,
+  renderTotals: PropTypes.func,
 };
 
 export default MovementsView;

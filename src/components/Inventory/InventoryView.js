@@ -10,18 +10,17 @@ const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice:
 
 const InventoryView = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [plants, setPlants] = useState([]);
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  if (isMobile) return <InventoryMovilView />;
 
-  const [plants, setPlants] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [editingId, setEditingId] = useState(null);
-
-  // Cargar plantas en tiempo real
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'plants'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -29,6 +28,20 @@ const InventoryView = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Filtro de plantas según búsqueda
+  const filteredPlants = plants.filter(plant => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      plant.name?.toLowerCase().includes(q) ||
+      plant.type?.toLowerCase().includes(q) ||
+      String(plant.stock).includes(q) ||
+      String(plant.basePrice).includes(q) ||
+      String(plant.purchasePrice).includes(q) ||
+      (plant.supplier?.toLowerCase().includes(q) || "")
+    );
+  });
 
   // Manejar cambios en el formulario
   const handleChange = e => {
@@ -84,9 +97,22 @@ const InventoryView = () => {
     await deleteDoc(doc(collection(db, 'plants'), id));
   };
 
+  // Render condicional después de los hooks
+  if (isMobile) return <InventoryMovilView />;
+
   return (
     <div className="relative">
       <h2 className="text-xl font-bold mb-4">Inventario de Plantas</h2>
+      {/* Barra de búsqueda */}
+      <div className="mb-4 max-w-md">
+        <input
+          type="text"
+          className="border rounded p-2 w-full"
+          placeholder="Buscar por nombre, tipo, proveedor..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
       <form id="form-alta-producto" onSubmit={handleSubmit} className="mb-6 grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
         <div>
           <label className="block text-sm font-medium">Nombre</label>
@@ -139,7 +165,7 @@ const InventoryView = () => {
           </tr>
         </thead>
         <tbody>
-          {plants
+          {filteredPlants
             .slice()
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(plant => (
