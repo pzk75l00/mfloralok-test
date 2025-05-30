@@ -2,7 +2,7 @@ import React from 'react';
 
 const Navigation = ({ currentView, setCurrentView }) => {
   const views = [
-    { id: 'plants', label: 'Plantas', icon: '🌱' },
+    { id: 'plants', label: 'Productos', icon: '📦' },
     { id: 'movements', label: 'Caja', icon: '💼' },
     { id: 'stats', label: 'Estadísticas', icon: '📊' },
     { id: 'reportes', label: 'Reportes', icon: '📈' },
@@ -18,7 +18,7 @@ const Navigation = ({ currentView, setCurrentView }) => {
         className={`px-4 py-2 rounded-md font-semibold ${currentView === 'plants' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
         onClick={() => setCurrentView('plants')}
       >
-        Plantas
+        Productos
       </button>
       <button
         className={`px-4 py-2 rounded-md font-semibold ${currentView === 'movements' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
