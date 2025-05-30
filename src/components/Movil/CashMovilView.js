@@ -51,22 +51,22 @@ const CashMovilView = (props) => {
           showOnlyForm={true}
           renderTotals={(tot) => (
             <>
-              <div className="mt-6 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
-                <div className="flex-1 bg-green-100 rounded-lg shadow p-4 flex flex-col items-center border border-green-300">
-                  <span className="text-gray-500 text-sm">Efectivo</span>
-                  <span className="text-2xl font-bold text-green-700">
+              <div className="mt-6 w-full max-w-xl mx-auto flex flex-wrap gap-2 sm:gap-4 justify-center">
+                <div className="flex-1 min-w-[110px] bg-green-100 rounded-lg shadow p-2 sm:p-4 flex flex-col items-center border border-green-300">
+                  <span className="text-gray-500 text-xs sm:text-sm">Efectivo</span>
+                  <span className="text-lg sm:text-2xl font-bold text-green-700 truncate">
                     ${tot.cajaFisicaDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex-1 bg-blue-100 rounded-lg shadow p-4 flex flex-col items-center border border-blue-300">
-                  <span className="text-gray-500 text-sm">Mercado Pago</span>
-                  <span className="text-2xl font-bold text-blue-700">
+                <div className="flex-1 min-w-[110px] bg-blue-100 rounded-lg shadow p-2 sm:p-4 flex flex-col items-center border border-blue-300">
+                  <span className="text-gray-500 text-xs sm:text-sm">Mercado Pago</span>
+                  <span className="text-lg sm:text-2xl font-bold text-blue-700 truncate">
                     ${tot.cajaMPDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex-1 bg-yellow-100 rounded-lg shadow p-4 flex flex-col items-center border border-yellow-300">
-                  <span className="text-gray-500 text-sm">Total</span>
-                  <span className="text-2xl font-bold text-yellow-700">
+                <div className="flex-1 min-w-[110px] bg-yellow-100 rounded-lg shadow p-2 sm:p-4 flex flex-col items-center border border-yellow-300">
+                  <span className="text-gray-500 text-xs sm:text-sm">Total</span>
+                  <span className="text-lg sm:text-2xl font-bold text-yellow-700 truncate">
                     ${tot.totalGeneralDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
