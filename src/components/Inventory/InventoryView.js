@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import InventoryMovilView from '../Movil/InventoryMovilView';
@@ -17,6 +17,12 @@ const InventoryView = () => {
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState('table'); // 'table' o 'cards'
+  const formRef = useRef(null);
+  const titleRef = useRef(null);
+  const mainContainerRef = useRef(null);
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -48,7 +54,19 @@ const InventoryView = () => {
 
   // Manejar cambios en el formulario
   const handleChange = e => {
-    const { name, value } = e.target;
+    const { name, value, type, files } = e.target;
+    if (type === 'file') {
+      const file = files[0];
+      setImageFile(file);
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result);
+        reader.readAsDataURL(file);
+      } else {
+        setImagePreview(null);
+      }
+      return;
+    }
     setForm(f => ({ ...f, [name]: name === 'stock' || name === 'basePrice' || name === 'purchasePrice' ? Number(value) : value }));
   };
 
@@ -80,9 +98,22 @@ const InventoryView = () => {
       supplier: form.supplier || ''
     };
     try {
+      // Guardar imagen si se seleccionó una nueva
+      if (imageFile) {
+        // Guardar en public/img/plants/plant_{id}.jpg (solo funciona en desarrollo local)
+        // En producción real, se recomienda usar Firebase Storage
+        const fileName = `plant_${plantData.id}.jpg`;
+        const filePath = `/img/plants/${fileName}`;
+        // No se puede guardar en public desde el navegador, solo mostrar preview y documentar
+        plantData.image = filePath;
+        // Mostrar advertencia si no se puede guardar realmente
+        alert('La imagen se asociará al producto, pero para que se vea en producción debe copiarse manualmente a public/img/plants/ con el nombre sugerido: ' + fileName);
+      }
       await setDoc(doc(collection(db, 'plants'), plantData.id), plantData);
       setForm(initialForm);
       setEditingId(null);
+      setImageFile(null);
+      setImagePreview(null);
     } catch (err) {
       alert('Error guardando la planta.');
     }
@@ -92,19 +123,48 @@ const InventoryView = () => {
   const handleEdit = plant => {
     setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
     setEditingId(plant.id);
+    setTimeout(() => {
+      if (mainContainerRef.current) {
+        mainContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (titleRef.current) {
+        titleRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      // Fallback: window scroll
+      setTimeout(() => {
+        const rect = titleRef.current?.getBoundingClientRect();
+        if (rect) window.scrollTo({ top: window.scrollY + rect.top - 24, behavior: 'smooth' });
+      }, 200);
+      if (formRef.current) {
+        const firstInput = formRef.current.querySelector('input,select,textarea');
+        if (firstInput) firstInput.focus();
+        formRef.current.classList.add('ring-2', 'ring-green-400');
+        setTimeout(() => formRef.current.classList.remove('ring-2', 'ring-green-400'), 1200);
+      }
+    }, 100);
   };
 
-  // Eliminar planta
-  const handleDelete = async id => {
-    if (!window.confirm('¿Eliminar esta planta?')) return;
-    await deleteDoc(doc(collection(db, 'plants'), id));
+  // Eliminar planta (abre modal)
+  const handleDelete = (id, name) => {
+    setDeleteModal({ open: true, id, name });
+  };
+
+  // Confirmar eliminación
+  const confirmDelete = async () => {
+    await deleteDoc(doc(collection(db, 'plants'), deleteModal.id));
+    setDeleteModal({ open: false, id: null, name: '' });
+  };
+
+  // Cancelar eliminación
+  const cancelDelete = () => {
+    setDeleteModal({ open: false, id: null, name: '' });
   };
 
   // Render condicional después de los hooks
   if (isMobile) return <InventoryMovilView />;
 
   return (
-    <div className="relative space-y-8">
+    <div ref={mainContainerRef} className="relative space-y-8">
       {/* Línea superior: barra flotante con selector de vista, búsqueda, exportar/importar y botón actualizar firestore */}
       <div className="sticky top-2 z-20 bg-white/90 backdrop-blur rounded-xl shadow-md border border-gray-100 px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         {/* Selector de vista (izquierda) */}
@@ -135,7 +195,7 @@ const InventoryView = () => {
             onClick={() => {
               // Exportar como CSV
               if (!plants.length) return;
-              const headers = ['id','name','type','stock','basePrice','purchasePrice','purchaseDate','supplier'];
+              const headers = ['id','name','type','stock','basePrice','purchasePrice','purchaseDate','supplier','image'];
               const rows = [headers.join(',')].concat(
                 plants.map(p => headers.map(h => {
                   let val = p[h] ?? '';
@@ -221,8 +281,14 @@ const InventoryView = () => {
       </div>
       {/* Bloque 1: Carga/edición de plantas */}
       <section className="bg-white rounded-xl shadow p-6 border border-gray-100">
-        <h2 className="text-2xl font-bold mb-2 text-green-700">Carga - Actualización de productos</h2>
-        <form id="form-alta-producto" onSubmit={handleSubmit} className="mb-2 w-full">
+        <h2 ref={titleRef} className="text-2xl font-bold mb-2 text-green-700">Carga - Actualización de productos</h2>
+        {editingId && (
+          <div className="mb-2 px-2 py-1 rounded bg-green-50 border border-green-200 text-green-800 text-xs font-semibold flex items-center gap-2">
+            <span className="material-icons text-base align-middle">edit</span>
+            Editando: <b className="ml-1">{form.name}</b>
+          </div>
+        )}
+        <form id="form-alta-producto" ref={formRef} onSubmit={handleSubmit} className="mb-2 w-full transition-shadow">
           <div className="w-full grid grid-cols-1 md:grid-cols-8 gap-2 items-end">
             <div>
               <label className="block text-xs font-medium">Nombre</label>
@@ -258,11 +324,46 @@ const InventoryView = () => {
               <label className="block text-xs font-medium">Proveedor</label>
               <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="(opcional)" style={{maxWidth:'120px'}} />
             </div>
+            <div>
+              <label className="block text-xs font-medium">Imagen</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 cursor-pointer w-full text-left"
+                  onClick={() => document.getElementById('input-img-producto').click()}
+                >
+                  Seleccionar imagen
+                </button>
+                <input
+                  id="input-img-producto"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    setImageFile(file || null);
+                    if (file) {
+                      setImagePreview(null); // No previsualizar
+                    } else {
+                      setImagePreview(null);
+                    }
+                  }}
+                />
+                {imageFile && (
+                  <span className="block text-green-700 text-[11px] mt-1 font-semibold">Imagen cargada</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2 mt-2 mb-2">
+            <b>Nota:</b> Para asociar una imagen personalizada al producto, debes copiar manualmente el archivo a <code>/public/img/plants/plant_{editingId || '[id]'}.jpg</code>.<br />
+            El nombre del archivo debe coincidir exactamente con el ID del producto. Puedes exportar el CSV para ver todos los IDs actuales.<br />
+            Si no se sube una imagen, se mostrará una imagen genérica.
           </div>
           <div className="flex gap-2 mt-3 justify-start border-t border-gray-100 pt-3">
             <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded font-semibold text-xs">{editingId ? 'Actualizar' : 'Agregar'}</button>
             {editingId && (
-              <button type="button" className="bg-gray-200 text-gray-700 px-3 py-1 rounded font-semibold border border-gray-400 hover:bg-gray-300 transition text-xs" onClick={()=>{setForm(initialForm);setEditingId(null);}}>Cancelar</button>
+              <button type="button" className="bg-gray-200 text-gray-700 px-3 py-1 rounded font-semibold border border-gray-400 hover:bg-gray-300 transition text-xs" onClick={()=>{setForm(initialForm);setEditingId(null);setImageFile(null);setImagePreview(null);}}>Cancelar</button>
             )}
           </div>
         </form>
@@ -298,8 +399,14 @@ const InventoryView = () => {
                     <td className="p-2">{plant.purchaseDate || '-'}</td>
                     <td className="p-2">{plant.supplier || '-'}</td>
                     <td className="p-2 flex gap-2">
-                      <button className="text-blue-600 underline" onClick={()=>handleEdit(plant)}>Editar</button>
-                      <button className="text-red-600 underline" onClick={()=>handleDelete(plant.id)}>Eliminar</button>
+                      <button
+                        className="px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        onClick={() => handleEdit(plant)}
+                      >Editar</button>
+                      <button
+                        className="px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                        onClick={() => handleDelete(plant.id, plant.name)}
+                      >Eliminar</button>
                     </td>
                   </tr>
                 ))}
@@ -311,11 +418,24 @@ const InventoryView = () => {
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(plant => (
-                <PlantCard key={plant.id} plant={plant} onEdit={handleEdit} onDelete={handleDelete} />
+                <PlantCard key={plant.id} plant={plant} onEdit={handleEdit} onDelete={() => handleDelete(plant.id, plant.name)} />
               ))}
           </div>
         )}
       </section>
+      {/* Modal de confirmación de eliminación */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-xs w-full border border-gray-200">
+            <h3 className="text-lg font-bold mb-2 text-red-700 flex items-center gap-2"><span className="material-icons text-2xl">warning</span> Confirmar eliminación</h3>
+            <p className="mb-4 text-gray-700 text-sm">¿Seguro que deseas eliminar el producto <b>{deleteModal.name}</b>? Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2 justify-end mt-4">
+              <button className="px-3 py-1 rounded border border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200" onClick={cancelDelete}>Cancelar</button>
+              <button className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700" onClick={confirmDelete}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Botón flotante solo visible en móvil */}
       <button
         type="button"
