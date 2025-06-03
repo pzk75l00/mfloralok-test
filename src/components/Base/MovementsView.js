@@ -260,57 +260,71 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   const isMobileDevice = isMobile;
 
+  // Toast para mostrar mensajes de éxito/error
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setToastError(msg.type === 'error');
+    if (msg.type === 'success') {
+      // Scroll al top en móvil
+      if (window.innerWidth < 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      setTimeout(() => setToastMsg(null), 4000); // 4 segundos
+    }
+  };
+
   // --- BLOQUE DE TOTALES DIARIOS PARA MÓVIL ---
   const TotalsBlock = () => (
     <div className="mb-4">
-      <div className="flex flex-col gap-2 text-center">
-        <div className="font-bold text-lg text-gray-800">Totales del Día</div>
-        <div className="flex flex-row justify-center gap-4">
-          <div className="bg-green-100 rounded px-3 py-1">
-            <div className="text-xs text-gray-600">Efectivo</div>
-            <div className="font-semibold text-green-700">${cajaFisicaDia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
-          </div>
-          <div className="bg-blue-100 rounded px-3 py-1">
-            <div className="text-xs text-gray-600">Mercado Pago</div>
-            <div className="font-semibold text-blue-700">${cajaMPDia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
-          </div>
-          <div className="bg-yellow-100 rounded px-3 py-1">
-            <div className="text-xs text-gray-600">Total</div>
-            <div className="font-semibold text-yellow-700">${totalGeneralDia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
-          </div>
+      <div className="flex w-full gap-2 mb-2">
+        <div className="flex-1 bg-green-100 rounded-lg shadow p-2 flex flex-col items-center border border-green-300">
+          <span className="text-gray-500 text-xs">Efectivo</span>
+          <span className="text-lg font-bold text-green-700">${cajaFisicaDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
+        <div className="flex-1 bg-blue-100 rounded-lg shadow p-2 flex flex-col items-center border border-blue-300">
+          <span className="text-gray-500 text-xs">Mercado Pago</span>
+          <span className="text-lg font-bold text-blue-700">${cajaMPDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div className="flex-1 bg-yellow-100 rounded-lg shadow p-2 flex flex-col items-center border border-yellow-300">
+          <span className="text-gray-500 text-xs">Total</span>
+          <span className="text-lg font-bold text-yellow-700">${totalGeneralDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+      </div>
+      <div className="w-full bg-purple-100 rounded-lg shadow p-4 flex flex-col items-center border border-purple-300">
+        <span className="text-gray-500 text-sm">Artículos vendidos hoy</span>
+        <span className="text-2xl font-bold text-purple-700">{cantidadProductosVendidosDia}</span>
       </div>
     </div>
   );
 
+  // --- BLOQUE DE HEADER Y FORMULARIO PARA ESCRITORIO ---
+  // Solo para escritorio, no modificar la lógica móvil
   const renderForm = () => (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form onSubmit={handleSubmit} className="bg-white p-3 rounded-lg shadow border-2 border-blue-300 mb-6 space-y-2 max-w-3xl mx-auto">
+      <div className="w-full grid grid-cols-2 md:grid-cols-8 gap-2 items-end">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Tipo</label>
-          <select name="type" value={form.type} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+          <label className="block text-xs font-medium text-gray-700">Tipo</label>
+          <select name="type" value={form.type} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs">
             {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Detalle</label>
+          <label className="block text-xs font-medium text-gray-700">Detalle</label>
           <input 
             name="detail" 
             value={form.type === 'venta' ? '' : form.detail}
             onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+            className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs"
             disabled={form.type === 'venta'}
             placeholder={form.type === 'venta' ? 'Solo para ingresos/egresos/compras' : ''}
           />
         </div>
-        {/* Producto solo para venta y compra */}
         {(form.type === 'venta' || form.type === 'compra') && (
           <div>
             <PlantAutocomplete
               plants={plants}
               value={form.plantId ? String(form.plantId) : ''}
               onChange={val => {
-                // Solo guardar si es un id válido
                 if (val && plants.some(p => String(p.id) === String(val))) {
                   setForm(f => ({ ...f, plantId: String(val) }));
                 } else {
@@ -337,203 +351,152 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             />
           </div>
         )}
-        {/* Cantidad solo para venta, o para compra si hay producto seleccionado */}
         {((form.type === 'venta') || (form.type === 'compra' && form.plantId)) && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">Cantidad</label>
-            <input type="number" name="quantity" min="1" value={form.quantity} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+            <label className="block text-xs font-medium text-gray-700">Cantidad</label>
+            <input type="number" name="quantity" min="1" value={form.quantity} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs" />
           </div>
         )}
-        {/* Para ingreso y egreso, cantidad y producto deshabilitados/no renderizados */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Precio</label>
-          <input type="number" name="price" min="0" value={form.price} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+          <label className="block text-xs font-medium text-gray-700">Precio</label>
+          <input type="number" name="price" min="0" value={form.price} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Total</label>
-          <input type="number" name="total" min="0" value={form.type === 'ingreso' || form.type === 'egreso' ? form.price : form.total} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="Se calcula automáticamente" disabled={form.type === 'ingreso' || form.type === 'egreso'} />
+          <label className="block text-xs font-medium text-gray-700">Total</label>
+          <input type="number" name="total" min="0" value={form.type === 'ingreso' || form.type === 'egreso' ? form.price : form.total} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs" placeholder="Se calcula automáticamente" disabled={form.type === 'ingreso' || form.type === 'egreso'} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
-          <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+          <label className="block text-xs font-medium text-gray-700">Método de Pago</label>
+          <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs">
             {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
         </div>
-        {/* Fecha: solo editable si no es móvil y es venta, siempre editable para otros movimientos */}
-        {((form.type !== 'venta') || !isMobileDevice) && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Fecha</label>
-            <input type="date" name="date" value={form.date?.slice(0,10) || ''} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
-          </div>
-        )}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Lugar</label>
-          <input name="location" value={form.location} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+          <label className="block text-xs font-medium text-gray-700">Fecha</label>
+          <input type="datetime-local" name="date" value={form.date || ''} onChange={handleChange} className="mt-1 block w-full border border-blue-400 rounded-md shadow-sm p-1 text-xs" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700">Lugar</label>
+          <input name="location" value={form.location} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs" />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Notas</label>
-          <input name="notes" value={form.notes} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+          <label className="block text-xs font-medium text-gray-700">Notas</label>
+          <input name="notes" value={form.notes} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-1 text-xs" />
         </div>
       </div>
-      <button type="submit" className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Registrar Movimiento</button>
+      <button type="submit" className="mt-2 px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Registrar Movimiento</button>
       {errorMsg && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2 text-center">{errorMsg}</div>
-      )}
-      {showSuggestPlant && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded mb-4">
-          <p className="mb-2">¿Deseas agregar <b>{suggestedPlantName}</b> como nuevo producto al inventario?</p>
-          <button
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mr-2"
-            onClick={() => { setShowPlantForm(true); setShowSuggestPlant(false); }}
-          >
-            Sí, agregar producto
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-            onClick={() => setShowSuggestPlant(false)}
-          >
-            No, gracias
-          </button>
-        </div>
-      )}
-      {showPlantForm && (
-        <div className="bg-white p-4 rounded-lg shadow mb-4">
-          <h3 className="text-lg font-bold mb-2">Nuevo Producto</h3>
-          <PlantForm
-            initialData={{ name: suggestedPlantName, basePrice: '', purchasePrice: '', stock: '', type: 'interior' }}
-            onSubmit={() => { setShowPlantForm(false); }}
-            onCancel={() => setShowPlantForm(false)}
-          />
-        </div>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2 text-center text-xs">{errorMsg}</div>
       )}
     </form>
   );
 
-  // Eliminar todos los movimientos del mes actual
-  const handleDeleteMonthMovements = async () => {
-    if (!window.confirm('¿Seguro que quieres borrar TODOS los movimientos de caja de este mes? Esta acción no se puede deshacer.')) return;
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    const toDelete = movements.filter(mov => {
-      if (!mov.date) return false;
-      const d = new Date(mov.date);
-      return d.getMonth() === month && d.getFullYear() === year;
-    });
-    for (const mov of toDelete) {
-      await deleteDoc(doc(db, 'movements', mov.id));
-    }
-    handleReload();
-    alert('Movimientos del mes eliminados.');
-  };
-
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setToastError(msg.type === 'error');
-    if (msg.type === 'success') {
-      // Scroll al top en móvil
-      if (window.innerWidth < 768) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      setTimeout(() => setToastMsg(null), 4000); // 4 segundos
-    }
-  };
-
-  // Limpiar plantId si el tipo de movimiento deja de ser venta o compra
-  useEffect(() => {
-    if (form.type !== 'venta' && form.type !== 'compra' && form.plantId) {
-      setForm(f => ({ ...f, plantId: '' }));
-    }
-  }, [form.type]);
-
-  // DEBUG: Log para ver qué valor se guarda al seleccionar producto
-  // useEffect(() => {
-  //   if (form.plantId) {
-  //     const selected = plants.find(p => String(p.id) === String(form.plantId));
-  //     console.log('DEBUG plantId:', form.plantId, 'selected:', selected);
-  //   }
-  // }, [form.plantId, plants]);
-
-  if (showOnlyForm) {
-    // Solo mostrar el formulario de carga de caja
+  if (isMobile) {
+    // --- BLOQUE MÓVIL: totales y artículos vendidos hoy con estilo correcto ---
     return (
       <div className="space-y-6">
-        {/* Renderiza totales y movimientosToday si corresponde (móvil y prop presente) */}
-        {isMobileDevice && typeof renderTotals === 'function' && renderTotals({
-          cajaFisicaDia,
-          cajaMPDia,
-          totalGeneralDia,
-          ventasEfectivoDia,
-          ventasMPDia,
-          totalVentasDia,
-          totalComprasDia,
-          cantidadProductosVendidosDia,
-          movementsToday // <-- agregar para exponer los movimientos del día
-        })}
-        {/* Renderiza solo el formulario de movimientos (compra, venta, ingreso, egreso) */}
-        {renderForm()}
-      </div>
-    );
-  }
-  if (hideForm) {
-    // Solo mostrar la tabla/lista de movimientos, sin formulario
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col items-center mb-4 w-full">
-          <div className="w-full max-w-xl bg-gradient-to-br from-pink-100 via-white to-pink-200 rounded-lg shadow border border-pink-300 py-4 px-3">
-            <h2 className="text-2xl font-black text-black text-center tracking-wide mb-1 font-sans">
-              Movimientos de Caja
-            </h2>
-            <h3 className="text-lg font-bold text-pink-700 text-center uppercase tracking-wider mb-2">
-              Ventas Diarias
-            </h3>
-            <hr className="border-t-2 border-pink-400 w-1/2 mx-auto my-2" />
+        <div className="flex w-full gap-2 mb-2">
+          <div className="flex-1 bg-green-100 rounded-lg shadow p-2 flex flex-col items-center border border-green-300">
+            <span className="text-gray-500 text-xs">Efectivo</span>
+            <span className="text-lg font-bold text-green-700">${cajaFisicaDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          <div className="w-full max-w-xl flex flex-row justify-between items-center mt-2">
-            <button onClick={handleReload} className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded border border-blue-300 font-semibold">
-              Recargar
-            </button>
-            <div className="text-base text-green-700 font-bold px-2 border-2 border-purple-300 rounded-lg bg-white shadow-sm">
-              {now.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
-            </div>
+          <div className="flex-1 bg-blue-100 rounded-lg shadow p-2 flex flex-col items-center border border-blue-300">
+            <span className="text-gray-500 text-xs">Mercado Pago</span>
+            <span className="text-lg font-bold text-blue-700">${cajaMPDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex-1 bg-yellow-100 rounded-lg shadow p-2 flex flex-col items-center border border-yellow-300">
+            <span className="text-gray-500 text-xs">Total</span>
+            <span className="text-lg font-bold text-yellow-700">${totalGeneralDia.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
-        {/* Tabla de movimientos del mes */}
-        {movementsThisMonth.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">No hay movimientos registrados este mes.</div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200 text-xs">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-1">Fecha</th>
-                <th className="px-2 py-1">Tipo</th>
-                <th className="px-2 py-1">Detalle</th>
-                <th className="px-2 py-1">Producto</th>
-                <th className="px-2 py-1">Cantidad</th>
-                <th className="px-2 py-1">Precio</th>
-                <th className="px-2 py-1">Total</th>
-                <th className="px-2 py-1">Método</th>
-                <th className="px-2 py-1">Lugar</th>
-                <th className="px-2 py-1">Notas</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {movementsThisMonth.map((mov, idx) => (
-                <tr key={mov.id || idx} className={mov.type === 'compra' ? 'bg-red-50' : mov.type === 'egreso' ? 'bg-yellow-50' : mov.type === 'ingreso' ? 'bg-green-50' : ''}>
-                  <td className="px-2 py-1">{mov.date ? new Date(mov.date).toLocaleDateString() : '-'}</td>
-                  <td className="px-2 py-1">{mov.type}</td>
-                  <td className="px-2 py-1">{(mov.type === 'venta' || mov.type === 'compra') ? '' : mov.detail}</td>
-                  <td className="px-2 py-1">{(mov.type === 'venta' || mov.type === 'compra') ? (plants.find(p => p.id === Number(mov.plantId))?.name || mov.detail || '-') : '-'}</td>
-                  <td className="px-2 py-1 text-right">{(mov.type === 'venta' || mov.type === 'compra') ? mov.quantity : ''}</td>
-                  <td className="px-2 py-1 text-right">{mov.price ? `$${mov.price}` : ''}</td>
-                  <td className="px-2 py-1 text-right">{mov.total ? `$${mov.total}` : ''}</td>
-                  <td className="px-2 py-1">{mov.paymentMethod}</td>
-                  <td className="px-2 py-1">{mov.location}</td>
-                  <td className="px-2 py-1">{mov.notes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="w-full bg-purple-100 rounded-lg shadow p-4 flex flex-col items-center border border-purple-300">
+          <span className="text-gray-500 text-sm">Artículos vendidos hoy</span>
+          <span className="text-2xl font-bold text-purple-700">{cantidadProductosVendidosDia}</span>
+        </div>
+        {/* Formulario móvil sin campo fecha */}
+        <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4 mt-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Tipo</label>
+              <select name="type" value={form.type} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-[#f5f6fa] text-gray-800">
+                {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Detalle</label>
+              <input 
+                name="detail" 
+                value={form.type === 'venta' ? '' : form.detail}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm"
+                disabled={form.type === 'venta'}
+                placeholder={form.type === 'venta' ? 'Solo para ingresos/egresos/compras' : ''}
+              />
+            </div>
+            {(form.type === 'venta' || form.type === 'compra') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Producto</label>
+                <PlantAutocomplete
+                  plants={plants}
+                  value={form.plantId ? String(form.plantId) : ''}
+                  onChange={val => {
+                    if (val && plants.some(p => String(p.id) === String(val))) {
+                      setForm(f => ({ ...f, plantId: String(val) }));
+                    } else {
+                      setForm(f => ({ ...f, plantId: '' }));
+                    }
+                    setShowSuggestPlant(false);
+                    setSuggestedPlantName('');
+                  }}
+                  onBlur={() => {
+                    setShowSuggestPlant(false);
+                    setSuggestedPlantName('');
+                  }}
+                  onSelect={() => {
+                    setShowSuggestPlant(false);
+                    setSuggestedPlantName('');
+                    setTimeout(() => {
+                      const el = document.activeElement;
+                      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    }, 100);
+                  }}
+                  required={form.type === 'venta'}
+                  label="Seleccionar producto"
+                  disabled={form.type !== 'venta' && form.type !== 'compra'}
+                />
+              </div>
+            )}
+            {((form.type === 'venta') || (form.type === 'compra' && form.plantId)) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Cantidad</label>
+                <input type="number" name="quantity" min="1" value={form.quantity} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm" />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Precio</label>
+              <input type="number" name="price" min="0" value={form.price} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Total</label>
+              <input type="number" name="total" min="0" value={form.type === 'ingreso' || form.type === 'egreso' ? form.price : form.total} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm" placeholder="Se calcula automáticamente" disabled={form.type === 'ingreso' || form.type === 'egreso'} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
+              <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-[#f5f6fa] text-gray-800">
+                {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lugar</label>
+              <input name="location" value={form.location} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Notas</label>
+              <input name="notes" value={form.notes} onChange={handleChange} className="mt-1 block w-full border border-gray-400 rounded-md shadow-sm p-2 text-sm" />
+            </div>
+          </div>
+          <button type="submit" className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Registrar Movimiento</button>
+        </form>
       </div>
     );
   }
@@ -556,23 +519,12 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           </div>
         )
       )}
-      <div className="flex flex-col items-center mb-4 w-full">
-        <div className="w-full max-w-xl bg-gradient-to-br from-pink-100 via-white to-pink-200 rounded-lg shadow border border-pink-300 py-4 px-3">
-          <h2 className="text-2xl font-black text-black text-center tracking-wide mb-1 font-sans">
-            Movimientos de Caja
-          </h2>
-          <h3 className="text-lg font-bold text-pink-700 text-center uppercase tracking-wider mb-2">
-            Ventas Diarias
-          </h3>
-          <hr className="border-t-2 border-pink-400 w-1/2 mx-auto my-2" />
-        </div>
-        <div className="w-full max-w-xl flex flex-row justify-between items-center mt-2">
-          <button onClick={handleReload} className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded border border-blue-300 font-semibold">
-            Recargar
-          </button>
-          <div className="text-base text-green-700 font-bold px-2 border-2 border-purple-300 rounded-lg bg-white shadow-sm">
-            {now.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
-          </div>
+      <div className="w-full max-w-xl flex flex-row justify-between items-center mt-2">
+        <button onClick={handleReload} className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded border border-blue-300 font-semibold">
+          Recargar
+        </button>
+        <div className="text-base text-green-700 font-bold px-2 border-2 border-purple-300 rounded-lg bg-white shadow-sm">
+          {now.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}
         </div>
       </div>
       {/* Solo formulario y tabla, sin totales ni resúmenes */}

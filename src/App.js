@@ -20,6 +20,7 @@ const App = () => {
       case 'plants':
         return <InventoryView />;
       case 'movements':
+      case 'caja':
         return <CashView />;
       case 'reportes':
         return <ReportsView />;
@@ -29,7 +30,7 @@ const App = () => {
   };
 
   return (
-    <DesktopLayout currentView={currentView} setCurrentView={setCurrentView}>
+    <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
       {renderView()}
     </DesktopLayout>
   );
