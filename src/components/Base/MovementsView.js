@@ -21,7 +21,7 @@ const PAYMENT_METHODS = [
 ];
 
 // Este componente se moverá a la carpeta Base
-const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals }) => {
+const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth, selectedYear, showOnlySalesOfDay }) => {
   const [plants, setPlants] = useState(propPlants || []);
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({
@@ -50,8 +50,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   // --- FILTRO MENSUAL ---
   const [reloadKey, setReloadKey] = useState(0);
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const currentMonth = typeof selectedMonth === 'number' ? selectedMonth : now.getMonth();
+  const currentYear = typeof selectedYear === 'number' ? selectedYear : now.getFullYear();
   const movementsThisMonth = movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
@@ -250,17 +250,21 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         showToast({ type: 'success', text: (form.type === 'venta' ? 'Venta' : 'Compra') + ' registrada correctamente' });
         setProducts([]);
         setProductForm({ plantId: '', quantity: 1, price: '' });
+        if (onMovementAdded) onMovementAdded();
       } else {
         let movementData = {
           ...form,
           total: Number(total),
-          price: price ? Number(price) : undefined,
           date: isoArgentina
         };
+        if (price !== '' && price !== undefined && !isNaN(Number(price))) {
+          movementData.price = Number(price);
+        }
         delete movementData.quantity;
         delete movementData.plantId;
         await addDoc(collection(db, 'movements'), movementData);
         showToast({ type: 'success', text: 'Movimiento registrado correctamente' });
+        if (onMovementAdded) onMovementAdded();
       }
       setForm({
         type: 'venta',
@@ -540,117 +544,122 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           </form>
         )}
       </div>
-      {/* Historial de movimientos fuera del sticky */}
-      <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0">
-        <h2 className="text-base font-bold mb-2">Histórico de Movimientos del Mes</h2>
-        {movementsThisMonth.length > 0 ? (
-          <table className="w-full border-collapse border border-gray-200 text-xs">
-            <thead>
-              <tr>
-                <th className="border border-gray-200 px-2 py-1">Fecha</th>
-                <th className="border border-gray-200 px-2 py-1">Producto</th>
-                <th className="border border-gray-200 px-2 py-1">Cantidad</th>
-                <th className="border border-gray-200 px-2 py-1">Precio</th>
-                <th className="border border-gray-200 px-2 py-1">Total</th>
-                <th className="border border-gray-200 px-2 py-1">Método de Pago</th>
-                <th className="border border-gray-200 px-2 py-1">Tipo</th>
-                <th className="border border-gray-200 px-2 py-1">Lugar</th>
-                <th className="border border-gray-200 px-2 py-1">Notas</th>
-                <th className="border border-gray-200 px-2 py-1">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movementsThisMonth.map(mov => {
-                let rowClass = '';
-                if (mov.type === 'ingreso') rowClass = 'bg-green-100 text-green-900';
-                if (mov.type === 'egreso') rowClass = 'bg-black text-white';
-                if (mov.type === 'compra') rowClass = 'bg-red-600 text-white';
-                if (mov.type === 'gasto') rowClass = 'bg-orange-500 text-white';
-                const isEditing = editingMovement === mov.id;
-                return (
-                  <tr key={mov.id} className={rowClass}>
-                    {isEditing ? (
-                      <>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <input type="datetime-local" name="date" value={formatDateForInput(editForm.date)} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          {(editForm.type === 'venta' || editForm.type === 'compra') ? (
-                            <select name="plantId" value={editForm.plantId || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
-                              <option value="">-</option>
-                              {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
-                          ) : '-'}
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          {(editForm.type === 'venta' || editForm.type === 'compra') ? (
-                            <input type="number" name="quantity" min="1" value={editForm.quantity ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                          ) : ''}
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <input type="number" name="price" value={editForm.price ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <input type="number" name="total" value={editForm.total ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <select name="paymentMethod" value={editForm.paymentMethod || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
-                            {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <select name="type" value={editForm.type || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
-                            {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <input name="location" value={editForm.location ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <input name="notes" value={editForm.notes ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1 flex gap-1">
-                          <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar'}</button>
-                          <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>Cancelar</button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="border border-gray-200 px-2 py-1">{mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          {plants && mov.plantId
-                            ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
-                            : '-'}
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1 text-right">
-                          {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
-                            ? mov.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
-                            : (mov.type === 'venta' || mov.type === 'compra') ? mov.quantity : ''}
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1 text-right">
-                          {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
-                            ? ''
-                            : mov.price ? `$${mov.price}` : ''}
-                        </td>
-                        <td className="border border-gray-200 px-2 py-1 text-right">{mov.total ? `$${mov.total}` : ''}</td>
-                        <td className="border border-gray-200 px-2 py-1">{PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}</td>
-                        <td className="border border-gray-200 px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
-                        <td className="border border-gray-200 px-2 py-1">{mov.location}</td>
-                        <td className="border border-gray-200 px-2 py-1">{mov.notes}</td>
-                        <td className="border border-gray-200 px-2 py-1">
-                          <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs">Editar</button>
-                        </td>
-                      </>
-                    )}
+      {/* Mostrar solo el formulario si showOnlyForm está activo (ej: Caja Diaria móvil) */}
+      {showOnlyForm ? null : (
+        <>
+          {/* Historial de movimientos fuera del sticky */}
+          <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0">
+            <h2 className="text-base font-bold mb-2">Histórico de Movimientos del Mes</h2>
+            {movementsThisMonth.length > 0 ? (
+              <table className="w-full border-collapse border border-gray-200 text-xs">
+                <thead>
+                  <tr>
+                    <th className="border border-gray-200 px-2 py-1">Fecha</th>
+                    <th className="border border-gray-200 px-2 py-1">Producto</th>
+                    <th className="border border-gray-200 px-2 py-1">Cantidad</th>
+                    <th className="border border-gray-200 px-2 py-1">Precio</th>
+                    <th className="border border-gray-200 px-2 py-1">Total</th>
+                    <th className="border border-gray-200 px-2 py-1">Método de Pago</th>
+                    <th className="border border-gray-200 px-2 py-1">Tipo</th>
+                    <th className="border border-gray-200 px-2 py-1">Lugar</th>
+                    <th className="border border-gray-200 px-2 py-1">Notas</th>
+                    <th className="border border-gray-200 px-2 py-1">Acciones</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          <p className="text-gray-500 text-xs">No hay movimientos registrados este mes.</p>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {movementsThisMonth.map(mov => {
+                    let rowClass = '';
+                    if (mov.type === 'ingreso') rowClass = 'bg-green-100 text-green-900';
+                    if (mov.type === 'egreso') rowClass = 'bg-black text-white';
+                    if (mov.type === 'compra') rowClass = 'bg-red-600 text-white';
+                    if (mov.type === 'gasto') rowClass = 'bg-orange-500 text-white';
+                    const isEditing = editingMovement === mov.id;
+                    return (
+                      <tr key={mov.id} className={rowClass}>
+                        {isEditing ? (
+                          <>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <input type="datetime-local" name="date" value={formatDateForInput(editForm.date)} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              {(editForm.type === 'venta' || editForm.type === 'compra') ? (
+                                <select name="plantId" value={editForm.plantId || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                                  <option value="">-</option>
+                                  {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                              ) : '-'}
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              {(editForm.type === 'venta' || editForm.type === 'compra') ? (
+                                <input type="number" name="quantity" min="1" value={editForm.quantity ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                              ) : ''}
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <input type="number" name="price" value={editForm.price ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <input type="number" name="total" value={editForm.total ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <select name="paymentMethod" value={editForm.paymentMethod || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                                {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                              </select>
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <select name="type" value={editForm.type || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                                {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                              </select>
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <input name="location" value={editForm.location ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <input name="notes" value={editForm.notes ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1 flex gap-1">
+                              <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar'}</button>
+                              <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>Cancelar</button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="border border-gray-200 px-2 py-1">{mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              {plants && mov.plantId
+                                ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
+                                : '-'}
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1 text-right">
+                              {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
+                                ? mov.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+                                : (mov.type === 'venta' || mov.type === 'compra') ? mov.quantity : ''}
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1 text-right">
+                              {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
+                                ? ''
+                                : mov.price ? `$${mov.price}` : ''}
+                            </td>
+                            <td className="border border-gray-200 px-2 py-1 text-right">{mov.total ? `$${mov.total}` : ''}</td>
+                            <td className="border border-gray-200 px-2 py-1">{PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}</td>
+                            <td className="border border-gray-200 px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
+                            <td className="border border-gray-200 px-2 py-1">{mov.location}</td>
+                            <td className="border border-gray-200 px-2 py-1">{mov.notes}</td>
+                            <td className="border border-gray-200 px-2 py-1">
+                              <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs">Editar</button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-gray-500 text-xs">No hay movimientos registrados este mes.</p>
+            )}
+          </div>
+        </>
+      )}
       {/* DEBUG: Mostrar datos en consola para ver si llegan desde Firebase */}
       <div style={{ display: 'none' }}>
         {useEffect(() => {
@@ -667,6 +676,10 @@ MovementsView.propTypes = {
   hideForm: PropTypes.bool,
   showOnlyForm: PropTypes.bool,
   renderTotals: PropTypes.func,
+  onMovementAdded: PropTypes.func,
+  selectedMonth: PropTypes.number,
+  selectedYear: PropTypes.number,
+  showOnlySalesOfDay: PropTypes.bool,
 };
 
 export default MovementsView;
