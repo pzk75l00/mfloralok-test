@@ -177,6 +177,8 @@ const InventoryView = () => {
     <div className="w-full max-w-7xl mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Inventario de Plantas</h2>
+        {/* Botón "Cargar desde Firebase" oculto por requerimiento */}
+        {/*
         <button
           onClick={handleReload}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
@@ -184,6 +186,7 @@ const InventoryView = () => {
         >
           {loading ? 'Cargando...' : 'Cargar desde Firebase'}
         </button>
+        */}
       </div>
       {/* Línea superior: barra flotante con selector de vista, búsqueda, exportar/importar y botón actualizar firestore */}
       <div className="sticky top-2 z-20 bg-white/90 backdrop-blur rounded-xl shadow-md border border-gray-100 px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
@@ -349,10 +352,12 @@ const InventoryView = () => {
               <div className="relative">
                 <button
                   type="button"
-                  className="px-2 py-1 rounded text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 cursor-pointer w-full text-left"
+                  className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer md:w-auto md:text-xs md:px-2 md:py-1 shadow flex items-center gap-2"
+                  style={{ maxWidth: '160px', width: '100%' }}
                   onClick={() => document.getElementById('input-img-producto').click()}
                 >
-                  Seleccionar imagen
+                  <span role="img" aria-label="imagen" className="text-base">🖼️</span>
+                  Buscar imagen
                 </button>
                 <input
                   id="input-img-producto"
