@@ -119,7 +119,7 @@ const InventoryMovilView = () => {
         </button>
         {showForm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-30">
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-4 mb-4 grid grid-cols-1 gap-3 w-full max-w-md relative" style={{paddingBottom: 120, marginBottom: 0, maxHeight: '90vh', overflowY: 'auto'}}>
+            <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow-md">
               <label className="text-sm font-medium text-gray-700">Nombre</label>
               <input name="name" value={form.name} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Nombre" required />
               <label className="text-sm font-medium text-gray-700">Tipo</label>

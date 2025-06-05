@@ -30,4 +30,5 @@ const LoadPlantsToFirestore = () => {
   );
 };
 
-export default LoadPlantsToFirestore;
+// Este componente ya no es necesario en la UI principal. Puede eliminarse o dejarse solo para uso técnico/manual.
+// export default LoadPlantsToFirestore;

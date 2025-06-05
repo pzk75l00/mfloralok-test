@@ -145,60 +145,62 @@ const ReportsMovilView = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-50 pb-24">
-      <div className="rounded-lg shadow bg-white p-3">
-        <div className="font-semibold text-green-700 mb-2">Totales del día</div>
-        <div className="flex flex-wrap gap-2 justify-center text-sm">
-          <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-blue-100 rounded px-3 py-1">Caja Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-purple-100 rounded px-3 py-1">Caja MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
-          <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos: <b>{cantidadProductosVendidos}</b></div>
+    <div>
+      <div className="relative min-h-screen bg-gray-50 pb-24">
+        <div className="rounded-lg shadow bg-white p-3">
+          <div className="font-semibold text-green-700 mb-2">Totales del día</div>
+          <div className="flex flex-wrap gap-2 justify-center text-sm">
+            <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-blue-100 rounded px-3 py-1">Caja Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-purple-100 rounded px-3 py-1">Caja MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos: <b>{cantidadProductosVendidos}</b></div>
+          </div>
         </div>
-      </div>
-      <div className="bg-white rounded-lg shadow p-3 mb-4">
-        <div className="font-semibold text-blue-700 mb-2">Productos más vendidos hoy</div>
-        {topVendidos.length === 0 ? (
-          <div className="text-gray-400 text-sm">No hay ventas registradas hoy.</div>
-        ) : (
-          <>
-            <Bar data={barData} options={barOptions} height={220} />
-            <ul className="text-sm mt-2">
-              {topVendidos.map((item, idx) => (
-                <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
+        <div className="bg-white rounded-lg shadow p-3 mb-4">
+          <div className="font-semibold text-blue-700 mb-2">Productos más vendidos hoy</div>
+          {topVendidos.length === 0 ? (
+            <div className="text-gray-400 text-sm">No hay ventas registradas hoy.</div>
+          ) : (
+            <>
+              <Bar data={barData} options={barOptions} height={220} />
+              <ul className="text-sm mt-2">
+                {topVendidos.map((item, idx) => (
+                  <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        <div className="bg-white rounded-lg shadow p-3 mb-4">
+          <div className="font-semibold text-blue-700 mb-2">Productos más vendidos del mes</div>
+          {topVendidosMes.length === 0 ? (
+            <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
+          ) : (
+            <>
+              <Bar data={barDataMes} options={barOptionsMes} height={220} />
+              <ul className="text-sm mt-2">
+                {topVendidosMes.map((item, idx) => (
+                  <li key={item.name} className={idx === 0 ? 'font-bold text-blue-700' : ''}>{item.name}: {item.qty}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+        <div className="bg-white rounded-lg shadow p-3">
+          <div className="font-semibold text-orange-700 mb-2">Productos a reponer (bajo stock)</div>
+          {bajoStock.length === 0 ? (
+            <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
+          ) : (
+            <ul className="text-sm">
+              {bajoStock.map(p => (
+                <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
               ))}
             </ul>
-          </>
-        )}
-      </div>
-      <div className="bg-white rounded-lg shadow p-3 mb-4">
-        <div className="font-semibold text-blue-700 mb-2">Productos más vendidos del mes</div>
-        {topVendidosMes.length === 0 ? (
-          <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
-        ) : (
-          <>
-            <Bar data={barDataMes} options={barOptionsMes} height={220} />
-            <ul className="text-sm mt-2">
-              {topVendidosMes.map((item, idx) => (
-                <li key={item.name} className={idx === 0 ? 'font-bold text-blue-700' : ''}>{item.name}: {item.qty}</li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
-      <div className="bg-white rounded-lg shadow p-3">
-        <div className="font-semibold text-orange-700 mb-2">Productos a reponer (bajo stock)</div>
-        {bajoStock.length === 0 ? (
-          <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
-        ) : (
-          <ul className="text-sm">
-            {bajoStock.map(p => (
-              <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
-            ))}
-          </ul>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

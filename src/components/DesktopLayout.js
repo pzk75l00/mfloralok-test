@@ -71,8 +71,18 @@ const DesktopLayout = ({ currentView, setCurrentView, children }) => {
           <Navigation currentView={currentView} setCurrentView={setCurrentView} sidebarMode={!sidebarOpen ? 'compact' : 'full'} />
         </aside>
         {/* Main content */}
-        <main className="flex-1 p-6 overflow-y-auto min-h-0">
-          {children}
+        <main
+          className={
+            `flex-1 overflow-y-auto min-h-0 ${currentView === 'caja' ? 'pt-0 pr-6 pb-6 pl-6' : 'p-6'}`
+          }
+          style={currentView === 'caja' ? {paddingTop: 0} : {}}
+        >
+          {currentView === 'caja' ? (
+            // Renderiza los children directamente, sin el contenedor blanco
+            children
+          ) : (
+            children
+          )}
         </main>
       </div>
       {/* Footer */}

@@ -23,6 +23,8 @@ const InventoryView = () => {
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [reloadFlag, setReloadFlag] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -31,12 +33,14 @@ const InventoryView = () => {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     const unsubscribe = onSnapshot(collection(db, 'plants'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPlants(data);
+      setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [reloadFlag]);
 
   // Filtro de plantas según búsqueda
   const filteredPlants = plants.filter(plant => {
@@ -160,11 +164,27 @@ const InventoryView = () => {
     setDeleteModal({ open: false, id: null, name: '' });
   };
 
+  // Botón para recargar desde Firebase
+  const handleReload = () => {
+    setLoading(true);
+    setReloadFlag(flag => flag + 1);
+  };
+
   // Render condicional después de los hooks
   if (isMobile) return <InventoryMovilView />;
 
   return (
-    <div ref={mainContainerRef} className="relative space-y-8">
+    <div className="w-full max-w-7xl mx-auto p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Inventario de Plantas</h2>
+        <button
+          onClick={handleReload}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+          disabled={loading}
+        >
+          {loading ? 'Cargando...' : 'Cargar desde Firebase'}
+        </button>
+      </div>
       {/* Línea superior: barra flotante con selector de vista, búsqueda, exportar/importar y botón actualizar firestore */}
       <div className="sticky top-2 z-20 bg-white/90 backdrop-blur rounded-xl shadow-md border border-gray-100 px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         {/* Selector de vista (izquierda) */}
@@ -288,7 +308,7 @@ const InventoryView = () => {
             Editando: <b className="ml-1">{form.name}</b>
           </div>
         )}
-        <form id="form-alta-producto" ref={formRef} onSubmit={handleSubmit} className="mb-2 w-full transition-shadow">
+        <form ref={formRef} onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
           <div className="w-full grid grid-cols-1 md:grid-cols-8 gap-2 items-end">
             <div>
               <label className="block text-xs font-medium">Nombre</label>

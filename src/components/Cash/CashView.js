@@ -12,8 +12,8 @@ const CashView = (props) => {
   }, []);
   if (isMobile) return <CashMovilView {...props} />;
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      {/* Título eliminado, ahora se muestra en el header global */}
+    <div className="max-w-full mx-auto px-6 space-y-8">
+      {/* Elimino el div sticky vacío para que MovementsView quede pegado arriba */}
       <MovementsView {...props} />
     </div>
   );
