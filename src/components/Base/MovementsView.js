@@ -480,7 +480,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 </div>
                 <div className="flex flex-col min-w-[70px] max-w-[90px]">
                   <label className="text-[11px] font-medium text-gray-700">Precio</label>
-                  <input type="number" name="price" min="0" value={productForm.price} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
+                  <input type="number" name="price" min="0" step="0.01" value={productForm.price} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
                 </div>
                 <button type="button" onClick={() => handleAddProduct()} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-4" id="btn-agregar-producto">Agregar</button>
                 {/* Lista de productos agregados */}
@@ -501,8 +501,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                           <tr key={idx}>
                             <td className="border px-1">{p.name}</td>
                             <td className="border px-1 text-right">{p.quantity}</td>
-                            <td className="border px-1 text-right">${p.price}</td>
-                            <td className="border px-1 text-right">${p.total}</td>
+                            <td className="border px-1 text-right">${Number(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="border px-1 text-right">${Number(p.total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="border px-1 text-center"><button type="button" onClick={() => handleRemoveProduct(idx)} className="text-red-600">✕</button></td>
                           </tr>
                         ))}
