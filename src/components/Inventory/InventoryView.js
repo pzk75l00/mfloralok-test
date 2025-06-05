@@ -4,6 +4,7 @@ import { db } from '../../firebase/firebaseConfig';
 import InventoryMovilView from '../Movil/InventoryMovilView';
 import PlantCard from './PlantCard';
 import LoadPlantsToFirestore from '../Base/LoadPlantsToFirestore';
+import ProductTypesManager from './ProductTypesManager';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
@@ -25,6 +26,8 @@ const InventoryView = () => {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [reloadFlag, setReloadFlag] = useState(0);
+  const [showTypesManager, setShowTypesManager] = useState(false);
+  const [productTypes, setProductTypes] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -41,6 +44,13 @@ const InventoryView = () => {
     });
     return () => unsubscribe();
   }, [reloadFlag]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'productTypes'), snap => {
+      setProductTypes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
 
   // Filtro de plantas según búsqueda
   const filteredPlants = plants.filter(plant => {
@@ -304,7 +314,13 @@ const InventoryView = () => {
       </div>
       {/* Bloque 1: Carga/edición de plantas */}
       <section className="bg-white rounded-xl shadow p-6 border border-gray-100">
-        <h2 ref={titleRef} className="text-2xl font-bold mb-2 text-green-700">Carga - Actualización de productos</h2>
+        <h2 ref={titleRef} className="text-2xl font-bold mb-2 text-green-700 flex items-center gap-2">
+          Carga - Actualización de productos
+          <button type="button" className="ml-2 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded border border-green-300 text-green-700" onClick={() => setShowTypesManager(true)}>
+            Gestionar tipos
+          </button>
+        </h2>
+        {showTypesManager && <ProductTypesManager onClose={() => setShowTypesManager(false)} />}
         {editingId && (
           <div className="mb-2 px-2 py-1 rounded bg-green-50 border border-green-200 text-green-800 text-xs font-semibold flex items-center gap-2">
             <span className="material-icons text-base align-middle">edit</span>
@@ -321,10 +337,9 @@ const InventoryView = () => {
               <label className="block text-xs font-medium">Tipo</label>
               <select name="type" value={form.type} onChange={handleChange} className="border rounded p-1 w-full text-xs" required>
                 <option value="">Seleccionar...</option>
-                <option value="Plantas de Interior">Plantas de Interior</option>
-                <option value="Plantas de Exterior">Plantas de Exterior</option>
-                <option value="Macetas">Macetas</option>
-                <option value="Otros">Otros</option>
+                {productTypes.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
               </select>
             </div>
             <div>
