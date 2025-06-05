@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
+import PropTypes from 'prop-types';
 
 const ProductTypesManager = ({ onClose }) => {
   const [types, setTypes] = useState([]);
@@ -75,6 +76,10 @@ const ProductTypesManager = ({ onClose }) => {
       </div>
     </div>
   );
+};
+
+ProductTypesManager.propTypes = {
+  onClose: PropTypes.func.isRequired
 };
 
 export default ProductTypesManager;

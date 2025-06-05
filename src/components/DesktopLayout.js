@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navigation from './Navigation';
 import logo from '../assets/images/logo.png';
 import PropTypes from 'prop-types';
+import { UserContext } from '../App';
 
 const socialLinks = [
   {
@@ -58,18 +59,22 @@ const DesktopLayout = ({ currentView, setCurrentView, children }) => {
       </header>
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <aside className={`transition-all duration-300 bg-white shadow-lg flex flex-col ${sidebarOpen ? 'w-56' : 'w-16'} h-screen sticky top-0 min-h-0 z-20`}>
-          <button
-            className="p-2 m-2 rounded hover:bg-gray-100 text-gray-400 self-end"
-            onClick={() => setSidebarOpen(o => !o)}
-            title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? 'M6 18L18 12L6 6' : 'M6 6l12 6-12 6'} />
-            </svg>
-          </button>
-          <Navigation currentView={currentView} setCurrentView={setCurrentView} sidebarMode={!sidebarOpen ? 'compact' : 'full'} />
-        </aside>
+        <UserContext.Consumer>
+          {({ userData }) => (
+            <aside className={`transition-all duration-300 bg-white shadow-lg flex flex-col ${sidebarOpen ? 'w-56' : 'w-16'} h-screen sticky top-0 min-h-0 z-20`}>
+              <button
+                className="p-2 m-2 rounded hover:bg-gray-100 text-gray-400 self-end"
+                onClick={() => setSidebarOpen(o => !o)}
+                title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? 'M6 18L18 12L6 6' : 'M6 6l12 6-12 6'} />
+                </svg>
+              </button>
+              <Navigation currentView={currentView} setCurrentView={setCurrentView} sidebarMode={!sidebarOpen ? 'compact' : 'full'} userData={userData} />
+            </aside>
+          )}
+        </UserContext.Consumer>
         {/* Main content */}
         <main
           className={
