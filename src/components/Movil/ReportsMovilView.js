@@ -9,12 +9,13 @@ import {
   BarElement,
   PointElement, // <-- Agregado
   LineElement,  // <-- Agregado
+  LineController, // <-- AGREGADO PARA GRÁFICOS DE LÍNEA
   Title,
   Tooltip,
   Legend
 } from 'chart.js';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, LineController, Title, Tooltip, Legend);
 
 // Vista móvil para reportes (puedes personalizar según necesidades)
 const ReportsMovilView = () => {
