@@ -294,8 +294,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         let movementData = {
           ...form,
           total: Number(total),
-          date: isoArgentina
+          date: isoArgentina,
+          detail: form.notes || '', // asegurar que siempre se guarda el detalle
         };
+        // Si es compra de un solo producto, guardar también el nombre
+        if (form.type === 'compra' && form.plantId) {
+          const plant = plants.find(p => String(p.id) === String(form.plantId));
+          if (plant) movementData.plantName = plant.name;
+        }
         if (price !== '' && price !== undefined && !isNaN(Number(price))) {
           movementData.price = Number(price);
         }
@@ -562,15 +568,15 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 )}
               </>
             ) : (
-              // Para otros tipos, mostrar campo de precio y detalle (notes)
+              // Para otros tipos, mostrar campo de detalle (notes) y precio
               <>
-                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
-                  <label className="text-[11px] font-medium text-gray-700">Precio</label>
-                  <input type="number" name="price" min="0" step="0.01" value={form.price} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-                </div>
                 <div className="flex flex-col w-full">
                   <label className="text-[11px] font-medium text-gray-700">Detalle</label>
                   <input name="notes" value={form.notes} onChange={handleChange} placeholder="Detalle del movimiento..." className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
+                </div>
+                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
+                  <label className="text-[11px] font-medium text-gray-700">Precio</label>
+                  <input type="number" name="price" min="0" step="0.01" value={form.price} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
                 </div>
               </>
             )}

@@ -15,6 +15,7 @@ const CashMovilView = (props) => {
   const [selectedMonth, setSelectedMonth] = useState(initialNow.getMonth());
   const [selectedYear, setSelectedYear] = useState(initialNow.getFullYear());
   const [movements, setMovements] = useState([]);
+  const [plants, setPlants] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -38,7 +39,14 @@ const CashMovilView = (props) => {
       });
       setComprasEgresosHoy(comprasEgresos);
     });
-    return () => unsubscribe();
+    const unsubPlants = onSnapshot(collection(db, 'plants'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlants(data);
+    });
+    return () => {
+      unsubscribe();
+      unsubPlants();
+    };
   }, [reloadKey]);
 
   // --- Lógica para filtrar movimientos del mes seleccionado ---
@@ -162,24 +170,41 @@ const CashMovilView = (props) => {
           <div className="mt-8 w-full max-w-xl mx-auto">
             {comprasEgresosHoy.length > 0 && (
               <div className="rounded-lg bg-red-50 border border-red-200 shadow-sm p-2 mt-2">
-                <div className="text-xs font-semibold text-red-700 mb-2 text-center">Compras y egresos de hoy</div>
+                <div className="text-xs font-semibold text-red-700 mb-2 text-center">Compras, egresos y gastos de hoy</div>
                 <ul className="divide-y divide-red-100">
                   <li className="flex flex-row items-center justify-between px-1 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded mb-1">
-                    <span className="w-14 text-left">Fecha</span>
-                    <span className="flex-1 px-2 text-left">Detalle</span>
+                    <span className="w-14 text-left">Tipo</span>
+                    <span className="flex-1 px-2 text-left">Producto/Detalle</span>
                     <span className="w-20 text-center">Precio</span>
                     <span className="w-14 text-center">Método</span>
                     <span className="max-w-[80px] text-left">Lugar</span>
                   </li>
-                  {comprasEgresosHoy.map((m, idx) => (
-                    <li key={m.id || idx} className="flex flex-row items-center justify-between px-1 py-1 text-xs">
-                      <span className="text-gray-700 w-14 text-left">{new Date(m.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</span>
-                      <span className="text-gray-600 flex-1 px-2 truncate text-left">{m.detail || '-'}</span>
-                      <span className="font-semibold text-red-700 w-20 text-center">${m.total?.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                      <span className="text-gray-700 w-14 text-center">{m.paymentMethod === 'efectivo' ? 'Efectivo' : m.paymentMethod === 'mercadoPago' ? 'MP' : '-'}</span>
-                      <span className="text-gray-500 max-w-[80px] truncate text-left ml-2">{m.location || '-'}</span>
-                    </li>
-                  ))}
+                  {comprasEgresosHoy.map((m, idx) => {
+                    let productoDetalle = '-';
+                    if (m.type === 'compra') {
+                      if (Array.isArray(m.products) && m.products.length > 0) {
+                        productoDetalle = m.products.map(p => p.name).join(', ');
+                      } else if (m.plantName) {
+                        productoDetalle = m.plantName;
+                      } else if (m.plantId && Array.isArray(plants) && plants.length > 0) {
+                        const plant = plants.find(p => String(p.id) === String(m.plantId));
+                        productoDetalle = plant ? plant.name : (m.detail || m.notes || '-');
+                      } else {
+                        productoDetalle = m.detail || m.notes || '-';
+                      }
+                    } else {
+                      productoDetalle = m.detail || m.notes || '-';
+                    }
+                    return (
+                      <li key={m.id || idx} className="flex flex-row items-center justify-between px-1 py-1 text-xs">
+                        <span className="text-gray-700 w-14 text-left">{m.type ? m.type.charAt(0).toUpperCase() + m.type.slice(1) : '-'}</span>
+                        <span className="text-gray-600 flex-1 px-2 truncate text-left">{productoDetalle}</span>
+                        <span className="font-semibold text-red-700 w-20 text-center">${m.total?.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-gray-700 w-14 text-center">{m.paymentMethod === 'efectivo' ? 'Efectivo' : m.paymentMethod === 'mercadoPago' ? 'MP' : '-'}</span>
+                        <span className="text-gray-500 max-w-[80px] truncate text-left ml-2">{m.location || '-'}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
