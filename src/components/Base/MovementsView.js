@@ -140,15 +140,53 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    console.log('DEBUG: handleSubmit called', form, products);
+    console.log('[MovementsView] handleSubmit called', {form, products, productForm});
     let total = form.total;
     let price = form.price;
+    // --- AJUSTE FLUJO VENTA/COMPRA UN SOLO PRODUCTO EN MÓVIL ---
+    let currentProducts = products;
+    let autoProduct = null;
+    if ((form.type === 'venta' || form.type === 'compra') && products.length === 0) {
+      // Si los campos requeridos están completos, agregamos el producto automáticamente
+      if (productForm.plantId && productForm.quantity && productForm.price) {
+        const plant = plants.find(p => String(p.id) === String(productForm.plantId));
+        // Validar stock solo para ventas
+        if (form.type === 'venta') {
+          if (!plant) {
+            setErrorMsg('Producto no encontrado en inventario.');
+            console.log('[MovementsView] ERROR: Producto no encontrado', {productForm, plants});
+            return;
+          }
+          const currentStock = plant.stock || 0;
+          if (currentStock < Number(productForm.quantity)) {
+            setErrorMsg(`Stock insuficiente para ${plant.name}. Disponible: ${currentStock}`);
+            console.log('[MovementsView] ERROR: Stock insuficiente', {plant, productForm});
+            return;
+          }
+        }
+        autoProduct = {
+          plantId: productForm.plantId,
+          name: plant?.name || '',
+          quantity: Number(productForm.quantity),
+          price: Number(productForm.price),
+          total: Number(productForm.quantity) * Number(productForm.price)
+        };
+        currentProducts = [autoProduct];
+        // No usar setProducts aquí, solo para el render visual
+        setProductForm({ plantId: '', quantity: 1, price: '' });
+        console.log('[MovementsView] Producto agregado automáticamente (móvil, submit directo)', autoProduct);
+      } else {
+        setErrorMsg('Agregue al menos un producto.');
+        console.log('[MovementsView] ERROR: Campos incompletos para agregar producto automáticamente', {productForm});
+        return;
+      }
+    }
     if (form.type === 'venta' || form.type === 'compra') {
-      if (products.length === 0) {
+      if (currentProducts.length === 0) {
         setErrorMsg('Agregue al menos un producto.');
         return;
       }
-      total = products.reduce((sum, p) => sum + p.total, 0);
+      total = currentProducts.reduce((sum, p) => sum + p.total, 0);
     }
     // Forzar siempre dos decimales exactos
     if (form.type === 'venta' || form.type === 'compra') {
@@ -162,7 +200,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     }
     // Validaciones adicionales para ventas y compras multiproducto
     if (form.type === 'venta' || form.type === 'compra') {
-      if (products.length === 0) {
+      if (currentProducts.length === 0) {
         setErrorMsg('Agregue al menos un producto.');
         return;
       }
@@ -207,7 +245,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     try {
       console.log('DEBUG: Intentando guardar movimiento', form, products);
       if (form.type === 'venta' || form.type === 'compra') {
-        for (const p of products) {
+        // Usar currentProducts (puede venir de products o del submit directo)
+        for (const p of currentProducts) {
           // Validar stock antes de registrar venta
           if (form.type === 'venta') {
             const plantRef = doc(db, 'plants', String(p.plantId));
@@ -444,26 +483,31 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   return (
     <div>
       {/* Sticky caja de escritorio con el formulario */}
-      <div className="sticky top-0 z-20 bg-white border border-gray-100 rounded-xl shadow-md px-2 py-1 w-full mx-0 mt-6">
+      <div className={`sticky top-0 z-20 bg-white border border-gray-100 rounded-xl shadow-md px-2 py-1 w-full mx-0 mt-6 ${isMobileDevice ? 'block' : ''}`}>
         {/* Formulario de carga de caja de escritorio */}
         {!hideForm && (
-          <form onSubmit={handleSubmit} className="flex flex-row flex-wrap gap-1 items-end w-full text-xs">
+          <form onSubmit={handleSubmit} className={`w-full ${isMobileDevice ? 'flex flex-col gap-3 items-stretch' : 'flex flex-row flex-wrap gap-1 items-end' } text-xs`}>
             {/* Selector de tipo de movimiento */}
-            <div className="flex flex-col min-w-[110px] max-w-[130px]">
+            <div className="flex flex-col w-full sm:min-w-[110px] sm:max-w-[130px]">
               <label className="text-[11px] font-medium text-gray-700">Tipo</label>
               <select name="type" value={form.type} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs">
                 {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
-            {/* Si es venta o compra, permitir multiproducto */}
+            {/* Si es venta o compra, permitir multiproducto y búsqueda */}
             {(form.type === 'venta' || form.type === 'compra') ? (
               <>
-                <div className="flex flex-col min-w-[120px] max-w-[160px]">
+                <div className="flex flex-col w-full sm:min-w-[120px] sm:max-w-[160px]">
+                  {/* Solo un label para Producto */}
                   <label className="text-[11px] font-medium text-gray-700">Producto</label>
-                  <select name="plantId" value={productForm.plantId} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs">
-                    <option value="">Seleccionar...</option>
-                    {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  {/* Autocompletado de productos */}
+                  <PlantAutocomplete
+                    plants={plants}
+                    value={productForm.plantId}
+                    onChange={id => setProductForm(prev => ({ ...prev, plantId: id }))}
+                    placeholder="Buscar producto..."
+                    label=""
+                  />
                   {productForm.plantId && (() => {
                     const plant = plants.find(p => String(p.id) === String(productForm.plantId));
                     if (!plant) return null;
@@ -474,15 +518,15 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                     );
                   })()}
                 </div>
-                <div className="flex flex-col min-w-[60px] max-w-[80px]">
+                <div className="flex flex-col w-full sm:min-w-[60px] sm:max-w-[80px]">
                   <label className="text-[11px] font-medium text-gray-700">Cantidad</label>
                   <input type="number" name="quantity" min="1" value={productForm.quantity} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
                 </div>
-                <div className="flex flex-col min-w-[70px] max-w-[90px]">
+                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
                   <label className="text-[11px] font-medium text-gray-700">Precio</label>
                   <input type="number" name="price" min="0" step="0.01" value={productForm.price} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
                 </div>
-                <button type="button" onClick={() => handleAddProduct()} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-4" id="btn-agregar-producto">Agregar</button>
+                <button type="button" onClick={() => handleAddProduct()} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-4 w-full sm:w-auto" id="btn-agregar-producto">Agregar</button>
                 {/* Lista de productos agregados */}
                 <div className="w-full mt-2">
                   {products.length > 0 && (
@@ -518,29 +562,30 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 )}
               </>
             ) : (
-              // ...existing code para otros tipos...
-              <></>
+              // Para otros tipos, mostrar campo de precio y detalle (notes)
+              <>
+                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
+                  <label className="text-[11px] font-medium text-gray-700">Precio</label>
+                  <input type="number" name="price" min="0" step="0.01" value={form.price} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
+                </div>
+                <div className="flex flex-col w-full">
+                  <label className="text-[11px] font-medium text-gray-700">Detalle</label>
+                  <input name="notes" value={form.notes} onChange={handleChange} placeholder="Detalle del movimiento..." className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
+                </div>
+              </>
             )}
-            {/* Método de Pago, Fecha, Lugar, Notas, Botón Registrar: siempre */}
-            <div className="flex flex-col min-w-[90px] max-w-[110px]">
+            {/* Método de Pago, Lugar, Botón Registrar: siempre */}
+            <div className="flex flex-col w-full sm:min-w-[90px] sm:max-w-[110px]">
               <label className="text-[11px] font-medium text-gray-700">Pago</label>
               <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs">
                 {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
-            <div className="flex flex-col min-w-[110px] max-w-[130px]">
-              <label className="text-[11px] font-medium text-gray-700">Fecha</label>
-              <input type="datetime-local" name="date" value={form.date} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-            </div>
-            <div className="flex flex-col min-w-[80px] max-w-[100px]">
+            <div className="flex flex-col w-full sm:min-w-[80px] sm:max-w-[100px]">
               <label className="text-[11px] font-medium text-gray-700">Lugar</label>
               <input name="location" value={form.location} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
             </div>
-            <div className="flex flex-col min-w-[100px] max-w-[120px]">
-              <label className="text-[11px] font-medium text-gray-700">Notas</label>
-              <input name="notes" value={form.notes} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-            </div>
-            <button type="submit" className="bg-green-600 text-white px-2 py-1 rounded font-semibold text-xs ml-2" id="btn-registrar-venta">{form.type === 'venta' ? 'Registrar Venta' : 'Registrar'}</button>
+            <button type="submit" className="bg-green-600 text-white px-2 py-2 rounded font-semibold text-base mt-2 w-full sm:w-auto" id="btn-registrar-venta">{form.type === 'venta' ? 'Registrar Venta' : 'Registrar'}</button>
           </form>
         )}
       </div>

@@ -32,12 +32,15 @@ const ReportsMovilView = () => {
     return () => { unsubMov(); unsubPlants(); };
   }, []);
 
-  // Filtrar movimientos de hoy
+  // Filtrar movimientos de hoy (ajustado para comparar solo año, mes y día, ignorando hora/min/seg y desfases de zona horaria)
   const now = new Date();
   const hoy = movements.filter(mov => {
     if (!mov.date) return false;
+    // Soporta tanto timestamps como strings ISO
     const d = new Date(mov.date);
-    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
   });
 
   // Totales del día
@@ -159,8 +162,8 @@ const ReportsMovilView = () => {
   const totalDisponibleMP = cajaMP;
 
   // Mes
-  const gastosEfectivoMes = sumMov(movimientosMes2, 'egreso', 'efectivo') + sumMov(movimientosMes2, 'compra', 'efectivo');
-  const gastosMPMes = sumMov(movimientosMes2, 'egreso', 'mercadoPago') + sumMov(movimientosMes2, 'compra', 'mercadoPago');
+  const gastosEfectivoMes = sumMov(movimientosMes2, 'egreso', 'efectivo') + sumMov(movimientosMes2, 'compra', 'efectivo') + sumMov(movimientosMes2, 'gasto', 'efectivo');
+  const gastosMPMes = sumMov(movimientosMes2, 'egreso', 'mercadoPago') + sumMov(movimientosMes2, 'compra', 'mercadoPago') + sumMov(movimientosMes2, 'gasto', 'mercadoPago');
   const ventasEfectivoMes = sumMov(movimientosMes2, 'venta', 'efectivo');
   const ventasMPMes = sumMov(movimientosMes2, 'venta', 'mercadoPago');
 
@@ -316,35 +319,75 @@ const ReportsMovilView = () => {
     },
   };
 
+  // --- GRÁFICO DE VENTAS VS GASTOS DEL MES (sin diferenciar método de pago) ---
+  // Usar variable diferente para evitar duplicado
+  const totalVentasMes = movimientosMes2.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const totalGastoMes_Vs = movimientosMes2.filter(m => m.type === 'egreso' || m.type === 'compra' || m.type === 'gasto').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const barDataVentasVsGastos = {
+    labels: ['Ventas', 'Gastos'],
+    datasets: [
+      {
+        label: 'Total ($)',
+        data: [totalVentasMes, totalGastoMes_Vs],
+        backgroundColor: ['rgba(34,197,94,0.7)', 'rgba(239,68,68,0.7)'],
+        borderColor: ['rgba(34,197,94,1)', 'rgba(239,68,68,1)'],
+        borderWidth: 1,
+      },
+    ],
+  };
+  const barOptionsVentasVsGastos = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: 'Ventas vs Gastos del mes' },
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'Total ($)' } },
+    },
+  };
+
   return (
     <div>
       <div className="relative min-h-screen bg-gray-50 pb-24">
         {/* NUEVOS TOTALES */}
+        {hoy.length === 0 ? (
+          <div className="rounded-lg shadow bg-white p-3 mb-4">
+            <div className="font-semibold text-blue-700 mb-2">Saldo de caja disponible</div>
+            <div className="flex flex-wrap gap-2 justify-center text-sm">
+              <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+              <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg shadow bg-white p-3 mb-4">
+            <div className="font-semibold text-green-700 mb-2">Totales del día</div>
+            <div className="flex flex-wrap gap-2 justify-center text-sm">
+              <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+              <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+              <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+              <div className="bg-pink-100 rounded px-3 py-1">Gastos: <b>{hoy.filter(m => m.type === 'gasto').reduce((sum, m) => sum + (Number(m.total) || 0), 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+              <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            </div>
+          </div>
+        )}
+        {/* Saldo de caja actual (opcional, si se quiere mostrar) */}
+        {/*
         <div className="rounded-lg shadow bg-white p-3 mb-4">
-          <div className="font-semibold text-green-700 mb-2">Totales del día</div>
+          <div className="font-semibold text-blue-700 mb-2">Saldo de caja actual</div>
           <div className="flex flex-wrap gap-2 justify-center text-sm">
-            <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center text-sm mt-2">
-            <div className="bg-blue-100 rounded px-3 py-1">Total Disponible Efectivo: <b>{totalDisponibleEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-100 rounded px-3 py-1">Total Disponible MP: <b>{totalDisponibleMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center text-sm mt-2">
-            <div className="bg-blue-50 rounded px-3 py-1">Gastos/Compras/Egresos Efectivo: <b>{gastosEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-50 rounded px-3 py-1">Gastos/Compras/Egresos MP: <b>{gastosMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{totalDisponibleEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{totalDisponibleMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
           </div>
         </div>
+        */}
         {/* TOTALES DEL MES */}
         <div className="rounded-lg shadow bg-white p-3 mb-4">
           <div className="font-semibold text-green-700 mb-2">Totales del mes</div>
           <div className="flex flex-wrap gap-2 justify-center text-sm">
             <div className="bg-green-100 rounded px-3 py-1">Ventas Efectivo: <b>{ventasEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
             <div className="bg-purple-100 rounded px-3 py-1">Ventas MP: <b>{ventasMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-blue-50 rounded px-3 py-1">Gastos/Compras/Egresos Efectivo: <b>{gastosEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-50 rounded px-3 py-1">Gastos/Compras/Egresos MP: <b>{gastosMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-blue-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos Efectivo: <b>{gastosEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-purple-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos MP: <b>{gastosMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
             <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos en el mes: <b>{totalProductosVendidosMes}</b></div>
           </div>
         </div>
@@ -433,6 +476,16 @@ const ReportsMovilView = () => {
             height={220}
           />
         </div>
+        {/* GRÁFICO DE GASTOS DEL MES */}
+        <div className="bg-white rounded-lg shadow p-3 mb-4">
+          <div className="font-semibold text-red-700 mb-2">Gastos del mes por tipo y método de pago</div>
+          <Bar data={barDataGastosMes} options={barOptionsGastosMes} height={220} />
+        </div>
+        {/* GRÁFICO DE VENTAS VS GASTOS DEL MES */}
+        <div className="bg-white rounded-lg shadow p-3 mb-4">
+          <div className="font-semibold text-blue-700 mb-2">Ventas vs Gastos del mes</div>
+          <Bar data={barDataVentasVsGastos} options={barOptionsVentasVsGastos} height={120} />
+        </div>
         {/* TABLA DE GANANCIA POR PRODUCTO */}
         <div className="bg-white rounded-lg shadow p-3 mb-4">
           <div className="font-semibold text-green-700 mb-2">Ganancia por producto vendido (mes)</div>
@@ -468,7 +521,7 @@ const ReportsMovilView = () => {
           )}
         </div>
         {/* PRODUCTOS A REPONER */}
-        <div className="bg-white rounded-lg shadow p-3">
+        <div className="bg-white rounded-lg shadow p-3 mb-4">
           <div className="font-semibold text-orange-700 mb-2">Productos a reponer (bajo stock)</div>
           {bajoStock2.length === 0 ? (
             <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
@@ -479,11 +532,6 @@ const ReportsMovilView = () => {
               ))}
             </ul>
           )}
-        </div>
-        {/* GRÁFICO DE GASTOS DEL MES */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-red-700 mb-2">Gastos del mes por tipo y método de pago</div>
-          <Bar data={barDataGastosMes} options={barOptionsGastosMes} height={220} />
         </div>
       </div>
     </div>
