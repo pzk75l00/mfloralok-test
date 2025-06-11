@@ -168,16 +168,16 @@ const CashMovilView = (props) => {
                     <span className="w-14 text-left">Fecha</span>
                     <span className="w-20 text-center">Total</span>
                     <span className="w-14 text-center">Método</span>
-                    <span className="flex-1 px-2 text-left">Lugar</span>
-                    <span className="max-w-[80px] text-left">Nota</span>
+                    <span className="flex-1 px-2 text-left">Detalle</span>
+                    <span className="max-w-[80px] text-left">Lugar</span>
                   </li>
                   {comprasEgresosHoy.map((m, idx) => (
                     <li key={m.id || idx} className="flex flex-row items-center justify-between px-1 py-1 text-xs">
                       <span className="text-gray-700 w-14 text-left">{new Date(m.date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</span>
                       <span className="font-semibold text-red-700 w-20 text-center">${m.total?.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                       <span className="text-gray-700 w-14 text-center">{m.paymentMethod === 'efectivo' ? 'Efectivo' : m.paymentMethod === 'mercadoPago' ? 'MP' : '-'}</span>
-                      <span className="text-gray-600 flex-1 px-2 truncate text-left">{m.location || '-'}</span>
-                      <span className="text-gray-500 max-w-[80px] truncate text-left ml-2">{m.notes || '-'}</span>
+                      <span className="text-gray-600 flex-1 px-2 truncate text-left">{m.detail || '-'}</span>
+                      <span className="text-gray-500 max-w-[80px] truncate text-left ml-2">{m.location || '-'}</span>
                     </li>
                   ))}
                 </ul>
