@@ -279,7 +279,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             quantity: p.quantity,
             price: p.price,
             total: p.total,
-            detail: '',
+            detail: form.notes || '', // <-- ahora guarda lo que el usuario escribió en Detalle
             date: isoArgentina
           };
           // Eliminar campos innecesarios
