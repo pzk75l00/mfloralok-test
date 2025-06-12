@@ -689,10 +689,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                               {isEditing ? (
                                 <>
                                   <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Guardar movimiento">
-                                    <span className="material-icons text-base align-middle">check</span>
+                                    <span className="material-icons text-base align-middle">Guardar</span>
                                   </button>
                                   <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Cancelar edición">
-                                    <span className="material-icons text-base align-middle">close</span>
+                                    <span className="material-icons text-base align-middle">Cerrar</span>
                                   </button>
                                 </>
                               ) : (
@@ -727,7 +727,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                             <td className="border border-gray-200 px-2 py-1 hidden sm:table-cell">{mov.notes}</td>
                             <td className="border border-gray-200 px-2 py-1 flex gap-1 justify-center items-center">
                               <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center" aria-label="Editar movimiento">
-                                <span className="material-icons text-base align-middle">edit</span>
+                                <span className="material-icons text-base align-middle">Editar</span>
                               </button>
                             </td>
                           </>
