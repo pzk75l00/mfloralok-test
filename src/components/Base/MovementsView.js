@@ -21,7 +21,7 @@ const PAYMENT_METHODS = [
 ];
 
 // Este componente se moverá a la carpeta Base
-const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth, selectedYear, showOnlySalesOfDay }) => {
+const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth, selectedYear, showOnlySalesOfDay, selectedDate }) => {
   const [plants, setPlants] = useState(propPlants || []);
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({
@@ -485,6 +485,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     }
   }, [productForm.plantId, form.type, plants]);
 
+  // Detectar si se debe mostrar el selector de fecha (solo móvil, solo si selectedDate viene como prop)
+  const showDateInput = isMobile && selectedDate !== undefined && false; // Forzar a false para ventas móvil
+
   // Render sugerencia de alta de planta
   return (
     <div>
@@ -500,6 +503,20 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
+            {/* Selector de fecha solo en móvil y si selectedDate viene como prop */}
+            {showDateInput && (
+              <div className="flex flex-col w-full sm:min-w-[110px] sm:max-w-[130px]">
+                <label className="text-[11px] font-medium text-gray-700">Fecha</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date.slice(0, 10)}
+                  onChange={e => setForm(prev => ({ ...prev, date: e.target.value + prev.date.slice(10) }))}
+                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs"
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+            )}
             {/* Si es venta o compra, permitir multiproducto y búsqueda */}
             {(form.type === 'venta' || form.type === 'compra') ? (
               <>
@@ -599,10 +616,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       {showOnlyForm ? null : (
         <>
           {/* Historial de movimientos fuera del sticky */}
-          <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0">
+          <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0 overflow-x-auto">
             <h2 className="text-base font-bold mb-2">Histórico de Movimientos del Mes</h2>
             {movementsThisMonth.length > 0 ? (
-              <table className="w-full border-collapse border border-gray-200 text-xs">
+              <table className="min-w-full border-collapse border border-gray-200 text-xs whitespace-nowrap">
                 <thead>
                   <tr>
                     <th className="border border-gray-200 px-2 py-1">Fecha</th>
@@ -613,8 +630,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                     <th className="border border-gray-200 px-2 py-1">Método de Pago</th>
                     <th className="border border-gray-200 px-2 py-1">Tipo</th>
                     <th className="border border-gray-200 px-2 py-1">Lugar</th>
-                    <th className="border border-gray-200 px-2 py-1">Notas</th>
-                    <th className="border border-gray-200 px-2 py-1">Acciones</th>
+                    {/* Ocultar Notas y Acciones en móvil para mejor visualización */}
+                    <th className="border border-gray-200 px-2 py-1 hidden sm:table-cell">Notas</th>
+                    <th className="border border-gray-200 px-2 py-1 hidden sm:table-cell">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -667,9 +685,21 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                             <td className="border border-gray-200 px-2 py-1">
                               <input name="notes" value={editForm.notes ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
                             </td>
-                            <td className="border border-gray-200 px-2 py-1 flex gap-1">
-                              <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>{editLoading ? 'Guardando...' : 'Guardar'}</button>
-                              <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs" disabled={editLoading}>Cancelar</button>
+                            <td className="border border-gray-200 px-2 py-1 flex gap-1 justify-center items-center">
+                              {isEditing ? (
+                                <>
+                                  <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Guardar movimiento">
+                                    <span className="material-icons text-base align-middle">check</span>
+                                  </button>
+                                  <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Cancelar edición">
+                                    <span className="material-icons text-base align-middle">close</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <button type="button" onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center" aria-label="Editar movimiento">
+                                  <span className="material-icons text-base align-middle">edit</span>
+                                </button>
+                              )}
                             </td>
                           </>
                         ) : (
@@ -694,9 +724,11 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                             <td className="border border-gray-200 px-2 py-1">{PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}</td>
                             <td className="border border-gray-200 px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
                             <td className="border border-gray-200 px-2 py-1">{mov.location}</td>
-                            <td className="border border-gray-200 px-2 py-1">{mov.notes}</td>
-                            <td className="border border-gray-200 px-2 py-1">
-                              <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs">Editar</button>
+                            <td className="border border-gray-200 px-2 py-1 hidden sm:table-cell">{mov.notes}</td>
+                            <td className="border border-gray-200 px-2 py-1 flex gap-1 justify-center items-center">
+                              <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center" aria-label="Editar movimiento">
+                                <span className="material-icons text-base align-middle">edit</span>
+                              </button>
                             </td>
                           </>
                         )}
@@ -731,6 +763,7 @@ MovementsView.propTypes = {
   selectedMonth: PropTypes.number,
   selectedYear: PropTypes.number,
   showOnlySalesOfDay: PropTypes.bool,
+  selectedDate: PropTypes.string,
 };
 
 export default MovementsView;

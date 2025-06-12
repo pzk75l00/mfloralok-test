@@ -21,6 +21,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 const ReportsMovilView = () => {
   const [movements, setMovements] = useState([]);
   const [plants, setPlants] = useState([]);
+  // --- FILTRO POR FECHA SELECCIONADA (solo para ventas móvil) ---
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
 
   useEffect(() => {
     const unsubMov = onSnapshot(collection(db, 'movements'), snap => {
@@ -346,6 +351,52 @@ const ReportsMovilView = () => {
     },
   };
 
+  // Filtrar movimientos por la fecha seleccionada (solo ventas, compras, ingresos, egresos, gastos)
+  const movimientosEnFecha = movements.filter(mov => {
+    if (!mov.date) return false;
+    const d = new Date(mov.date);
+    const fechaMov = d.toISOString().slice(0, 10);
+    return fechaMov === selectedDate;
+  });
+
+  // Ranking productos vendidos en la fecha seleccionada
+  const ventasPorProductoFecha = {};
+  movimientosEnFecha.filter(m => m.type === 'venta').forEach(m => {
+    if (!m.plantId) return;
+    ventasPorProductoFecha[m.plantId] = (ventasPorProductoFecha[m.plantId] || 0) + (Number(m.quantity) || 0);
+  });
+  const productosVendidosFecha = Object.entries(ventasPorProductoFecha)
+    .map(([plantId, qty]) => ({
+      name: plants.find(p => String(p.id) === String(plantId))?.name || 'Producto eliminado',
+      qty
+    }))
+    .sort((a, b) => b.qty - a.qty);
+
+  // Datos para el gráfico de barras (fecha seleccionada)
+  const barDataFecha = {
+    labels: productosVendidosFecha.map(item => item.name),
+    datasets: [
+      {
+        label: 'Cantidad vendida',
+        data: productosVendidosFecha.map(item => item.qty),
+        backgroundColor: 'rgba(34,197,94,0.7)',
+        borderColor: 'rgba(34,197,94,1)',
+        borderWidth: 1,
+      },
+    ],
+  };
+  const barOptionsFecha = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: 'Productos vendidos en la fecha seleccionada' },
+    },
+    scales: {
+      x: { title: { display: false } },
+      y: { beginAtZero: true, title: { display: true, text: 'Cantidad' } },
+    },
+  };
+
   return (
     <div>
       <div className="relative min-h-screen bg-gray-50 pb-24">
@@ -487,37 +538,39 @@ const ReportsMovilView = () => {
           <Bar data={barDataVentasVsGastos} options={barOptionsVentasVsGastos} height={120} />
         </div>
         {/* TABLA DE GANANCIA POR PRODUCTO */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
           <div className="font-semibold text-green-700 mb-2">Ganancia por producto vendido (mes)</div>
           <div className="mb-1 text-green-800 text-sm font-bold">Ganancia total: {gananciaTotalMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
           <div className="mb-2 text-green-800 text-sm font-bold">% Ganancia total: {porcentajeGananciaTotalMes !== null ? porcentajeGananciaTotalMes.toFixed(1) + '%' : '-'}</div>
           {gananciaArray.length === 0 ? (
             <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
           ) : (
-            <table className="min-w-full text-xs">
-              <thead>
-                <tr className="bg-green-100">
-                  <th className="p-1">Producto</th>
-                  <th className="p-1">Cantidad</th>
-                  <th className="p-1">Total Venta</th>
-                  <th className="p-1">Total Costo</th>
-                  <th className="p-1">Ganancia</th>
-                  <th className="p-1">% Ganancia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gananciaArray.map((row, idx) => (
-                  <tr key={row.name + idx}>
-                    <td className="p-1">{row.name}</td>
-                    <td className="p-1 text-center">{row.cantidad}</td>
-                    <td className="p-1 text-right">{row.totalVenta.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                    <td className="p-1 text-right">{row.totalCosto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                    <td className="p-1 text-right font-bold">{row.ganancia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                    <td className="p-1 text-right">{row.porcentaje !== null ? row.porcentaje.toFixed(1) + '%' : '-'}</td>
+            <div className="overflow-x-auto w-full">
+              <table className="min-w-[480px] w-full text-xs whitespace-nowrap">
+                <thead>
+                  <tr className="bg-green-100">
+                    <th className="p-1">Producto</th>
+                    <th className="p-1">Cantidad</th>
+                    <th className="p-1">Total Venta</th>
+                    <th className="p-1">Total Costo</th>
+                    <th className="p-1">Ganancia</th>
+                    <th className="p-1">% Ganancia</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {gananciaArray.map((row, idx) => (
+                    <tr key={row.name + idx}>
+                      <td className="p-1">{row.name}</td>
+                      <td className="p-1 text-center">{row.cantidad}</td>
+                      <td className="p-1 text-right">{row.totalVenta.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                      <td className="p-1 text-right">{row.totalCosto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                      <td className="p-1 text-right font-bold">{row.ganancia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                      <td className="p-1 text-right">{row.porcentaje !== null ? row.porcentaje.toFixed(1) + '%' : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
         {/* PRODUCTOS A REPONER */}
@@ -526,11 +579,40 @@ const ReportsMovilView = () => {
           {bajoStock2.length === 0 ? (
             <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
           ) : (
-            <ul className="text-sm">
-              {bajoStock2.map(p => (
-                <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto w-full">
+              <ul className="text-sm min-w-[320px]">
+                {bajoStock2.map(p => (
+                  <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {/* Selector de fecha para ventas móvil */}
+        <div className="flex flex-col sm:flex-row gap-2 mb-2 max-w-xs mx-auto">
+          <label className="text-xs font-semibold text-gray-700">Seleccionar fecha:</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="border rounded px-2 py-1 text-xs"
+            max={new Date().toISOString().slice(0, 10)}
+          />
+        </div>
+        {/* Gráfico y lista de productos vendidos en la fecha seleccionada */}
+        <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
+          <div className="font-semibold text-blue-700 mb-2">Productos vendidos en la fecha seleccionada</div>
+          {productosVendidosFecha.length === 0 ? (
+            <div className="text-gray-400 text-sm">No hay ventas registradas en esa fecha.</div>
+          ) : (
+            <>
+              <Bar data={barDataFecha} options={barOptionsFecha} height={220} />
+              <ul className="text-sm mt-2 min-w-[320px]">
+                {productosVendidosFecha.map((item, idx) => (
+                  <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </div>
