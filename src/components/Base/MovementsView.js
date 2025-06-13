@@ -6,6 +6,10 @@ import PlantAutocomplete from './PlantAutocomplete';
 import { toZonedTime } from 'date-fns-tz';
 import { registrarVenta } from './saleUtils';
 import PropTypes from 'prop-types';
+import SalesMobileForm from '../Movil/forms/SalesMobileForm';
+import SalesDesktopForm from '../Desktop/forms/SalesDesktopForm';
+import CashMobileForm from '../Movil/forms/CashMobileForm';
+import CashDesktopForm from '../Desktop/forms/CashDesktopForm';
 
 const MOVEMENT_TYPES = [
   { value: 'venta', label: 'Venta' },
@@ -320,9 +324,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         total: '',
         paymentMethod: 'efectivo',
         date: new Date().toISOString().slice(0, 16),
-        location: '',
+        location: form.location, // Mantener el último lugar
         notes: ''
       });
+      // Guardar el último lugar en localStorage
+      if (form.location) {
+        localStorage.setItem('lastLocation', form.location);
+      }
     } catch (err) {
       setErrorMsg('Error al registrar el movimiento');
       showToast({ type: 'error', text: 'Error al registrar el movimiento' });
@@ -485,6 +493,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     }
   }, [productForm.plantId, form.type, plants]);
 
+  // Inicializar location desde localStorage si existe
+  useEffect(() => {
+    const lastLocation = localStorage.getItem('lastLocation');
+    if (lastLocation) {
+      setForm(prev => ({ ...prev, location: lastLocation }));
+    }
+  }, []);
+
   // Detectar si se debe mostrar el selector de fecha (solo móvil, solo si selectedDate viene como prop)
   const showDateInput = isMobile && selectedDate !== undefined && false; // Forzar a false para ventas móvil
 
@@ -493,123 +509,51 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     <div>
       {/* Sticky caja de escritorio con el formulario */}
       <div className={`sticky top-0 z-20 bg-white border border-gray-100 rounded-xl shadow-md px-2 py-1 w-full mx-0 mt-6 ${isMobileDevice ? 'block' : ''}`}>
-        {/* Formulario de carga de caja de escritorio */}
+        {/* Formulario desacoplado según dispositivo y tipo */}
         {!hideForm && (
-          <form onSubmit={handleSubmit} className={`w-full ${isMobileDevice ? 'flex flex-col gap-3 items-stretch' : 'flex flex-row flex-wrap gap-1 items-end' } text-xs`}>
-            {/* Selector de tipo de movimiento */}
-            <div className="flex flex-col w-full sm:min-w-[110px] sm:max-w-[130px]">
-              <label className="text-[11px] font-medium text-gray-700">Tipo</label>
-              <select name="type" value={form.type} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs">
-                {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </div>
-            {/* Selector de fecha solo en móvil y si selectedDate viene como prop */}
-            {showDateInput && (
-              <div className="flex flex-col w-full sm:min-w-[110px] sm:max-w-[130px]">
-                <label className="text-[11px] font-medium text-gray-700">Fecha</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={form.date.slice(0, 10)}
-                  onChange={e => setForm(prev => ({ ...prev, date: e.target.value + prev.date.slice(10) }))}
-                  className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs"
-                  max={new Date().toISOString().slice(0, 10)}
-                />
-              </div>
-            )}
-            {/* Si es venta o compra, permitir multiproducto y búsqueda */}
-            {(form.type === 'venta' || form.type === 'compra') ? (
-              <>
-                <div className="flex flex-col w-full sm:min-w-[120px] sm:max-w-[160px]">
-                  {/* Solo un label para Producto */}
-                  <label className="text-[11px] font-medium text-gray-700">Producto</label>
-                  {/* Autocompletado de productos */}
-                  <PlantAutocomplete
-                    plants={plants}
-                    value={productForm.plantId}
-                    onChange={id => setProductForm(prev => ({ ...prev, plantId: id }))}
-                    placeholder="Buscar producto..."
-                    label=""
-                  />
-                  {productForm.plantId && (() => {
-                    const plant = plants.find(p => String(p.id) === String(productForm.plantId));
-                    if (!plant) return null;
-                    return (
-                      <div className="text-[10px] text-gray-500 mt-1">
-                        Stock: <b>{plant.stock}</b> | Precio sugerido: <b>${form.type === 'venta' ? (plant.purchasePrice || plant.basePrice || '-') : (plant.basePrice || plant.purchasePrice || '-')}</b>
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div className="flex flex-col w-full sm:min-w-[60px] sm:max-w-[80px]">
-                  <label className="text-[11px] font-medium text-gray-700">Cantidad</label>
-                  <input type="number" name="quantity" min="1" value={productForm.quantity} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-                </div>
-                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
-                  <label className="text-[11px] font-medium text-gray-700">Precio</label>
-                  <input type="number" name="price" min="0" step="0.01" value={productForm.price} onChange={handleProductFormChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-                </div>
-                <button type="button" onClick={() => handleAddProduct()} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-4 w-full sm:w-auto" id="btn-agregar-producto">Agregar</button>
-                {/* Lista de productos agregados */}
-                <div className="w-full mt-2">
-                  {products.length > 0 && (
-                    <table className="w-full text-xs border border-gray-200 mb-2">
-                      <thead>
-                        <tr>
-                          <th className="border px-1">Producto</th>
-                          <th className="border px-1">Cantidad</th>
-                          <th className="border px-1">Precio</th>
-                          <th className="border px-1">Subtotal</th>
-                          <th className="border px-1"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {products.map((p, idx) => (
-                          <tr key={idx}>
-                            <td className="border px-1">{p.name}</td>
-                            <td className="border px-1 text-right">{p.quantity}</td>
-                            <td className="border px-1 text-right">${Number(p.price).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td className="border px-1 text-right">${Number(p.total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td className="border px-1 text-center"><button type="button" onClick={() => handleRemoveProduct(idx)} className="text-red-600">✕</button></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                  {products.length > 0 && (
-                    <div className="text-right font-bold text-green-700 pr-2">Total: ${ventaTotal}</div>
-                  )}
-                </div>
-                {errorMsg && (
-                  <div className="w-full text-xs text-red-600 font-semibold bg-red-100 rounded p-1 mb-2" id="error-msg-caja">{errorMsg}</div>
-                )}
-              </>
-            ) : (
-              // Para otros tipos, mostrar campo de detalle (notes) y precio
-              <>
-                <div className="flex flex-col w-full">
-                  <label className="text-[11px] font-medium text-gray-700">Detalle</label>
-                  <input name="notes" value={form.notes} onChange={handleChange} placeholder="Detalle del movimiento..." className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-                </div>
-                <div className="flex flex-col w-full sm:min-w-[70px] sm:max-w-[90px]">
-                  <label className="text-[11px] font-medium text-gray-700">Precio</label>
-                  <input type="number" name="price" min="0" step="0.01" value={form.price} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-                </div>
-              </>
-            )}
-            {/* Método de Pago, Lugar, Botón Registrar: siempre */}
-            <div className="flex flex-col w-full sm:min-w-[90px] sm:max-w-[110px]">
-              <label className="text-[11px] font-medium text-gray-700">Pago</label>
-              <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs">
-                {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col w-full sm:min-w-[80px] sm:max-w-[100px]">
-              <label className="text-[11px] font-medium text-gray-700">Lugar</label>
-              <input name="location" value={form.location} onChange={handleChange} className="mt-1 w-full border border-gray-300 rounded-md shadow-sm p-1 text-xs" />
-            </div>
-            <button type="submit" className="bg-green-600 text-white px-2 py-2 rounded font-semibold text-base mt-2 w-full sm:w-auto" id="btn-registrar-venta">{form.type === 'venta' ? 'Registrar Venta' : 'Registrar'}</button>
-          </form>
+          (form.type === 'venta' && isMobileDevice) ? (
+            <SalesMobileForm
+              form={form}
+              productForm={productForm}
+              plants={plants}
+              handleChange={handleChange}
+              handleProductFormChange={handleProductFormChange}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
+              ventaTotal={ventaTotal}
+              products={products}
+              onSubmit={handleSubmit}
+              errorMsg={errorMsg}
+            />
+          ) : (form.type === 'venta' && !isMobileDevice) ? (
+            <SalesDesktopForm
+              form={form}
+              productForm={productForm}
+              plants={plants}
+              handleChange={handleChange}
+              handleProductFormChange={handleProductFormChange}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
+              ventaTotal={ventaTotal}
+              products={products}
+              onSubmit={handleSubmit}
+              errorMsg={errorMsg}
+            />
+          ) : (isMobileDevice ? (
+            <CashMobileForm
+              form={form}
+              handleChange={handleChange}
+              onSubmit={handleSubmit}
+              errorMsg={errorMsg}
+            />
+          ) : (
+            <CashDesktopForm
+              form={form}
+              handleChange={handleChange}
+              onSubmit={handleSubmit}
+              errorMsg={errorMsg}
+            />
+          ))
         )}
       </div>
       {/* Mostrar solo el formulario si showOnlyForm está activo (ej: Caja Diaria móvil) */}

@@ -397,225 +397,254 @@ const ReportsMovilView = () => {
     },
   };
 
+  // Calcular saldo disponible del mes (caja final)
+  const cajaEfectivoMes = movimientosMes2.filter(m => m.paymentMethod === 'efectivo').reduce((sum, m) => {
+    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
+    if (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') return sum - (Number(m.total) || 0);
+    return sum;
+  }, 0);
+  const cajaMPMes = movimientosMes2.filter(m => m.paymentMethod === 'mercadoPago').reduce((sum, m) => {
+    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
+    if (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') return sum - (Number(m.total) || 0);
+    return sum;
+  }, 0);
+  const totalDisponibleMes = cajaEfectivoMes + cajaMPMes;
+
   return (
-    <div>
-      <div className="relative min-h-screen bg-gray-50 pb-24">
-        {/* NUEVOS TOTALES */}
-        {hoy.length === 0 ? (
-          <div className="rounded-lg shadow bg-white p-3 mb-4">
-            <div className="font-semibold text-blue-700 mb-2">Saldo de caja disponible</div>
-            <div className="flex flex-wrap gap-2 justify-center text-sm">
-              <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-              <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            </div>
+    <div className="p-3">
+      <h1 className="text-lg font-bold mb-3">Reportes - Móvil</h1>
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-gray-700">Total disponible del mes</span>
+            <span className="text-xl font-bold text-green-700">${totalDisponibleMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-        ) : (
-          <div className="rounded-lg shadow bg-white p-3 mb-4">
-            <div className="font-semibold text-green-700 mb-2">Totales del día</div>
-            <div className="flex flex-wrap gap-2 justify-center text-sm">
-              <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-              <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-              <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-              <div className="bg-pink-100 rounded px-3 py-1">Gastos: <b>{hoy.filter(m => m.type === 'gasto').reduce((sum, m) => sum + (Number(m.total) || 0), 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-              <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Efectivo: <b>${cajaEfectivoMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+            <span>Mercado Pago: <b>${cajaMPMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
           </div>
-        )}
-        {/* Saldo de caja actual (opcional, si se quiere mostrar) */}
-        {/*
-        <div className="rounded-lg shadow bg-white p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Saldo de caja actual</div>
-          <div className="flex flex-wrap gap-2 justify-center text-sm">
-            <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{totalDisponibleEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{totalDisponibleMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="text-xs text-gray-500 mt-1">
+            Saldo real disponible considerando ventas, ingresos, compras, egresos y gastos del mes.
           </div>
-        </div>
-        */}
-        {/* TOTALES DEL MES */}
-        <div className="rounded-lg shadow bg-white p-3 mb-4">
-          <div className="font-semibold text-green-700 mb-2">Totales del mes</div>
-          <div className="flex flex-wrap gap-2 justify-center text-sm">
-            <div className="bg-green-100 rounded px-3 py-1">Ventas Efectivo: <b>{ventasEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-100 rounded px-3 py-1">Ventas MP: <b>{ventasMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-blue-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos Efectivo: <b>{gastosEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos MP: <b>{gastosMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos en el mes: <b>{totalProductosVendidosMes}</b></div>
-          </div>
-        </div>
-        {/* GRÁFICO DE PRODUCTOS VENDIDOS HOY */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Productos vendidos hoy</div>
-          {productosVendidosHoy.length === 0 ? (
-            <div className="text-gray-400 text-sm">No hay ventas registradas hoy.</div>
-          ) : (
-            <>
-              <Bar data={barData} options={barOptions} height={220} />
-              <ul className="text-sm mt-2">
-                {productosVendidosHoy.map((item, idx) => (
-                  <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-        {/* GRÁFICO DE PRODUCTOS VENDIDOS MES */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Productos vendidos del mes</div>
-          {productosVendidosMes.length === 0 ? (
-            <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
-          ) : (
-            <>
-              <Bar data={barDataMes} options={barOptionsMes} height={220} />
-              <ul className="text-sm mt-2">
-                {productosVendidosMes.map((item, idx) => (
-                  <li key={item.name} className={idx === 0 ? 'font-bold text-blue-700' : ''}>{item.name}: {item.qty}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-        {/* GRÁFICO MENSUAL POR DÍA (SOLO TOTAL VENDIDO) */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Total vendido por día del mes</div>
-          <Bar data={barDataVentasPorDia} options={barOptionsVentasPorDia} height={220} />
-        </div>
-        {/* GRÁFICO MENSUAL POR DÍA (SOLO CANTIDAD DE PRODUCTOS) */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Cantidad de productos vendidos por día del mes</div>
-          <Bar data={barDataProductosPorDia} options={barOptionsProductosPorDia} height={220} />
-        </div>
-        {/* GRÁFICO MENSUAL POR DÍA (JUNTOS: TOTAL VENDIDO Y CANTIDAD DE PRODUCTOS) */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Total vendido y cantidad de productos por día del mes</div>
-          <Bar
-            data={{
-              labels: Array.from({ length: diasEnMes }, (_, i) => `${i + 1}`),
-              datasets: [
-                {
-                  type: 'bar',
-                  label: 'Total vendido ($)',
-                  data: ventasPorDia,
-                  backgroundColor: 'rgba(34,197,94,0.7)',
-                  borderColor: 'rgba(34,197,94,1)',
-                  borderWidth: 1,
-                  yAxisID: 'y',
-                },
-                {
-                  type: 'line',
-                  label: 'Cantidad productos',
-                  data: productosPorDia,
-                  backgroundColor: 'rgba(59,130,246,0.7)',
-                  borderColor: 'rgba(59,130,246,1)',
-                  borderWidth: 2,
-                  fill: false,
-                  yAxisID: 'y1',
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              plugins: {
-                legend: { display: true },
-                title: { display: true, text: 'Total vendido ($) y cantidad de productos por día' },
-              },
-              scales: {
-                x: { title: { display: true, text: 'Día del mes' } },
-                y: { beginAtZero: true, title: { display: true, text: 'Total vendido ($)' } },
-                y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Cantidad productos' }, grid: { drawOnChartArea: false } },
-              },
-            }}
-            height={220}
-          />
-        </div>
-        {/* GRÁFICO DE GASTOS DEL MES */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-red-700 mb-2">Gastos del mes por tipo y método de pago</div>
-          <Bar data={barDataGastosMes} options={barOptionsGastosMes} height={220} />
-        </div>
-        {/* GRÁFICO DE VENTAS VS GASTOS DEL MES */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Ventas vs Gastos del mes</div>
-          <Bar data={barDataVentasVsGastos} options={barOptionsVentasVsGastos} height={120} />
-        </div>
-        {/* TABLA DE GANANCIA POR PRODUCTO */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
-          <div className="font-semibold text-green-700 mb-2">Ganancia por producto vendido (mes)</div>
-          <div className="mb-1 text-green-800 text-sm font-bold">Ganancia total: {gananciaTotalMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
-          <div className="mb-2 text-green-800 text-sm font-bold">% Ganancia total: {porcentajeGananciaTotalMes !== null ? porcentajeGananciaTotalMes.toFixed(1) + '%' : '-'}</div>
-          {gananciaArray.length === 0 ? (
-            <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
-          ) : (
-            <div className="overflow-x-auto w-full">
-              <table className="min-w-[480px] w-full text-xs whitespace-nowrap">
-                <thead>
-                  <tr className="bg-green-100">
-                    <th className="p-1">Producto</th>
-                    <th className="p-1">Cantidad</th>
-                    <th className="p-1">Total Venta</th>
-                    <th className="p-1">Total Costo</th>
-                    <th className="p-1">Ganancia</th>
-                    <th className="p-1">% Ganancia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gananciaArray.map((row, idx) => (
-                    <tr key={row.name + idx}>
-                      <td className="p-1">{row.name}</td>
-                      <td className="p-1 text-center">{row.cantidad}</td>
-                      <td className="p-1 text-right">{row.totalVenta.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                      <td className="p-1 text-right">{row.totalCosto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                      <td className="p-1 text-right font-bold">{row.ganancia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
-                      <td className="p-1 text-right">{row.porcentaje !== null ? row.porcentaje.toFixed(1) + '%' : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        {/* PRODUCTOS A REPONER */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <div className="font-semibold text-orange-700 mb-2">Productos a reponer (bajo stock)</div>
-          {bajoStock2.length === 0 ? (
-            <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
-          ) : (
-            <div className="overflow-x-auto w-full">
-              <ul className="text-sm min-w-[320px]">
-                {bajoStock2.map(p => (
-                  <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-        {/* Selector de fecha para ventas móvil */}
-        <div className="flex flex-col sm:flex-row gap-2 mb-2 max-w-xs mx-auto">
-          <label className="text-xs font-semibold text-gray-700">Seleccionar fecha:</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={e => setSelectedDate(e.target.value)}
-            className="border rounded px-2 py-1 text-xs"
-            max={new Date().toISOString().slice(0, 10)}
-          />
-        </div>
-        {/* Gráfico y lista de productos vendidos en la fecha seleccionada */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
-          <div className="font-semibold text-blue-700 mb-2">Productos vendidos en la fecha seleccionada</div>
-          {productosVendidosFecha.length === 0 ? (
-            <div className="text-gray-400 text-sm">No hay ventas registradas en esa fecha.</div>
-          ) : (
-            <>
-              <Bar data={barDataFecha} options={barOptionsFecha} height={220} />
-              <ul className="text-sm mt-2 min-w-[320px]">
-                {productosVendidosFecha.map((item, idx) => (
-                  <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
-                ))}
-              </ul>
-            </>
-          )}
         </div>
       </div>
+      {/* NUEVOS TOTALES */}
+      {hoy.length === 0 ? (
+        <div className="rounded-lg shadow bg-white p-3 mb-4">
+          <div className="font-semibold text-blue-700 mb-2">Saldo de caja disponible</div>
+          <div className="flex flex-wrap gap-2 justify-center text-sm">
+            <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg shadow bg-white p-3 mb-4">
+          <div className="font-semibold text-green-700 mb-2">Totales del día</div>
+          <div className="flex flex-wrap gap-2 justify-center text-sm">
+            <div className="bg-green-100 rounded px-3 py-1">Ventas: <b>{totalVentas.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-red-100 rounded px-3 py-1">Compras: <b>{totalCompras.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-orange-100 rounded px-3 py-1">Egresos: <b>{totalEgresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-pink-100 rounded px-3 py-1">Gastos: <b>{hoy.filter(m => m.type === 'gasto').reduce((sum, m) => sum + (Number(m.total) || 0), 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-lime-100 rounded px-3 py-1">Ingresos: <b>{totalIngresos.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          </div>
+        </div>
+      )}
+      {/* Saldo de caja actual (opcional, si se quiere mostrar) */}
+      {/*
+      <div className="rounded-lg shadow bg-white p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Saldo de caja actual</div>
+        <div className="flex flex-wrap gap-2 justify-center text-sm">
+          <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{totalDisponibleEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{totalDisponibleMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+        </div>
+      </div>
+      */}
+      {/* TOTALES DEL MES */}
+      <div className="rounded-lg shadow bg-white p-3 mb-4">
+        <div className="font-semibold text-green-700 mb-2">Totales del mes</div>
+        <div className="flex flex-wrap gap-2 justify-center text-sm">
+          <div className="bg-green-100 rounded px-3 py-1">Ventas Efectivo: <b>{ventasEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="bg-purple-100 rounded px-3 py-1">Ventas MP: <b>{ventasMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="bg-blue-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos Efectivo: <b>{gastosEfectivoMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="bg-purple-50 rounded px-3 py-1">Gastos/Compras/Egresos/Gastos MP: <b>{gastosMPMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+          <div className="bg-gray-100 rounded px-3 py-1">Productos vendidos en el mes: <b>{totalProductosVendidosMes}</b></div>
+        </div>
+      </div>
+      {/* GRÁFICO DE PRODUCTOS VENDIDOS HOY */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Productos vendidos hoy</div>
+        {productosVendidosHoy.length === 0 ? (
+          <div className="text-gray-400 text-sm">No hay ventas registradas hoy.</div>
+        ) : (
+          <>
+            <Bar data={barData} options={barOptions} height={220} />
+            <ul className="text-sm mt-2">
+              {productosVendidosHoy.map((item, idx) => (
+                <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+      {/* GRÁFICO DE PRODUCTOS VENDIDOS MES */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Productos vendidos del mes</div>
+        {productosVendidosMes.length === 0 ? (
+          <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
+        ) : (
+          <>
+            <Bar data={barDataMes} options={barOptionsMes} height={220} />
+            <ul className="text-sm mt-2">
+              {productosVendidosMes.map((item, idx) => (
+                <li key={item.name} className={idx === 0 ? 'font-bold text-blue-700' : ''}>{item.name}: {item.qty}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+      {/* GRÁFICO MENSUAL POR DÍA (SOLO TOTAL VENDIDO) */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Total vendido por día del mes</div>
+        <Bar data={barDataVentasPorDia} options={barOptionsVentasPorDia} height={220} />
+      </div>
+      {/* GRÁFICO MENSUAL POR DÍA (SOLO CANTIDAD DE PRODUCTOS) */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Cantidad de productos vendidos por día del mes</div>
+        <Bar data={barDataProductosPorDia} options={barOptionsProductosPorDia} height={220} />
+      </div>
+      {/* GRÁFICO MENSUAL POR DÍA (JUNTOS: TOTAL VENDIDO Y CANTIDAD DE PRODUCTOS) */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Total vendido y cantidad de productos por día del mes</div>
+        <Bar
+          data={{
+            labels: Array.from({ length: diasEnMes }, (_, i) => `${i + 1}`),
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Total vendido ($)',
+                data: ventasPorDia,
+                backgroundColor: 'rgba(34,197,94,0.7)',
+                borderColor: 'rgba(34,197,94,1)',
+                borderWidth: 1,
+                yAxisID: 'y',
+              },
+              {
+                type: 'line',
+                label: 'Cantidad productos',
+                data: productosPorDia,
+                backgroundColor: 'rgba(59,130,246,0.7)',
+                borderColor: 'rgba(59,130,246,1)',
+                borderWidth: 2,
+                fill: false,
+                yAxisID: 'y1',
+              },
+            ],
+          }}
+          options={{
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              title: { display: true, text: 'Total vendido ($) y cantidad de productos por día' },
+            },
+            scales: {
+              x: { title: { display: true, text: 'Día del mes' } },
+              y: { beginAtZero: true, title: { display: true, text: 'Total vendido ($)' } },
+              y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Cantidad productos' }, grid: { drawOnChartArea: false } },
+            },
+          }}
+          height={220}
+        />
+      </div>
+      {/* GRÁFICO DE GASTOS DEL MES */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-red-700 mb-2">Gastos del mes por tipo y método de pago</div>
+        <Bar data={barDataGastosMes} options={barOptionsGastosMes} height={220} />
+      </div>
+      {/* GRÁFICO DE VENTAS VS GASTOS DEL MES */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-blue-700 mb-2">Ventas vs Gastos del mes</div>
+        <Bar data={barDataVentasVsGastos} options={barOptionsVentasVsGastos} height={120} />
+      </div>
+      {/* Selector de fecha para ventas móvil */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-2 max-w-xs mx-auto">
+        <label className="text-xs font-semibold text-gray-700">Seleccionar fecha:</label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={e => setSelectedDate(e.target.value)}
+          className="border rounded px-2 py-1 text-xs"
+          max={new Date().toISOString().slice(0, 10)}
+        />
+      </div>
+      {/* Gráfico y lista de productos vendidos en la fecha seleccionada */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
+        <div className="font-semibold text-blue-700 mb-2">Productos vendidos en la fecha seleccionada</div>
+        {productosVendidosFecha.length === 0 ? (
+          <div className="text-gray-400 text-sm">No hay ventas registradas en esa fecha.</div>
+        ) : (
+          <>
+            <Bar data={barDataFecha} options={barOptionsFecha} height={220} />
+            <ul className="text-sm mt-2 min-w-[320px]">
+              {productosVendidosFecha.map((item, idx) => (
+                <li key={item.name} className={idx === 0 ? 'font-bold text-green-700' : ''}>{item.name}: {item.qty}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+      {/* TABLA DE GANANCIA POR PRODUCTO */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4 overflow-x-auto">
+        <div className="font-semibold text-green-700 mb-2">Ganancia por producto vendido (mes)</div>
+        <div className="mb-1 text-green-800 text-sm font-bold">Ganancia total: {gananciaTotalMes.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</div>
+        <div className="mb-2 text-green-800 text-sm font-bold">% Ganancia total: {porcentajeGananciaTotalMes !== null ? porcentajeGananciaTotalMes.toFixed(1) + '%' : '-'}</div>
+        {gananciaArray.length === 0 ? (
+          <div className="text-gray-400 text-sm">No hay ventas registradas este mes.</div>
+        ) : (
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[480px] w-full text-xs whitespace-nowrap">
+              <thead>
+                <tr className="bg-green-100">
+                  <th className="p-1">Producto</th>
+                  <th className="p-1">Cantidad</th>
+                  <th className="p-1">Total Venta</th>
+                  <th className="p-1">Total Costo</th>
+                  <th className="p-1">Ganancia</th>
+                  <th className="p-1">% Ganancia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gananciaArray.map((row, idx) => (
+                  <tr key={row.name + idx}>
+                    <td className="p-1">{row.name}</td>
+                    <td className="p-1 text-center">{row.cantidad}</td>
+                    <td className="p-1 text-right">{row.totalVenta.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                    <td className="p-1 text-right">{row.totalCosto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                    <td className="p-1 text-right font-bold">{row.ganancia.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
+                    <td className="p-1 text-right">{row.porcentaje !== null ? row.porcentaje.toFixed(1) + '%' : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {/* PRODUCTOS A REPONER */}
+      <div className="bg-white rounded-lg shadow p-3 mb-4">
+        <div className="font-semibold text-orange-700 mb-2">Productos a reponer (bajo stock)</div>
+        {bajoStock2.length === 0 ? (
+          <div className="text-gray-400 text-sm">No hay productos con bajo stock.</div>
+        ) : (
+          <div className="overflow-x-auto w-full">
+            <ul className="text-sm min-w-[320px]">
+              {bajoStock2.map(p => (
+                <li key={p.id}>{p.name} <span className="text-gray-500">({p.stock} en stock)</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+
     </div>
   );
 };
