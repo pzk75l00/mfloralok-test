@@ -3,6 +3,7 @@ import PlantCard from './PlantCard';
 import PlantForm from './PlantForm';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
+import { logToBackend } from '../../utils/logToBackend';
 
 const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
   const [showForm, setShowForm] = useState(false);
@@ -17,6 +18,11 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Ejemplo: log al montar la vista de plantas
+  React.useEffect(() => {
+    logToBackend('Vista de plantas abierta', { timestamp: new Date().toISOString() });
   }, []);
 
   const handleAdd = () => {
@@ -163,6 +169,7 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
                   <th className="px-2 py-1 text-right">Stock</th>
                   <th className="px-2 py-1 text-right">Precio venta</th>
                   <th className="px-2 py-1 text-right">Precio compra</th>
+                  <th className="px-2 py-1 text-right">Costo Promedio</th>
                   <th className="px-2 py-1 text-left">Tipo</th>
                   <th className="px-2 py-1">Acciones</th>
                 </tr>
@@ -174,6 +181,7 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
                     <td className="px-2 py-1 text-right">{plant.stock}</td>
                     <td className="px-2 py-1 text-right">${plant.basePrice}</td>
                     <td className="px-2 py-1 text-right">${plant.purchasePrice}</td>
+                    <td className="px-2 py-1 text-right">{plant.costoPromedio !== undefined ? `$${plant.costoPromedio}` : '-'}</td>
                     <td className="px-2 py-1">{plant.type}</td>
                     <td className="px-2 py-1 flex gap-2">
                       <button onClick={() => handleEdit(plant)} className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100">Editar</button>

@@ -1,16 +1,31 @@
 // Autocompletado de productos para formularios
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import PlantFormModal from './PlantFormModal'; // Asegúrate de importar el modal
 
 const PlantAutocomplete = ({ plants, value, onChange, placeholder }) => {
   const [input, setInput] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [pendingName, setPendingName] = useState('');
   const filtered = plants.filter(p =>
     p.name.toLowerCase().includes(input.toLowerCase())
   );
 
   const handleSelect = (p) => {
     onChange(p.id);
-    setInput(''); // Limpiar el input después de seleccionar
+    setInput('');
+  };
+
+  const handleAddNew = () => {
+    setShowModal(true);
+    setPendingName(input);
+  };
+
+  const handleCreate = (plant) => {
+    // Emitir el nuevo producto al padre
+    onChange({ newPlant: plant });
+    setShowModal(false);
+    setInput('');
   };
 
   return (
@@ -34,9 +49,15 @@ const PlantAutocomplete = ({ plants, value, onChange, placeholder }) => {
             </div>
           ))}
           {filtered.length === 0 && (
-            <div className="px-2 py-1 text-gray-400">Sin resultados</div>
+            <div className="px-2 py-1 text-gray-400 flex justify-between items-center">
+              Sin resultados
+              <button className="ml-2 text-blue-600 underline text-xs" onClick={handleAddNew} type="button">Agregar &quot;{input}&quot;</button>
+            </div>
           )}
         </div>
+      )}
+      {showModal && (
+        <PlantFormModal initialName={pendingName} onCreate={handleCreate} onClose={() => setShowModal(false)} />
       )}
     </div>
   );

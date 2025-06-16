@@ -86,6 +86,17 @@ const PlantForm = ({ initialData, onSubmit, onCancel }) => {
             required
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Costo Promedio</label>
+          <input
+            type="text"
+            name="costoPromedio"
+            value={formData.costoPromedio !== undefined ? `$${formData.costoPromedio}` : '-'}
+            readOnly
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 text-gray-700"
+            tabIndex={-1}
+          />
+        </div>
         <div className="flex justify-end gap-2 mt-4">
           <button
             type="button"

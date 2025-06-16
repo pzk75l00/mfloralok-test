@@ -8,6 +8,7 @@ if (!container) {
   throw new Error('No se encontró el elemento root en el HTML.');
 }
 const root = createRoot(container);
+
 root.render(
   <StrictMode>
     <App />

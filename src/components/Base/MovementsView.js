@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import PlantForm from './PlantForm';
 import PlantAutocomplete from './PlantAutocomplete';
@@ -25,7 +25,7 @@ const PAYMENT_METHODS = [
 ];
 
 // Este componente se moverá a la carpeta Base
-const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth, selectedYear, showOnlySalesOfDay, selectedDate }) => {
+const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth: propSelectedMonth, selectedYear: propSelectedYear, showOnlySalesOfDay, selectedDate }) => {
   const [plants, setPlants] = useState(propPlants || []);
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({
@@ -38,7 +38,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     paymentMethod: 'efectivo',
     date: new Date().toISOString().slice(0, 16),
     location: '',
-    notes: ''
+    notes: '',
+    supplier: '' // <-- Aseguro que el campo supplier esté en el estado inicial
   });
   const [showSuggestPlant, setShowSuggestPlant] = useState(false);
   const [suggestedPlantName, setSuggestedPlantName] = useState('');
@@ -50,12 +51,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [editingMovement, setEditingMovement] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState('todos');
 
   // --- FILTRO MENSUAL ---
   const [reloadKey, setReloadKey] = useState(0);
   const now = new Date();
-  const currentMonth = typeof selectedMonth === 'number' ? selectedMonth : now.getMonth();
-  const currentYear = typeof selectedYear === 'number' ? selectedYear : now.getFullYear();
+  const currentMonth = typeof propSelectedMonth === 'number' ? propSelectedMonth : now.getMonth();
+  const currentYear = typeof propSelectedYear === 'number' ? propSelectedYear : now.getFullYear();
   const movementsThisMonth = movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
@@ -66,6 +68,19 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   // --- NUEVO ESTADO PARA VENTA MULTIPRODUCTO ---
   const [products, setProducts] = useState([]);
   const [productForm, setProductForm] = useState({ plantId: '', quantity: 1, price: '' });
+
+  // Mostrar todos los movimientos por defecto
+  const [showAll, setShowAll] = useState(true);
+
+  // Si showAll está activo, mostrar todos los movimientos, si no, filtrar por mes seleccionado
+  const displayedMovements = showAll
+    ? movements
+    : movements.filter(mov => {
+        if (!mov.date) return false;
+        const d = new Date(mov.date);
+        if (isNaN(d.getTime())) return false;
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
 
   useEffect(() => {
     // Sincronizar plantas y movimientos en un solo efecto para evitar race conditions
@@ -106,6 +121,28 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   // --- FUNCIONES PARA MANEJAR PRODUCTOS EN LA VENTA ---
   const handleProductFormChange = (e) => {
+    if (e.target.name === 'newPlant') {
+      const newPlant = e.target.value;
+      const plantId = `new-${Date.now()}`;
+      console.log('[DEBUG][handleProductFormChange] newPlant recibido:', newPlant);
+      setProducts(prev => [
+        ...prev,
+        {
+          plantId,
+          name: newPlant.name,
+          quantity: Number(newPlant.quantity),
+          price: Number(newPlant.price),
+          salePrice: Number(newPlant.salePrice),
+          total: Number(newPlant.quantity) * Number(newPlant.price),
+          supplier: newPlant.supplier || '',
+          type: newPlant.type || 'Otros',
+          _fullNewPlant: newPlant
+        }
+      ]);
+      setProductForm({ plantId: '', quantity: 1, price: '', supplier: '' });
+      setErrorMsg('');
+      return;
+    }
     const { name, value } = e.target;
     setProductForm(prev => ({ ...prev, [name]: value }));
   };
@@ -125,15 +162,25 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         return;
       }
     }
-    const plant = plants.find(p => String(p.id) === String(productForm.plantId));
+    let plantId = productForm.plantId;
+    let name = '';
+    if (plantId === 'new' && productForm.newPlant) {
+      // Si es un producto nuevo, usar los datos del modal
+      name = productForm.newPlant.name;
+      plantId = `new-${Date.now()}`; // id temporal único
+    } else {
+      const plant = plants.find(p => String(p.id) === String(productForm.plantId));
+      name = plant?.name || '';
+    }
     setProducts(prev => [...prev, {
-      plantId: productForm.plantId,
-      name: plant?.name || '',
+      plantId,
+      name,
       quantity: Number(productForm.quantity),
       price: Number(productForm.price),
-      total: Number(productForm.quantity) * Number(productForm.price)
+      total: Number(productForm.quantity) * Number(productForm.price),
+      supplier: productForm.supplier || ''
     }]);
-    setProductForm({ plantId: '', quantity: 1, price: '' });
+    setProductForm({ plantId: '', quantity: 1, price: '', supplier: '' });
     setErrorMsg('');
   };
   const handleRemoveProduct = (idx) => {
@@ -147,41 +194,45 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     console.log('[MovementsView] handleSubmit called', {form, products, productForm});
     let total = form.total;
     let price = form.price;
-    // --- AJUSTE FLUJO VENTA/COMPRA UN SOLO PRODUCTO EN MÓVIL ---
     let currentProducts = products;
     let autoProduct = null;
     if ((form.type === 'venta' || form.type === 'compra') && products.length === 0) {
-      // Si los campos requeridos están completos, agregamos el producto automáticamente
-      if (productForm.plantId && productForm.quantity && productForm.price) {
-        const plant = plants.find(p => String(p.id) === String(productForm.plantId));
-        // Validar stock solo para ventas
-        if (form.type === 'venta') {
-          if (!plant) {
-            setErrorMsg('Producto no encontrado en inventario.');
-            console.log('[MovementsView] ERROR: Producto no encontrado', {productForm, plants});
-            return;
-          }
-          const currentStock = plant.stock || 0;
-          if (currentStock < Number(productForm.quantity)) {
-            setErrorMsg(`Stock insuficiente para ${plant.name}. Disponible: ${currentStock}`);
-            console.log('[MovementsView] ERROR: Stock insuficiente', {plant, productForm});
-            return;
-          }
+      if ((productForm.plantId && productForm.quantity && productForm.price) || (productForm.plantId === 'new' && productForm.newPlant)) {
+        let plant, name, plantId, price, salePrice, quantity, supplier, type;
+        if (productForm.plantId === 'new' && productForm.newPlant) {
+          plantId = `new-${Date.now()}`;
+          name = productForm.newPlant.name;
+          price = Number(productForm.newPlant.price);
+          salePrice = Number(productForm.newPlant.salePrice);
+          quantity = Number(productForm.newPlant.quantity);
+          supplier = productForm.newPlant.supplier || '';
+          type = productForm.newPlant.type || 'Otros';
+        } else {
+          plant = plants.find(p => String(p.id) === String(productForm.plantId));
+          plantId = productForm.plantId;
+          name = plant?.name || '';
+          price = Number(form.price);
+          salePrice = plant?.salePrice || 0;
+          quantity = Number(form.quantity);
+          supplier = plant?.supplier || '';
+          type = plant?.type || 'Otros';
         }
         autoProduct = {
-          plantId: productForm.plantId,
-          name: plant?.name || '',
-          quantity: Number(productForm.quantity),
-          price: Number(productForm.price),
-          total: Number(productForm.quantity) * Number(productForm.price)
+          plantId,
+          name,
+          quantity,
+          price,
+          salePrice,
+          total: quantity * price,
+          supplier,
+          type,
+          _fullNewPlant: productForm.newPlant
         };
+        console.log('[DEBUG][handleSubmit] autoProduct generado:', autoProduct);
         currentProducts = [autoProduct];
-        // No usar setProducts aquí, solo para el render visual
         setProductForm({ plantId: '', quantity: 1, price: '' });
-        console.log('[MovementsView] Producto agregado automáticamente (móvil, submit directo)', autoProduct);
       } else {
         setErrorMsg('Agregue al menos un producto.');
-        console.log('[MovementsView] ERROR: Campos incompletos para agregar producto automáticamente', {productForm});
         return;
       }
     }
@@ -190,8 +241,49 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         setErrorMsg('Agregue al menos un producto.');
         return;
       }
-      total = currentProducts.reduce((sum, p) => sum + p.total, 0);
+      // --- AJUSTE: Si hay productos nuevos, asegurar que se usen todos los campos ---
+      currentProducts = currentProducts.map(p => {
+        if (p._fullNewPlant) {
+          const logObj = {
+            ...p,
+            ...p._fullNewPlant,
+            supplier: p._fullNewPlant.supplier || p.supplier || '',
+            type: p._fullNewPlant.type || p.type || 'Otros',
+            price: Number(p._fullNewPlant.price),
+            salePrice: Number(p._fullNewPlant.salePrice),
+            quantity: Number(p._fullNewPlant.quantity),
+            total: Number(p._fullNewPlant.quantity) * Number(p._fullNewPlant.price)
+          };
+          console.log('[DEBUG][handleSubmit] Producto nuevo mapeado para submit:', logObj);
+          return logObj;
+        }
+        return p;
+      });
+      console.log('[DEBUG][handleSubmit] currentProducts final:', currentProducts);
     }
+    // --- NUEVO: Crear productos nuevos en inventario antes de registrar movimientos ---
+    for (const p of currentProducts) {
+      if (String(p.plantId).startsWith('new') && p._fullNewPlant) {
+        const plantRef = doc(db, 'plants', `${Date.now()}`);
+        const newPlant = {
+          name: p._fullNewPlant.name,
+          type: p._fullNewPlant.type || 'Otros',
+          stock: Number(p._fullNewPlant.quantity),
+          basePrice: Number(p._fullNewPlant.price),
+          purchasePrice: Number(p._fullNewPlant.price),
+          salePrice: Number(p._fullNewPlant.salePrice),
+          costoPromedio: Number(p._fullNewPlant.price),
+          purchaseDate: new Date().toISOString().slice(0, 10),
+          supplier: p._fullNewPlant.supplier || '',
+          image: '',
+        };
+        console.log('[DEBUG][handleSubmit] Creando producto en inventario:', newPlant);
+        await setDoc(plantRef, newPlant);
+        p.plantId = plantRef.id;
+        console.log('[DEBUG][handleSubmit] Producto creado en inventario con ID:', plantRef.id);
+      }
+    }
+    // --- FIN NUEVO ---
     // Forzar siempre dos decimales exactos
     if (form.type === 'venta' || form.type === 'compra') {
       if (!total) total = 0;
@@ -266,16 +358,72 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             }
             await updateDoc(plantRef, { stock: currentStock - p.quantity });
           }
-          // Actualizar stock en compra
+          // Actualizar stock en compra y calcular costo promedio
           if (form.type === 'compra') {
-            const plantRef = doc(db, 'plants', String(p.plantId));
-            const plantSnap = await getDoc(plantRef);
-            if (!plantSnap.exists()) {
-              setErrorMsg('Producto no encontrado en inventario.');
-              return;
+            const isNew = String(p.plantId).startsWith('new') && productForm.newPlant;
+            let plantRef, plantSnap;
+            if (isNew) {
+              // Crear producto con datos del modal
+              plantRef = doc(db, 'plants', `${Date.now()}`);
+              const newPlant = {
+                name: productForm.newPlant.name,
+                type: productForm.newPlant.type || 'Otros',
+                stock: Number(productForm.newPlant.quantity),
+                basePrice: Number(productForm.newPlant.price),
+                purchasePrice: Number(productForm.newPlant.price),
+                salePrice: Number(productForm.newPlant.salePrice),
+                costoPromedio: Number(productForm.newPlant.price),
+                purchaseDate: isoArgentina.slice(0, 10),
+                supplier: productForm.newPlant.supplier || p.supplier || '',
+                image: '',
+              };
+              await setDoc(plantRef, newPlant);
+              plantSnap = await getDoc(plantRef);
+            } else {
+              plantRef = doc(db, 'plants', String(p.plantId));
+              plantSnap = await getDoc(plantRef);
+              if (!plantSnap.exists()) {
+                // Crear producto automáticamente si no existe
+                const newPlant = {
+                  name: p.name || 'Producto nuevo',
+                  type: p.type || 'Otros',
+                  stock: Number(p.quantity),
+                  basePrice: Number(p.price),
+                  purchasePrice: Number(p.price),
+                  costoPromedio: Number(p.price),
+                  purchaseDate: isoArgentina.slice(0, 10),
+                  supplier: p.supplier || '',
+                  image: '',
+                };
+                await setDoc(plantRef, newPlant);
+                plantSnap = await getDoc(plantRef); // Refrescar para continuar lógica normal
+              }
             }
-            const currentStock = plantSnap.data().stock || 0;
-            await updateDoc(plantRef, { stock: currentStock + p.quantity });
+            const plantData = plantSnap.data();
+            const currentStock = Number(plantData.stock) || 0;
+            const currentCostoPromedio = plantData.costoPromedio !== undefined && plantData.costoPromedio !== '' ? Number(plantData.costoPromedio) : undefined;
+            const precioCompraAnterior = plantData.basePrice !== undefined && plantData.basePrice !== '' ? Number(plantData.basePrice) : undefined;
+            const fechaCompraAnterior = plantData.purchaseDate || '';
+            const cantidadComprada = Number(p.quantity);
+            const precioPagado = Number(p.price);
+            const fechaCompraNueva = form.purchaseDate || '';
+            let nuevoCostoPromedio = precioPagado;
+            if (currentCostoPromedio !== undefined && !isNaN(currentCostoPromedio) && currentCostoPromedio > 0) {
+              // Si hay costo promedio anterior mayor a 0, promediar con el nuevo
+              nuevoCostoPromedio = (currentCostoPromedio + precioPagado) / 2;
+            } else if (precioCompraAnterior !== undefined && !isNaN(precioCompraAnterior)) {
+              // Si no hay costo promedio válido pero sí precio de compra anterior, promediar ambos
+              nuevoCostoPromedio = (precioCompraAnterior + precioPagado) / 2;
+            } // Si no hay ninguno, queda el precioPagado
+            nuevoCostoPromedio = Math.round(nuevoCostoPromedio * 100) / 100;
+            // Regla 4: Actualizar fecha de compra SIEMPRE con la fecha real del movimiento
+            let nuevaFechaCompra = isoArgentina.slice(0, 10); // Solo la fecha (YYYY-MM-DD)
+            await updateDoc(plantRef, { 
+              stock: currentStock + cantidadComprada,
+              costoPromedio: nuevoCostoPromedio,
+              purchaseDate: nuevaFechaCompra,
+              supplier: p.supplier || plantData.supplier || ''
+            });
           }
           const movementData = {
             ...form,
@@ -283,8 +431,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             quantity: p.quantity,
             price: p.price,
             total: p.total,
-            detail: form.notes || '', // <-- ahora guarda lo que el usuario escribió en Detalle
-            date: isoArgentina
+            // Ajuste: para compras, el campo detail será el nombre del producto
+            detail: form.type === 'compra' ? p.name : (form.detail || ''),
+            date: isoArgentina,
+            source: 'escritorio', // Indica origen escritorio
           };
           // Eliminar campos innecesarios
           delete movementData.products;
@@ -299,7 +449,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           ...form,
           total: Number(total),
           date: isoArgentina,
-          detail: form.notes || '', // asegurar que siempre se guarda el detalle
+          detail: form.detail || '', // asegurar que siempre se guarda el detalle correcto
+          source: 'escritorio', // Indica origen escritorio
         };
         // Si es compra de un solo producto, guardar también el nombre
         if (form.type === 'compra' && form.plantId) {
@@ -325,7 +476,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         paymentMethod: 'efectivo',
         date: new Date().toISOString().slice(0, 16),
         location: form.location, // Mantener el último lugar
-        notes: ''
+        notes: '',
+        supplier: '' // <-- Mantener supplier en el reset
       });
       // Guardar el último lugar en localStorage
       if (form.location) {
@@ -501,8 +653,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     }
   }, []);
 
+  // Selector de mes y año para filtrar movimientos
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
   // Detectar si se debe mostrar el selector de fecha (solo móvil, solo si selectedDate viene como prop)
   const showDateInput = isMobile && selectedDate !== undefined && false; // Forzar a false para ventas móvil
+
+  console.log('[DEBUG][MovementsView] Render');
 
   // Render sugerencia de alta de planta
   return (
@@ -545,6 +703,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               handleChange={handleChange}
               onSubmit={handleSubmit}
               errorMsg={errorMsg}
+              plants={plants}
+              productForm={productForm}
+              handleProductFormChange={handleProductFormChange}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
+              products={products}
+              ventaTotal={ventaTotal}
             />
           ) : (
             <CashDesktopForm
@@ -552,6 +717,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               handleChange={handleChange}
               onSubmit={handleSubmit}
               errorMsg={errorMsg}
+              plants={plants}
+              productForm={productForm}
+              handleProductFormChange={handleProductFormChange}
+              handleAddProduct={handleAddProduct}
+              handleRemoveProduct={handleRemoveProduct}
+              products={products}
+              ventaTotal={ventaTotal}
             />
           ))
         )}
@@ -562,12 +734,40 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           {/* Historial de movimientos fuera del sticky */}
           <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0 overflow-x-auto">
             <h2 className="text-base font-bold mb-2">Histórico de Movimientos del Mes</h2>
-            {movementsThisMonth.length > 0 ? (
+            {/* Selector para alternar entre todos los movimientos o solo los del mes */}
+            {!isMobileDevice && (
+              <div className="mb-2">
+                <label className="mr-2">Ver:</label>
+                <select value={showAll ? 'todos' : 'mes'} onChange={e => setShowAll(e.target.value === 'todos')} className="border rounded px-2 py-1">
+                  <option value="todos">Todos los movimientos</option>
+                  <option value="mes">Solo del mes seleccionado</option>
+                </select>
+              </div>
+            )}
+            {/* Selector de mes y año para filtrar movimientos */}
+            {!isMobileDevice && !showAll && (
+              <div className="mb-2 flex gap-2 items-center">
+                <label>Mes:</label>
+                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="border rounded px-2 py-1">
+                  {[...Array(12)].map((_, i) => (
+                    <option key={i} value={i}>{new Date(0, i).toLocaleString('es-AR', { month: 'long' })}</option>
+                  ))}
+                </select>
+                <label>Año:</label>
+                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="border rounded px-2 py-1">
+                  {[...Array(6)].map((_, i) => {
+                    const year = now.getFullYear() - 3 + i;
+                    return <option key={year} value={year}>{year}</option>;
+                  })}
+                </select>
+              </div>
+            )}
+            {displayedMovements.length > 0 ? (
               <table className="min-w-full border-collapse border border-gray-200 text-xs whitespace-nowrap">
                 <thead>
                   <tr>
                     <th className="border border-gray-200 px-2 py-1">Fecha</th>
-                    <th className="border border-gray-200 px-2 py-1">Producto</th>
+                    <th className="border border-gray-200 px-2 py-1">Producto / Detalle</th>
                     <th className="border border-gray-200 px-2 py-1">Cantidad</th>
                     <th className="border border-gray-200 px-2 py-1">Precio</th>
                     <th className="border border-gray-200 px-2 py-1">Total</th>
@@ -580,7 +780,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                   </tr>
                 </thead>
                 <tbody>
-                  {movementsThisMonth.map(mov => {
+                  {displayedMovements.map(mov => {
                     let rowClass = '';
                     if (mov.type === 'ingreso') rowClass = 'bg-green-100 text-green-900';
                     if (mov.type === 'egreso') rowClass = 'bg-black text-white';
@@ -650,9 +850,12 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                           <>
                             <td className="border border-gray-200 px-2 py-1">{mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</td>
                             <td className="border border-gray-200 px-2 py-1">
-                              {plants && mov.plantId
-                                ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
-                                : '-'}
+                              {(mov.type === 'ingreso' || mov.type === 'egreso' || mov.type === 'gasto')
+                                ? (mov.detail || '-')
+                                : (plants && mov.plantId
+                                    ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
+                                    : (mov.detail || '-')
+                                  )}
                             </td>
                             <td className="border border-gray-200 px-2 py-1 text-right">
                               {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)

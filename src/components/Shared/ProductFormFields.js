@@ -22,11 +22,23 @@ const ProductFormFields = ({ productForm, plants, handleProductFormChange }) => 
       <PlantAutocomplete
         plants={plants}
         value={productForm.plantId}
-        onChange={id => handleProductFormChange({ target: { name: 'plantId', value: id } })}
+        onChange={val => {
+          if (val && val.newPlant) {
+            // Si es un nuevo producto, emitir evento especial
+            handleProductFormChange({ target: { name: 'newPlant', value: val.newPlant } });
+          } else {
+            handleProductFormChange({ target: { name: 'plantId', value: val } });
+          }
+        }}
         placeholder="Buscar producto..."
       />
       {selectedPlant && (
-        <div className="text-xs text-gray-500 mb-2">Stock disponible: <b>{selectedPlant.stock ?? 0}</b></div>
+        <>
+          <div className="text-xs text-gray-500 mb-2">Stock disponible: <b>{selectedPlant.stock ?? 0}</b></div>
+          {selectedPlant.costoPromedio !== undefined && (
+            <div className="text-xs text-blue-700 mb-2">Costo promedio actual: <b>${selectedPlant.costoPromedio}</b></div>
+          )}
+        </>
       )}
       <input
         type="number"
@@ -46,6 +58,7 @@ const ProductFormFields = ({ productForm, plants, handleProductFormChange }) => 
         className="border rounded px-2 py-1 mb-2 w-full"
         placeholder="Precio"
       />
+      {/* Eliminar campo proveedor del formulario de producto */}
     </>
   );
 };

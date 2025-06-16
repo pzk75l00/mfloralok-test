@@ -4,6 +4,7 @@ import CashView from './components/Cash/CashView';
 import ReportsView from './components/Reports/ReportsView';
 import NavigationMovil from './components/Movil/NavigationMovil';
 import DesktopLayout from './components/DesktopLayout';
+import StatisticsView from './components/Desktop/statistics/StatisticsView';
 
 // Crear y exportar UserContext
 export const UserContext = createContext({ user: null, userData: null });
@@ -35,6 +36,8 @@ const App = () => {
         return <CashView />;
       case 'reportes':
         return <ReportsView />;
+      case 'stats':
+        return <StatisticsView />;
       default:
         return <div className="text-center text-gray-500">Seleccione un módulo.</div>;
     }

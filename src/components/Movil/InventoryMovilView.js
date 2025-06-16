@@ -3,7 +3,7 @@ import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firesto
 import { db } from '../../firebase/firebaseConfig';
 import ProductTypesManager from './ProductTypesManager';
 
-const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
+const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '', costoPromedio: '' };
 
 const InventoryMovilView = () => {
   const [plants, setPlants] = useState([]);
@@ -71,7 +71,7 @@ const InventoryMovilView = () => {
   };
 
   const handleEdit = plant => {
-    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
+    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier, costoPromedio: plant.costoPromedio });
     setEditingId(plant.id);
     setShowForm(true);
   };
@@ -150,6 +150,8 @@ const InventoryMovilView = () => {
               <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Precio de Venta" required />
               <label className="text-sm font-medium text-gray-700">Precio de Compra</label>
               <input name="basePrice" type="number" min="0" value={form.basePrice} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Precio de Compra" required />
+              <label className="text-sm font-medium text-gray-700">Costo Promedio</label>
+              <input name="costoPromedio" value={form.costoPromedio || ''} readOnly className="border rounded p-2 w-full bg-gray-100 text-gray-700" placeholder="No disponible" />
               <label className="text-sm font-medium text-gray-700">Fecha de Compra</label>
               <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-2 w-full" />
               <label className="text-sm font-medium text-gray-700">Proveedor (opcional)</label>
