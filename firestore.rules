@@ -1,7 +1,18 @@
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Permitir acceso completo a todas las colecciones
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
+    }
+    
+    // Reglas específicas para cada colección
+    match /plants/{plantId} {
+      allow read, write: if true;
+    }
+    
+    match /movements/{movementId} {
+      allow read, write: if true;
     }
   }
 }

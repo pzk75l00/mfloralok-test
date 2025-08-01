@@ -6,7 +6,7 @@ import PlantCard from './PlantCard';
 import LoadPlantsToFirestore from '../Base/LoadPlantsToFirestore';
 import ProductTypesManager from './ProductTypesManager';
 
-const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '', costoPromedio: '' };
+const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
 // Inventario de plantas
 // Aquí irá la lógica y UI para listar, agregar, editar y eliminar plantas
@@ -135,7 +135,7 @@ const InventoryView = () => {
 
   // Editar planta
   const handleEdit = plant => {
-    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier, costoPromedio: plant.costoPromedio });
+    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
     setEditingId(plant.id);
     setTimeout(() => {
       if (mainContainerRef.current) {
@@ -351,10 +351,6 @@ const InventoryView = () => {
               <input name="basePrice" type="number" min="0" value={form.basePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" required style={{maxWidth:'100px'}} />
             </div>
             <div>
-              <label className="block text-xs font-medium">Costo Promedio</label>
-              <input name="costoPromedio" value={form.costoPromedio || ''} readOnly className="border rounded p-1 w-full text-xs bg-gray-100 text-gray-700" placeholder="No disponible" style={{maxWidth:'110px'}} />
-            </div>
-            <div>
               <label className="block text-xs font-medium">Precio Venta</label>
               <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" required style={{maxWidth:'100px'}} />
             </div>
@@ -424,7 +420,6 @@ const InventoryView = () => {
                 <th className="p-2">Stock</th>
                 <th className="p-2">Precio de Venta</th>
                 <th className="p-2">Precio de Compra</th>
-                <th className="p-2">Costo Promedio</th>
                 <th className="p-2">Fecha de Compra</th>
                 <th className="p-2">Proveedor</th>
                 <th className="p-2">Acciones</th>
@@ -441,7 +436,6 @@ const InventoryView = () => {
                     <td className="p-2">{plant.stock}</td>
                     <td className="p-2">${plant.purchasePrice}</td>
                     <td className="p-2">${plant.basePrice}</td>
-                    <td className="p-2">{plant.costoPromedio !== undefined && plant.costoPromedio !== '' ? `$${plant.costoPromedio}` : '-'}</td>
                     <td className="p-2">{plant.purchaseDate || '-'}</td>
                     <td className="p-2">{plant.supplier || '-'}</td>
                     <td className="p-2 flex gap-2">

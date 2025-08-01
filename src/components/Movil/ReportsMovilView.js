@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { Bar } from 'react-chartjs-2';
+import { 
+  calculateBalanceByPaymentMethod, 
+  calculatePeriodBalance 
+} from '../../utils/balanceCalculations';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -54,17 +58,21 @@ const ReportsMovilView = () => {
   const totalEgresos = hoy.filter(m => m.type === 'egreso').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
   const totalIngresos = hoy.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
 
-  // Caja efectivo y MP: ventas+ingresos - compras-egresos SOLO del día actual
-  const cajaEfectivo = hoy.filter(m => m.paymentMethod === 'efectivo').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
-  const cajaMP = hoy.filter(m => m.paymentMethod === 'mercadoPago').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
+  // --- CÁLCULOS DE SALDO MEJORADOS ---
+  // Saldo total acumulado (desde el inicio de todos los tiempos)
+  const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
+  
+  // Saldos del día actual (para mostrar movimientos del día)
+  const saldoDelDia = calculatePeriodBalance(movements, 'day', now);
+  
+  // Saldos del mes actual (para comparación)
+  const saldoDelMes = calculatePeriodBalance(movements, 'month', now);
+
+  // Mantener compatibilidad con variables existentes para el resto del código
+  const totalDisponibleEfectivo = saldoTotalAcumulado.efectivo;
+  const totalDisponibleMP = saldoTotalAcumulado.mercadoPago;
+  const cajaEfectivo = saldoDelDia.efectivo;
+  const cajaMP = saldoDelDia.mercadoPago;
   // Ranking productos vendidos hoy
   const ventasPorProducto = {};
   hoy.filter(m => m.type === 'venta').forEach(m => {
@@ -163,8 +171,7 @@ const ReportsMovilView = () => {
   // Día
   const gastosEfectivo = sumMov(hoy, 'egreso', 'efectivo') + sumMov(hoy, 'compra', 'efectivo');
   const gastosMP = sumMov(hoy, 'egreso', 'mercadoPago') + sumMov(hoy, 'compra', 'mercadoPago');
-  const totalDisponibleEfectivo = cajaEfectivo;
-  const totalDisponibleMP = cajaMP;
+  // Variables ya definidas arriba con los nuevos cálculos
 
   // Mes
   const gastosEfectivoMes = sumMov(movimientosMes2, 'egreso', 'efectivo') + sumMov(movimientosMes2, 'compra', 'efectivo') + sumMov(movimientosMes2, 'gasto', 'efectivo');
@@ -397,44 +404,57 @@ const ReportsMovilView = () => {
     },
   };
 
-  // Calcular saldo disponible del mes (caja final)
-  const cajaEfectivoMes = movimientosMes2.filter(m => m.paymentMethod === 'efectivo').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
-  const cajaMPMes = movimientosMes2.filter(m => m.paymentMethod === 'mercadoPago').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
-  const totalDisponibleMes = cajaEfectivoMes + cajaMPMes;
+  // NOTA: Los cálculos de saldo ahora usan las utilidades para mostrar el saldo real acumulado
+  // Mantener las variables del mes para comparación si es necesario
+  const cajaEfectivoMes = saldoDelMes.efectivo;
+  const cajaMPMes = saldoDelMes.mercadoPago;
+  const totalDisponibleMes = saldoDelMes.total;
 
   return (
     <div className="p-3">
       <h1 className="text-lg font-bold mb-3">Reportes - Móvil</h1>
+      
+      {/* SALDO TOTAL DISPONIBLE - PRINCIPAL */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-lg p-4 mb-4 border border-green-200">
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-gray-800">💰 Saldo Total Disponible</span>
+            <span className="text-2xl font-bold text-green-700">${saldoTotalAcumulado.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex justify-between text-sm text-gray-600 bg-white bg-opacity-60 rounded px-2 py-1">
+            <span>💵 Efectivo: <b>${saldoTotalAcumulado.efectivo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+            <span>💳 Mercado Pago: <b>${saldoTotalAcumulado.mercadoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+          </div>
+          <div className="text-xs text-gray-600 mt-1 font-medium">
+            ✅ Saldo real acumulado desde el inicio hasta hoy, considerando todas las operaciones.
+          </div>
+        </div>
+      </div>
+
+      {/* SALDO DEL MES - SECUNDARIO */}
       <div className="bg-white rounded-lg shadow p-3 mb-4">
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-700">Total disponible del mes</span>
-            <span className="text-xl font-bold text-green-700">${totalDisponibleMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="font-semibold text-gray-700">📅 Total del mes actual</span>
+            <span className="text-xl font-bold text-blue-700">${totalDisponibleMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between text-xs text-gray-500">
             <span>Efectivo: <b>${cajaEfectivoMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
             <span>Mercado Pago: <b>${cajaMPMes.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            Saldo real disponible considerando ventas, ingresos, compras, egresos y gastos del mes.
+            Movimientos únicamente del mes actual.
           </div>
         </div>
       </div>
-      {/* NUEVOS TOTALES */}
+      
+      {/* TOTALES DEL DÍA */}
       {hoy.length === 0 ? (
         <div className="rounded-lg shadow bg-white p-3 mb-4">
-          <div className="font-semibold text-blue-700 mb-2">Saldo de caja disponible</div>
+          <div className="font-semibold text-blue-700 mb-2">📊 Saldo del día (sin movimientos)</div>
           <div className="flex flex-wrap gap-2 justify-center text-sm">
-            <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{cajaEfectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
-            <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{cajaMP.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-blue-100 rounded px-3 py-1">Efectivo: <b>{saldoDelDia.efectivo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
+            <div className="bg-purple-100 rounded px-3 py-1">MP: <b>{saldoDelDia.mercadoPago.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</b></div>
           </div>
         </div>
       ) : (
