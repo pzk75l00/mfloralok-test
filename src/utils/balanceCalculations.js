@@ -108,3 +108,46 @@ export const calculatePeriodBalance = (movements, period, referenceDate = new Da
 
   return calculateBalanceByPaymentMethod(filteredMovements);
 };
+
+/**
+ * Calcula totales detallados por tipo de movimiento y método de pago
+ * @param {Array} movements - Array de movimientos
+ * @returns {Object} - Totales detallados incluyendo gastos
+ */
+export const calculateDetailedTotals = (movements) => {
+  const ventasEfectivo = movements.filter(m => m.type === 'venta' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const ventasMP = movements.filter(m => m.type === 'venta' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const comprasEfectivo = movements.filter(m => m.type === 'compra' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const comprasMP = movements.filter(m => m.type === 'compra' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const ingresosEfectivo = movements.filter(m => m.type === 'ingreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const ingresosMP = movements.filter(m => m.type === 'ingreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const egresosEfectivo = movements.filter(m => m.type === 'egreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const egresosMP = movements.filter(m => m.type === 'egreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const gastosEfectivo = movements.filter(m => m.type === 'gasto' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const gastosMP = movements.filter(m => m.type === 'gasto' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  
+  // Calcular saldos de caja (ingresos + ventas - egresos - compras - gastos)
+  const cajaFisica = ingresosEfectivo + ventasEfectivo - comprasEfectivo - egresosEfectivo - gastosEfectivo;
+  const cajaMP = ingresosMP + ventasMP - comprasMP - egresosMP - gastosMP;
+  const totalGeneral = cajaFisica + cajaMP;
+  
+  // Cantidad de productos vendidos
+  const cantidadProductosVendidos = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+  
+  return {
+    cajaFisica,
+    cajaMP,
+    totalGeneral,
+    cantidadProductosVendidos,
+    ventasEfectivo,
+    ventasMP,
+    comprasEfectivo,
+    comprasMP,
+    ingresosEfectivo,
+    ingresosMP,
+    egresosEfectivo,
+    egresosMP,
+    gastosEfectivo,
+    gastosMP
+  };
+};

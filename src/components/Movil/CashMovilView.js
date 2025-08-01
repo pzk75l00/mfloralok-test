@@ -3,6 +3,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 // import getNow from '../../utils/mockDate'; // Eliminar mock
 import MovementsView from '../Base/MovementsView';
+import { calculateDetailedTotals } from '../../utils/balanceCalculations';
 import PropTypes from 'prop-types';
 
 // Vista móvil para Caja: muestra totales del día y formulario
@@ -32,7 +33,7 @@ const CashMovilView = (props) => {
         if (!m.date) return false;
         const d = new Date(m.date);
         if (isNaN(d.getTime())) return false;
-        return (m.type === 'compra' || m.type === 'egreso') &&
+        return (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') &&
           d.getDate() === currentDay &&
           d.getMonth() === currentMonth &&
           d.getFullYear() === currentYear;
@@ -67,38 +68,13 @@ const CashMovilView = (props) => {
     : [];
 
   // --- Totales del mes o del día ---
-  const calcTotals = (movs) => {
-    const ventasEfectivo = movs.filter(m => m.type === 'venta' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const ventasMP = movs.filter(m => m.type === 'venta' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const comprasEfectivo = movs.filter(m => m.type === 'compra' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const comprasMP = movs.filter(m => m.type === 'compra' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const ingresosEfectivo = movs.filter(m => m.type === 'ingreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const ingresosMP = movs.filter(m => m.type === 'ingreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const egresosEfectivo = movs.filter(m => m.type === 'egreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const egresosMP = movs.filter(m => m.type === 'egreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-    const cajaFisica = ingresosEfectivo + ventasEfectivo - comprasEfectivo - egresosEfectivo;
-    const cajaMP = ingresosMP + ventasMP - comprasMP - egresosMP;
-    const totalGeneral = cajaFisica + cajaMP;
-    const cantidadProductosVendidos = movs.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
-    return {
-      cajaFisica,
-      cajaMP,
-      totalGeneral,
-      cantidadProductosVendidos,
-      ventasEfectivo,
-      ventasMP,
-      comprasEfectivo,
-      comprasMP,
-      ingresosEfectivo,
-      ingresosMP,
-      egresosEfectivo,
-      egresosMP
-    };
-  };
-
+  // Usar la función reutilizable de utils
+  const totalsForDay = isCurrentMonth && movementsToday.length > 0 ? calculateDetailedTotals(movementsToday) : null;
+  const totalsForMonth = calculateDetailedTotals(movementsThisMonth);
+  
   // --- Panel superior dinámico ---
   const showDayTotals = isCurrentMonth && movementsToday.length > 0;
-  const totals = showDayTotals ? calcTotals(movementsToday) : calcTotals(movementsThisMonth);
+  const totals = showDayTotals ? totalsForDay : totalsForMonth;
 
   // Forzar recarga de movimientos tras registrar uno nuevo
   const handleMovementAdded = (...args) => {

@@ -47,6 +47,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [errorMsg, setErrorMsg] = useState('');
   const [toastMsg, setToastMsg] = useState(null);
   const [toastError, setToastError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMovement, setEditingMovement] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -143,6 +144,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isSubmitting) {
+      console.log('[MovementsView] Ya se está procesando un envío, ignorando...');
+      return;
+    }
+    
+    setIsSubmitting(true);
     setErrorMsg('');
     console.log('[MovementsView] handleSubmit called', {form, products, productForm});
     let total = form.total;
@@ -159,12 +168,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           if (!plant) {
             setErrorMsg('Producto no encontrado en inventario.');
             console.log('[MovementsView] ERROR: Producto no encontrado', {productForm, plants});
+            setIsSubmitting(false);
             return;
           }
           const currentStock = plant.stock || 0;
           if (currentStock < Number(productForm.quantity)) {
             setErrorMsg(`Stock insuficiente para ${plant.name}. Disponible: ${currentStock}`);
             console.log('[MovementsView] ERROR: Stock insuficiente', {plant, productForm});
+            setIsSubmitting(false);
             return;
           }
         }
@@ -182,12 +193,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       } else {
         setErrorMsg('Agregue al menos un producto.');
         console.log('[MovementsView] ERROR: Campos incompletos para agregar producto automáticamente', {productForm});
+        setIsSubmitting(false);
         return;
       }
     }
     if (form.type === 'venta' || form.type === 'compra') {
       if (currentProducts.length === 0) {
         setErrorMsg('Agregue al menos un producto.');
+        setIsSubmitting(false);
         return;
       }
       total = currentProducts.reduce((sum, p) => sum + p.total, 0);
@@ -206,6 +219,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     if (form.type === 'venta' || form.type === 'compra') {
       if (currentProducts.length === 0) {
         setErrorMsg('Agregue al menos un producto.');
+        setIsSubmitting(false);
         return;
       }
     }
@@ -216,12 +230,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         setErrorMsg('No hay saldo suficiente en Mercado Pago para realizar esta operación.');
         showToast({ type: 'error', text: 'No hay saldo suficiente en Mercado Pago para realizar esta operación.' });
         setToastError(true);
+        setIsSubmitting(false);
         return;
       }
       if (form.paymentMethod === 'efectivo' && monto > cajaActualEfectivo) {
         setErrorMsg('No hay saldo suficiente en Efectivo para realizar esta operación.');
         showToast({ type: 'error', text: 'No hay saldo suficiente en Efectivo para realizar esta operación.' });
         setToastError(true);
+        setIsSubmitting(false);
         return;
       }
     }
@@ -257,11 +273,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             const plantSnap = await getDoc(plantRef);
             if (!plantSnap.exists()) {
               setErrorMsg('Producto no encontrado en inventario.');
+              setIsSubmitting(false);
               return;
             }
             const currentStock = plantSnap.data().stock || 0;
             if (currentStock < p.quantity) {
               setErrorMsg(`Stock insuficiente para ${p.name}. Disponible: ${currentStock}`);
+              setIsSubmitting(false);
               return;
             }
             await updateDoc(plantRef, { stock: currentStock - p.quantity });
@@ -272,6 +290,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             const plantSnap = await getDoc(plantRef);
             if (!plantSnap.exists()) {
               setErrorMsg('Producto no encontrado en inventario.');
+              setIsSubmitting(false);
               return;
             }
             const currentStock = plantSnap.data().stock || 0;
@@ -336,6 +355,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       showToast({ type: 'error', text: 'Error al registrar el movimiento' });
       setToastError(true);
       console.error('ERROR al guardar movimiento:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -523,6 +544,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               ventaTotal={ventaTotal}
               products={products}
               onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
               errorMsg={errorMsg}
             />
           ) : (form.type === 'venta' && !isMobileDevice) ? (
@@ -537,6 +559,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               ventaTotal={ventaTotal}
               products={products}
               onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
               errorMsg={errorMsg}
             />
           ) : (isMobileDevice ? (
@@ -544,6 +567,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               form={form}
               handleChange={handleChange}
               onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
               errorMsg={errorMsg}
             />
           ) : (
@@ -551,6 +575,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               form={form}
               handleChange={handleChange}
               onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
               errorMsg={errorMsg}
             />
           ))
