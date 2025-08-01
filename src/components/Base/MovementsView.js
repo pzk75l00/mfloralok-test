@@ -57,12 +57,18 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const now = new Date();
   const currentMonth = typeof selectedMonth === 'number' ? selectedMonth : now.getMonth();
   const currentYear = typeof selectedYear === 'number' ? selectedYear : now.getFullYear();
-  const movementsThisMonth = movements.filter(mov => {
+  
+  // En escritorio: mostrar todos los movimientos, en móvil: solo del mes
+  const movementsThisMonth = isMobile ? movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
     if (isNaN(d.getTime())) return false;
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  });
+  }) : movements.filter(mov => {
+    if (!mov.date) return false;
+    const d = new Date(mov.date);
+    return !isNaN(d.getTime());
+  }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Ordenar por fecha más reciente primero
 
   // --- NUEVO ESTADO PARA VENTA MULTIPRODUCTO ---
   const [products, setProducts] = useState([]);
@@ -586,7 +592,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         <>
           {/* Historial de movimientos fuera del sticky */}
           <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0 overflow-x-auto">
-            <h2 className="text-base font-bold mb-2">Histórico de Movimientos del Mes</h2>
+            <h2 className="text-base font-bold mb-2">
+              {isMobile ? "Histórico de Movimientos del Mes" : "Histórico de Todos los Movimientos"}
+            </h2>
             {movementsThisMonth.length > 0 ? (
               <table className="min-w-full border-collapse border border-gray-200 text-xs whitespace-nowrap">
                 <thead>
