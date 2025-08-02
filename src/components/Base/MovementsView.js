@@ -247,6 +247,20 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         return;
       }
     }
+
+    // Validación de fecha futura para movimientos en escritorio
+    if (!isMobileDevice && (form.type === 'venta' || form.type === 'compra' || form.type === 'ingreso' || form.type === 'egreso' || form.type === 'gasto')) {
+      const fechaMovimiento = new Date(form.date);
+      const fechaActual = new Date();
+      if (fechaMovimiento > fechaActual) {
+        setErrorMsg('No se puede registrar un movimiento con fecha futura.');
+        showToast({ type: 'error', text: 'No se puede registrar un movimiento con fecha futura.' });
+        setToastError(true);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     // Fecha: lógica según dispositivo y tipo
     let dateStr = form.date;
     let dateArg;
