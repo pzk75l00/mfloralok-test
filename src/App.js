@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import InventoryView from './components/Inventory/InventoryView';
 import CashView from './components/Cash/CashView';
 import ReportsView from './components/Reports/ReportsView';
+import StatisticsView from './components/Desktop/statistics/StatisticsView';
 import NavigationMovil from './components/Movil/NavigationMovil';
 import DesktopLayout from './components/DesktopLayout';
 
@@ -33,6 +34,8 @@ const App = () => {
       case 'movements':
       case 'caja':
         return <CashView />;
+      case 'stats':
+        return <StatisticsView />;
       case 'reportes':
         return <ReportsView />;
       default:
