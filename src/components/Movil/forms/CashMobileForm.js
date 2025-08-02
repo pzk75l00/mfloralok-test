@@ -5,11 +5,6 @@ import PropTypes from 'prop-types';
 const CashMobileForm = ({ form, handleChange, onSubmit, isSubmitting, errorMsg }) => {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 items-stretch">
-      <select name="type" value={form.type} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50">
-        <option value="ingreso">Ingreso</option>
-        <option value="egreso">Egreso</option>
-        <option value="gasto">Gasto</option>
-      </select>
       <textarea name="notes" value={form.notes} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Detalle del movimiento" />
       <input type="number" name="price" value={form.price} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Monto" />
       <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50">
