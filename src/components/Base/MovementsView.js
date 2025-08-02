@@ -29,7 +29,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [plants, setPlants] = useState(propPlants || []);
   const [movements, setMovements] = useState([]);
   const [form, setForm] = useState({
-    type: 'venta',
+    type: 'venta', // Volver al valor por defecto original
     detail: '',
     plantId: '',
     quantity: 1,
@@ -341,7 +341,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         if (onMovementAdded) onMovementAdded();
       }
       setForm({
-        type: 'venta',
+        type: 'venta', // Volver al valor por defecto original
         detail: '',
         plantId: '',
         quantity: 1,
@@ -536,55 +536,76 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     <div>
       {/* Sticky caja de escritorio con el formulario */}
       <div className={`sticky top-0 z-20 bg-white border border-gray-100 rounded-xl shadow-md px-2 py-1 w-full mx-0 mt-6 ${isMobileDevice ? 'block' : ''}`}>
+        {/* Selector de tipo de movimiento en escritorio y móvil */}
+        {!hideForm && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Movimiento</label>
+            <select 
+              name="type" 
+              value={form.type} 
+              onChange={handleChange} 
+              className="w-full border rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {MOVEMENT_TYPES.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Formulario desacoplado según dispositivo y tipo */}
         {!hideForm && (
-          (form.type === 'venta' && isMobileDevice) ? (
-            <SalesMobileForm
-              form={form}
-              productForm={productForm}
-              plants={plants}
-              handleChange={handleChange}
-              handleProductFormChange={handleProductFormChange}
-              handleAddProduct={handleAddProduct}
-              handleRemoveProduct={handleRemoveProduct}
-              ventaTotal={ventaTotal}
-              products={products}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              errorMsg={errorMsg}
-            />
-          ) : (form.type === 'venta' && !isMobileDevice) ? (
-            <SalesDesktopForm
-              form={form}
-              productForm={productForm}
-              plants={plants}
-              handleChange={handleChange}
-              handleProductFormChange={handleProductFormChange}
-              handleAddProduct={handleAddProduct}
-              handleRemoveProduct={handleRemoveProduct}
-              ventaTotal={ventaTotal}
-              products={products}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              errorMsg={errorMsg}
-            />
-          ) : (isMobileDevice ? (
-            <CashMobileForm
-              form={form}
-              handleChange={handleChange}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              errorMsg={errorMsg}
-            />
+          isMobileDevice ? (
+            (form.type === 'venta' || form.type === 'compra') ? (
+              <SalesMobileForm
+                form={form}
+                productForm={productForm}
+                plants={plants}
+                handleChange={handleChange}
+                handleProductFormChange={handleProductFormChange}
+                handleAddProduct={handleAddProduct}
+                handleRemoveProduct={handleRemoveProduct}
+                ventaTotal={ventaTotal}
+                products={products}
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                errorMsg={errorMsg}
+              />
+            ) : (
+              <CashMobileForm
+                form={form}
+                handleChange={handleChange}
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                errorMsg={errorMsg}
+              />
+            )
           ) : (
-            <CashDesktopForm
-              form={form}
-              handleChange={handleChange}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              errorMsg={errorMsg}
-            />
-          ))
+            ((form.type === 'venta' || form.type === 'compra') ? (
+              <SalesDesktopForm
+                form={form}
+                productForm={productForm}
+                plants={plants}
+                handleChange={handleChange}
+                handleProductFormChange={handleProductFormChange}
+                handleAddProduct={handleAddProduct}
+                handleRemoveProduct={handleRemoveProduct}
+                ventaTotal={ventaTotal}
+                products={products}
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                errorMsg={errorMsg}
+              />
+            ) : (
+              <CashDesktopForm
+                form={form}
+                handleChange={handleChange}
+                onSubmit={handleSubmit}
+                isSubmitting={isSubmitting}
+                errorMsg={errorMsg}
+              />
+            ))
+          )
         )}
       </div>
       {/* Mostrar solo el formulario si showOnlyForm está activo (ej: Caja Diaria móvil) */}
