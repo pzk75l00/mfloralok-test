@@ -51,6 +51,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [editingMovement, setEditingMovement] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [blurTimeout, setBlurTimeout] = useState(null);
 
   // --- FILTRO MENSUAL ---
   const [reloadKey, setReloadKey] = useState(0);
@@ -468,8 +469,78 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     setEditForm(prev => ({ ...prev, [name]: value }));
   };
   const handleEditCancel = () => {
+    // Limpiar timeout si está pendiente
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+      setBlurTimeout(null);
+    }
     setEditingMovement(null);
     setEditForm(null);
+  };
+  
+  // Nuevas funciones para edición inline sin botones
+  const handleCellDoubleClick = (mov, field) => {
+    if (!isMobileDevice) { // Solo en desktop
+      setEditingMovement(mov.id);
+      setEditForm({ ...mov });
+    }
+  };
+  
+  const handleFieldBlur = async (e) => {
+    // Cancelar cualquier timeout previo
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+    }
+    
+    // Crear un delay antes de guardar automáticamente
+    const timeoutId = setTimeout(async () => {
+      // Verificar si el foco está aún dentro de la fila de edición
+      const editingRow = document.querySelector('.ring-2.ring-blue-400');
+      const activeElement = document.activeElement;
+      
+      // Solo guardar si el foco salió completamente de la fila de edición
+      if (editingMovement && (!editingRow || !editingRow.contains(activeElement))) {
+        await handleEditSave();
+      }
+    }, 150); // 150ms de delay
+    
+    setBlurTimeout(timeoutId);
+  };
+
+  const handleFieldFocus = () => {
+    // Cancelar el timeout si el usuario hace focus en otro campo de la misma fila
+    if (blurTimeout) {
+      clearTimeout(blurTimeout);
+      setBlurTimeout(null);
+    }
+  };
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleEditCancel();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.target.blur(); // Esto activará el onBlur que guarda
+    } else if (e.key === 'Tab') {
+      // Permitir Tab para navegar, pero guardar al salir
+      setTimeout(() => {
+        if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') {
+          handleEditSave();
+        }
+      }, 0);
+    }
+  };
+  
+  const isFieldEditable = (field, movType) => {
+    const baseFields = ['date', 'paymentMethod', 'type', 'location', 'notes'];
+    const salesPurchaseFields = ['plantId', 'quantity', 'price', 'total'];
+    const otherFields = ['price', 'total'];
+    
+    if (baseFields.includes(field)) return true;
+    if ((movType === 'venta' || movType === 'compra') && salesPurchaseFields.includes(field)) return true;
+    if ((movType === 'ingreso' || movType === 'egreso' || movType === 'gasto') && otherFields.includes(field)) return true;
+    return false;
   };
   const handleEditSave = async () => {
     if (!editForm) return;
@@ -627,9 +698,16 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         <>
           {/* Historial de movimientos fuera del sticky */}
           <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0 overflow-x-auto">
-            <h2 className="text-base font-bold mb-2">
-              {isMobile ? "Histórico de Movimientos del Mes" : "Histórico de Todos los Movimientos"}
-            </h2>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-base font-bold">
+                {isMobile ? "Histórico de Movimientos del Mes" : "Histórico de Todos los Movimientos"}
+              </h2>
+              {!isMobileDevice && (
+                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                  💡 Doble clic para editar • Al salir del campo se guarda automáticamente • Escape: cancelar
+                </div>
+              )}
+            </div>
             {movementsThisMonth.length > 0 ? (
               <table className="min-w-full border-collapse border border-gray-200 text-xs whitespace-nowrap">
                 <thead>
@@ -642,9 +720,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                     <th className="border border-gray-200 px-2 py-1">Método de Pago</th>
                     <th className="border border-gray-200 px-2 py-1">Tipo</th>
                     <th className="border border-gray-200 px-2 py-1">Lugar</th>
-                    {/* Ocultar Notas y Acciones en móvil para mejor visualización */}
+                    {/* Ocultar Notas en móvil para mejor visualización */}
                     <th className="border border-gray-200 px-2 py-1 hidden sm:table-cell">Notas</th>
-                    <th className="border border-gray-200 px-2 py-1 hidden sm:table-cell">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -656,15 +733,15 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                     if (mov.type === 'gasto') rowClass = 'bg-orange-500 text-white';
                     const isEditing = editingMovement === mov.id;
                     return (
-                      <tr key={mov.id} className={rowClass}>
+                      <tr key={mov.id} className={`${rowClass} ${isEditing ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}>
                         {isEditing ? (
                           <>
                             <td className="border border-gray-200 px-2 py-1">
-                              <input type="datetime-local" name="date" value={formatDateForInput(editForm.date)} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                              <input type="datetime-local" name="date" value={formatDateForInput(editForm.date)} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" autoFocus />
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
                               {(editForm.type === 'venta' || editForm.type === 'compra') ? (
-                                <select name="plantId" value={editForm.plantId || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                                <select name="plantId" value={editForm.plantId || ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400">
                                   <option value="">-</option>
                                   {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
@@ -672,75 +749,93 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
                               {(editForm.type === 'venta' || editForm.type === 'compra') ? (
-                                <input type="number" name="quantity" min="1" value={editForm.quantity ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                                <input type="number" name="quantity" min="1" value={editForm.quantity ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" />
                               ) : ''}
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
-                              <input type="number" name="price" value={editForm.price ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                              <input type="number" name="price" value={editForm.price ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" />
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
-                              <input type="number" name="total" value={editForm.total ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                              <input type="number" name="total" value={editForm.total ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" />
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
-                              <select name="paymentMethod" value={editForm.paymentMethod || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                              <select name="paymentMethod" value={editForm.paymentMethod || ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400">
                                 {PAYMENT_METHODS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                               </select>
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
-                              <select name="type" value={editForm.type || ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5">
+                              <select name="type" value={editForm.type || ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400">
                                 {MOVEMENT_TYPES.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                               </select>
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
-                              <input name="location" value={editForm.location ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
+                              <input name="location" value={editForm.location ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" />
                             </td>
-                            <td className="border border-gray-200 px-2 py-1">
-                              <input name="notes" value={editForm.notes ?? ''} onChange={handleEditChange} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5" />
-                            </td>
-                            <td className="border border-gray-200 px-2 py-1 flex gap-1 justify-center items-center">
-                              {isEditing ? (
-                                <>
-                                  <button type="button" onClick={handleEditSave} className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Guardar movimiento">
-                                    <span className="material-icons text-base align-middle">Guardar</span>
-                                  </button>
-                                  <button type="button" onClick={handleEditCancel} className="bg-gray-400 text-white px-2 py-1 rounded text-xs flex items-center" disabled={editLoading} aria-label="Cancelar edición">
-                                    <span className="material-icons text-base align-middle">Cerrar</span>
-                                  </button>
-                                </>
-                              ) : (
-                                <button type="button" onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center" aria-label="Editar movimiento">
-                                  <span className="material-icons text-base align-middle">edit</span>
-                                </button>
-                              )}
+                            <td className="border border-gray-200 px-2 py-1 hidden sm:table-cell">
+                              <input name="notes" value={editForm.notes ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" />
                             </td>
                           </>
                         ) : (
                           <>
-                            <td className="border border-gray-200 px-2 py-1">{mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</td>
-                            <td className="border border-gray-200 px-2 py-1">
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('date', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'date')}
+                            >
+                              {mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                            </td>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('plantId', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'plantId')}
+                            >
                               {plants && mov.plantId
                                 ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
                                 : '-'}
                             </td>
-                            <td className="border border-gray-200 px-2 py-1 text-right">
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('quantity', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'quantity')}
+                            >
                               {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
                                 ? mov.products.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
                                 : (mov.type === 'venta' || mov.type === 'compra') ? mov.quantity : ''}
                             </td>
-                            <td className="border border-gray-200 px-2 py-1 text-right">
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('price', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'price')}
+                            >
                               {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
                                 ? ''
                                 : mov.price ? `$${mov.price}` : ''}
                             </td>
-                            <td className="border border-gray-200 px-2 py-1 text-right">{mov.total ? `$${mov.total}` : ''}</td>
-                            <td className="border border-gray-200 px-2 py-1">{PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}</td>
-                            <td className="border border-gray-200 px-2 py-1">{MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}</td>
-                            <td className="border border-gray-200 px-2 py-1">{mov.location}</td>
-                            <td className="border border-gray-200 px-2 py-1 hidden sm:table-cell">{mov.notes}</td>
-                            <td className="border border-gray-200 px-2 py-1 flex gap-1 justify-center items-center">
-                              <button onClick={() => handleEditClick(mov)} className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center" aria-label="Editar movimiento">
-                                <span className="material-icons text-base align-middle">Editar</span>
-                              </button>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('total', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'total')}
+                            >
+                              {mov.total ? `$${mov.total}` : ''}
+                            </td>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('paymentMethod', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'paymentMethod')}
+                            >
+                              {PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}
+                            </td>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('type', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'type')}
+                            >
+                              {MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}
+                            </td>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('location', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'location')}
+                            >
+                              {mov.location}
+                            </td>
+                            <td 
+                              className={`border border-gray-200 px-2 py-1 hidden sm:table-cell ${!isMobileDevice && isFieldEditable('notes', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              onDoubleClick={() => handleCellDoubleClick(mov, 'notes')}
+                            >
+                              {mov.notes}
                             </td>
                           </>
                         )}

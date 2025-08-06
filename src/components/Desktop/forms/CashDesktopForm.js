@@ -2,7 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const CashDesktopForm = ({ form, handleChange, onSubmit, errorMsg }) => {
+const CashDesktopForm = ({ form, handleChange, onSubmit, errorMsg, isSubmitting }) => {
   // Calcular la fecha máxima permitida (fecha actual)
   const maxDate = new Date().toISOString().slice(0, 16);
   
@@ -29,7 +29,13 @@ const CashDesktopForm = ({ form, handleChange, onSubmit, errorMsg }) => {
         </div>
         <input type="text" name="location" value={form.location} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Lugar" />
         {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
-        <button type="submit" className="bg-green-600 text-white rounded px-4 py-2 font-bold">Registrar movimiento</button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="bg-green-600 text-white rounded px-4 py-2 font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? 'Procesando...' : 'Registrar movimiento'}
+        </button>
       </div>
     </form>
   );
@@ -40,6 +46,7 @@ CashDesktopForm.propTypes = {
   handleChange: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   errorMsg: PropTypes.string,
+  isSubmitting: PropTypes.bool,
 };
 
 export default CashDesktopForm;

@@ -4,10 +4,11 @@ import PropTypes from 'prop-types';
 import ProductFormFields from '../../Shared/ProductFormFields';
 import ProductTable from '../../Shared/ProductTable';
 
-const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProductFormChange, handleAddProduct, handleRemoveProduct, ventaTotal, products, onSubmit, errorMsg }) => {
+const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProductFormChange, handleAddProduct, handleRemoveProduct, ventaTotal, products, onSubmit, errorMsg, isSubmitting }) => {
   const isVenta = form.type === 'venta';
   const buttonText = isVenta ? 'Registrar venta' : 'Registrar compra';
   const buttonColor = isVenta ? 'bg-green-600' : 'bg-red-600';
+  const submittingText = isVenta ? 'Registrando venta...' : 'Registrando compra...';
   
   // Calcular la fecha máxima permitida (fecha actual)
   const maxDate = new Date().toISOString().slice(0, 16);
@@ -40,7 +41,13 @@ const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProdu
         <input type="text" name="location" value={form.location} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Lugar" />
         <textarea name="notes" value={form.notes} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Notas" />
         {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
-        <button type="submit" className={`${buttonColor} text-white rounded px-4 py-2 font-bold w-full`}>{buttonText}</button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className={`${buttonColor} text-white rounded px-4 py-2 font-bold w-full disabled:bg-gray-400 disabled:cursor-not-allowed`}
+        >
+          {isSubmitting ? submittingText : buttonText}
+        </button>
       </div>
     </form>
   );
@@ -58,6 +65,7 @@ SalesDesktopForm.propTypes = {
   products: PropTypes.array.isRequired,
   onSubmit: PropTypes.func.isRequired,
   errorMsg: PropTypes.string,
+  isSubmitting: PropTypes.bool,
 };
 
 export default SalesDesktopForm;
