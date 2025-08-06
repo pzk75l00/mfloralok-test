@@ -27,7 +27,7 @@ const CashDesktopForm = ({ form, handleChange, onSubmit, errorMsg }) => {
             title="Seleccione la fecha del movimiento (no puede ser posterior a la fecha actual)"
           />
         </div>
-        <textarea name="location" value={form.location} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Notas adicionales" rows="2" />
+        <input type="text" name="location" value={form.location} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Lugar" />
         {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
         <button type="submit" className="bg-green-600 text-white rounded px-4 py-2 font-bold">Registrar movimiento</button>
       </div>

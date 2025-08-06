@@ -37,6 +37,7 @@ const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProdu
             title="Seleccione la fecha del movimiento (no puede ser posterior a la fecha actual)"
           />
         </div>
+        <input type="text" name="location" value={form.location} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Lugar" />
         <textarea name="notes" value={form.notes} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full" placeholder="Notas" />
         {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
         <button type="submit" className={`${buttonColor} text-white rounded px-4 py-2 font-bold w-full`}>{buttonText}</button>
