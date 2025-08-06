@@ -202,4 +202,29 @@
 
 ---
 
+## 🔮 **Funcionalidades Futuras en Desarrollo**
+
+### 💰 **Pagos Combinados (Próximamente)**
+**Problema**: Actualmente solo puedes elegir UN método de pago por venta.
+
+**Solución en desarrollo**: Poder dividir un pago entre múltiples métodos.
+
+**Ejemplo del futuro**:
+```
+🛒 Venta: $500
+💰 Efectivo: $150 (lo que tiene el cliente)
+📱 Mercado Pago: $350 (el resto)
+✅ Total cubierto: $500
+```
+
+**Casos que se solucionarán**:
+- Cliente sin cambio exacto
+- Límites diarios de Mercado Pago
+- Ventas grupales en ferias
+- Clientes que prefieren combinar métodos
+
+*Esta funcionalidad está en análisis y desarrollo activo.*
+
+---
+
 *🎯 Recuerda: La clave está en ser consistente y registrar todo inmediatamente*

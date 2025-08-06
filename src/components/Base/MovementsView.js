@@ -147,6 +147,12 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const handleRemoveProduct = (idx) => {
     setProducts(prev => prev.filter((_, i) => i !== idx));
   };
+  
+  // Función para actualizar la lista de plantas cuando se crea un producto nuevo
+  const handleProductsUpdated = (updatedPlants) => {
+    setPlants(updatedPlants);
+  };
+  
   const ventaTotal = products.reduce((sum, p) => sum + p.total, 0);
 
   const handleSubmit = async (e) => {
@@ -655,6 +661,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
                 errorMsg={errorMsg}
+                onProductsUpdated={handleProductsUpdated}
               />
             ) : (
               <CashMobileForm
@@ -680,6 +687,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
                 errorMsg={errorMsg}
+                onProductsUpdated={handleProductsUpdated}
               />
             ) : (
               <CashDesktopForm

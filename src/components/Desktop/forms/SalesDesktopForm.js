@@ -4,7 +4,21 @@ import PropTypes from 'prop-types';
 import ProductFormFields from '../../Shared/ProductFormFields';
 import ProductTable from '../../Shared/ProductTable';
 
-const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProductFormChange, handleAddProduct, handleRemoveProduct, ventaTotal, products, onSubmit, errorMsg, isSubmitting }) => {
+const SalesDesktopForm = ({ 
+  form, 
+  productForm, 
+  plants, 
+  handleChange, 
+  handleProductFormChange, 
+  handleAddProduct, 
+  handleRemoveProduct, 
+  ventaTotal, 
+  products, 
+  onSubmit, 
+  errorMsg, 
+  isSubmitting,
+  onProductsUpdated 
+}) => {
   const isVenta = form.type === 'venta';
   const buttonText = isVenta ? 'Registrar venta' : 'Registrar compra';
   const buttonColor = isVenta ? 'bg-green-600' : 'bg-red-600';
@@ -16,7 +30,12 @@ const SalesDesktopForm = ({ form, productForm, plants, handleChange, handleProdu
   return (
     <form onSubmit={onSubmit} className="flex flex-row gap-4 items-end">
       <div className="flex flex-col gap-2 flex-1">
-        <ProductFormFields productForm={productForm} plants={plants} handleProductFormChange={handleProductFormChange} />
+        <ProductFormFields 
+          productForm={productForm} 
+          plants={plants} 
+          handleProductFormChange={handleProductFormChange} 
+          onProductsUpdated={onProductsUpdated}
+        />
         <button type="button" onClick={handleAddProduct} className="bg-blue-500 text-white rounded px-2 py-1">Agregar producto</button>
       </div>
       <div className="flex-1">
@@ -66,6 +85,7 @@ SalesDesktopForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   errorMsg: PropTypes.string,
   isSubmitting: PropTypes.bool,
+  onProductsUpdated: PropTypes.func,
 };
 
 export default SalesDesktopForm;

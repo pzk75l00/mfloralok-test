@@ -94,10 +94,18 @@ Esta documentación te guiará paso a paso para aprovechar al máximo **Mundo Fl
 ### 🛒 "Compré plantas y necesito registrarlas"
 → [Casos de Uso - Escenario 2](Casos_de_Uso.md#-escenario-2-compra-a-proveedor)
 
-### 💰 "Necesito registrar un gasto"
+### � "Compré herramientas/insumos que NO son para venta"
+→ **🚧 Próximamente**: Sistema inteligente de productos vs insumos
+→ [Casos de Uso - Escenario 3](Casos_de_Uso.md#-escenario-3-pago-de-servicios) (temporal: registrar como gasto)
+
+### �💰 "Necesito registrar un gasto"
 → [Casos de Uso - Escenario 3](Casos_de_Uso.md#-escenario-3-pago-de-servicios)
 
-### 📊 "Quiero ver cómo va el mes"
+### � "Quiero pagar con múltiples métodos (efectivo + Mercado Pago)"
+→ [Casos de Uso - Funcionalidades Futuras](Casos_de_Uso.md#-funcionalidades-futuras-en-desarrollo)
+→ **🚧 Próximamente**: Sistema de pagos combinados
+
+### �📊 "Quiero ver cómo va el mes"
 → [Guía Completa - Reportes](Guia_Usuario_MundoFloral.md#reportes-y-consultas)
 → [Casos de Uso - Escenario 10](Casos_de_Uso.md#-escenario-10-análisis-mensual)
 
@@ -148,6 +156,13 @@ Esta documentación te guiará paso a paso para aprovechar al máximo **Mundo Fl
 - Describe cómo mejoraría tu trabajo
 - Comparte con el administrador del sistema
 
+### 🛠️ ¿Eres desarrollador o quieres ver funcionalidades futuras?
+- 📋 **Roadmap técnico**: `doc/dev/` contiene toda la documentación de desarrollo
+- � **Gestión de productos**: Ver análisis completo en `doc/dev/Mejoras_Gestion_Productos.md`
+- �💰 **Pagos combinados**: Ver análisis completo en `doc/dev/Pagos_Combinados_Analisis.md`
+- 🚀 **Proyectos futuros**: Roadmap detallado en `doc/dev/Roadmap_Desarrollo.md`
+- 🏗️ **Arquitectura**: Documentación técnica en `doc/dev/Arquitectura_Tecnica.md`
+
 ---
 
 ## 📅 Actualizaciones
@@ -158,6 +173,12 @@ Esta documentación te guiará paso a paso para aprovechar al máximo **Mundo Fl
 - ✅ Edición directa en tabla (sin botones de acción)
 - ✅ Auto-guardado inteligente
 - ✅ Mejor experiencia visual durante el procesamiento
+
+**En desarrollo para próximas versiones:**
+- 🚧 **Gestión inteligente de productos**: Distinguir entre productos para venta vs insumos de uso interno
+- 🚧 **Pagos combinados**: Dividir una venta entre múltiples métodos (ej: $150 efectivo + $350 Mercado Pago)
+- 🚧 **Sistema de combos**: Crear paquetes de productos con descuentos
+- 🚧 **Sistema de pedidos**: Gestión de encargos y entregas
 
 ### 🔄 Mantenimiento de Documentación
 Esta documentación se actualiza regularmente para reflejar nuevas características y mejoras en la aplicación.

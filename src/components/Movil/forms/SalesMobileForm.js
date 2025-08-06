@@ -4,9 +4,29 @@ import PropTypes from 'prop-types';
 import ProductFormFields from '../../Shared/ProductFormFields';
 import ProductTable from '../../Shared/ProductTable';
 
-const SalesMobileForm = ({ form, productForm, plants, handleChange, handleProductFormChange, handleAddProduct, handleRemoveProduct, ventaTotal, products, onSubmit, isSubmitting, errorMsg }) => (
+const SalesMobileForm = ({ 
+  form, 
+  productForm, 
+  plants, 
+  handleChange, 
+  handleProductFormChange, 
+  handleAddProduct, 
+  handleRemoveProduct, 
+  ventaTotal, 
+  products, 
+  onSubmit, 
+  isSubmitting, 
+  errorMsg,
+  onProductsUpdated 
+}) => (
   <form onSubmit={onSubmit} className="flex flex-col gap-3 items-stretch">
-    <ProductFormFields productForm={productForm} plants={plants} handleProductFormChange={handleProductFormChange} disabled={isSubmitting} />
+    <ProductFormFields 
+      productForm={productForm} 
+      plants={plants} 
+      handleProductFormChange={handleProductFormChange} 
+      onProductsUpdated={onProductsUpdated}
+      disabled={isSubmitting} 
+    />
     <button type="button" onClick={handleAddProduct} disabled={isSubmitting} className="bg-blue-500 text-white rounded px-2 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed">Agregar producto</button>
     <ProductTable products={products} handleRemoveProduct={handleRemoveProduct} disabled={isSubmitting} />
     <div className="font-bold text-right">Total: ${ventaTotal}</div>
@@ -40,6 +60,7 @@ SalesMobileForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   isSubmitting: PropTypes.bool,
   errorMsg: PropTypes.string,
+  onProductsUpdated: PropTypes.func,
 };
 
 export default SalesMobileForm;
