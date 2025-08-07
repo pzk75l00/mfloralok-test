@@ -3,6 +3,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ProductFormFields from '../../Shared/ProductFormFields';
 import ProductTable from '../../Shared/ProductTable';
+import PaymentSelector from '../../Shared/PaymentSelector';
 
 const SalesMobileForm = ({ 
   form, 
@@ -17,7 +18,8 @@ const SalesMobileForm = ({
   onSubmit, 
   isSubmitting, 
   errorMsg,
-  onProductsUpdated 
+  onProductsUpdated,
+  onPaymentMethodsChange
 }) => (
   <form onSubmit={onSubmit} className="flex flex-col gap-3 items-stretch">
     <ProductFormFields 
@@ -25,15 +27,22 @@ const SalesMobileForm = ({
       plants={plants} 
       handleProductFormChange={handleProductFormChange} 
       onProductsUpdated={onProductsUpdated}
+      movementType={form.type}
       disabled={isSubmitting} 
     />
     <button type="button" onClick={handleAddProduct} disabled={isSubmitting} className="bg-blue-500 text-white rounded px-2 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed">Agregar producto</button>
     <ProductTable products={products} handleRemoveProduct={handleRemoveProduct} disabled={isSubmitting} />
     <div className="font-bold text-right">Total: ${ventaTotal}</div>
-    <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50">
-      <option value="efectivo">Efectivo</option>
-      <option value="mercadoPago">Mercado Pago</option>
-    </select>
+    
+    {/* Sistema de pagos mejorado */}
+    <PaymentSelector
+      total={ventaTotal}
+      paymentMethods={form.paymentMethods}
+      onChange={onPaymentMethodsChange}
+      disabled={isSubmitting}
+      showManageButton={true}
+    />
+    
     <input type="text" name="location" value={form.location} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Lugar" />
     <textarea name="notes" value={form.notes} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Notas" />
     {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
@@ -61,6 +70,7 @@ SalesMobileForm.propTypes = {
   isSubmitting: PropTypes.bool,
   errorMsg: PropTypes.string,
   onProductsUpdated: PropTypes.func,
+  onPaymentMethodsChange: PropTypes.func,
 };
 
 export default SalesMobileForm;

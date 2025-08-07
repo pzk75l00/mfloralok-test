@@ -7,6 +7,13 @@ import { toZonedTime } from 'date-fns-tz';
 import { registrarVenta } from './saleUtils';
 import PropTypes from 'prop-types';
 import { updateProductPurchasePrice } from '../../utils/productManagement';
+import { 
+  validateMixedPayment, 
+  generatePaymentSummary, 
+  getMainPaymentMethod,
+  createPaymentMethodsFromSingle,
+  calculateTotalsByPaymentMethod 
+} from '../../utils/mixedPaymentUtils';
 import SalesMobileForm from '../Movil/forms/SalesMobileForm';
 import SalesDesktopForm from '../Desktop/forms/SalesDesktopForm';
 import CashMobileForm from '../Movil/forms/CashMobileForm';
@@ -37,6 +44,12 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     price: '',
     total: '',
     paymentMethod: 'efectivo',
+    paymentMethods: {
+      efectivo: 0,
+      mercadoPago: 0,
+      transferencia: 0,
+      tarjeta: 0
+    },
     date: new Date().toISOString().slice(0, 16),
     location: '',
     notes: ''
@@ -101,17 +114,39 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // Calcular saldos actuales de caja antes del submit
-  const cajaActualEfectivo = movements.filter(m => m.paymentMethod === 'efectivo').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
-  const cajaActualMP = movements.filter(m => m.paymentMethod === 'mercadoPago').reduce((sum, m) => {
-    if (m.type === 'venta' || m.type === 'ingreso') return sum + (Number(m.total) || 0);
-    if (m.type === 'compra' || m.type === 'egreso') return sum - (Number(m.total) || 0);
-    return sum;
-  }, 0);
+  // Calcular saldos actuales de caja antes del submit (compatible con pagos combinados)
+  const calculateCashBalance = (movements, method) => {
+    let totalBalance = 0;
+    let processedMovements = 0;
+    
+    const balance = movements.reduce((sum, m) => {
+      let amount = 0;
+      
+      // Si tiene paymentMethods (nuevo formato)
+      if (m.paymentMethods && m.paymentMethods[method]) {
+        amount = Number(m.paymentMethods[method]) || 0;
+        if (amount > 0) {
+          processedMovements++;
+        }
+      } 
+      // Si usa formato antiguo
+      else if (m.paymentMethod === method) {
+        amount = Number(m.total) || 0; // Usar m.total para el monto del movimiento
+        if (amount > 0) {
+          processedMovements++;
+        }
+      }
+      
+      if (m.type === 'venta' || m.type === 'ingreso') return sum + amount;
+      if (m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto') return sum - amount;
+      return sum;
+    }, 0);
+    
+    return balance;
+  };
+  
+  const cajaActualEfectivo = calculateCashBalance(movements, 'efectivo');
+  const cajaActualMP = calculateCashBalance(movements, 'mercadoPago');
 
   // --- FUNCIONES PARA MANEJAR PRODUCTOS EN LA VENTA ---
   const handleProductFormChange = (e) => {
@@ -154,7 +189,43 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     setPlants(updatedPlants);
   };
   
+  // Función para manejar cambios en métodos de pago combinados
+  const handlePaymentMethodsChange = (paymentMethods) => {
+    const mainMethod = getMainPaymentMethod(paymentMethods);
+    setForm(prev => ({
+      ...prev,
+      paymentMethods,
+      paymentMethod: mainMethod // Mantener compatibilidad
+    }));
+  };
+  
   const ventaTotal = products.reduce((sum, p) => sum + p.total, 0);
+  
+  // Efecto para sincronizar paymentMethods con el total de venta cuando cambia
+  useEffect(() => {
+    if (form.type === 'venta' || form.type === 'compra') {
+      const hasPayments = Object.values(form.paymentMethods).some(amount => amount > 0);
+      if (!hasPayments && ventaTotal > 0) {
+        // Auto-inicializar con el total en efectivo si no hay pagos configurados
+        const newPaymentMethods = createPaymentMethodsFromSingle('efectivo', ventaTotal);
+        setForm(prev => ({
+          ...prev,
+          paymentMethods: newPaymentMethods
+        }));
+      } else if (hasPayments && ventaTotal === 0) {
+        // Limpiar pagos cuando no hay productos
+        setForm(prev => ({
+          ...prev,
+          paymentMethods: {
+            efectivo: 0,
+            mercadoPago: 0,
+            transferencia: 0,
+            tarjeta: 0
+          }
+        }));
+      }
+    }
+  }, [ventaTotal, form.type]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -240,6 +311,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     // Validación de saldo suficiente para egresos
     if ((form.type === 'egreso')) {
       const monto = Number(form.price);
+      
       if (form.paymentMethod === 'mercadoPago' && monto > cajaActualMP) {
         setErrorMsg('No hay saldo suficiente en Mercado Pago para realizar esta operación.');
         showToast({ type: 'error', text: 'No hay saldo suficiente en Mercado Pago para realizar esta operación.' });
@@ -292,6 +364,38 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
     try {
       console.log('DEBUG: Intentando guardar movimiento', form, products);
+      
+      // 🆕 VALIDAR PAGOS COMBINADOS
+      if (form.type === 'venta' || form.type === 'compra' || form.type === 'ingreso' || form.type === 'egreso' || form.type === 'gasto') {
+        const totalMovimiento = form.type === 'venta' || form.type === 'compra' ? 
+          currentProducts.reduce((sum, p) => sum + p.total, 0) : 
+          Number(total);
+          
+        // Verificar si se están usando pagos combinados
+        const hasPaymentMethods = form.paymentMethods && Object.values(form.paymentMethods).some(amount => amount > 0);
+        let finalPaymentMethods = form.paymentMethods;
+        
+        if (!hasPaymentMethods) {
+          // Crear paymentMethods desde el método tradicional
+          finalPaymentMethods = createPaymentMethodsFromSingle(form.paymentMethod, totalMovimiento);
+        }
+        
+        const validation = validateMixedPayment(totalMovimiento, finalPaymentMethods);
+        if (!validation.isValid) {
+          setErrorMsg(validation.error);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Generar resumen de pago
+        const paymentSummary = generatePaymentSummary(finalPaymentMethods);
+        
+        // Actualizar form para usar en el guardado
+        form.paymentMethods = finalPaymentMethods;
+        form.paymentSummary = paymentSummary;
+        form.paymentMethod = getMainPaymentMethod(finalPaymentMethods);
+      }
+      
       if (form.type === 'venta' || form.type === 'compra') {
         // Usar currentProducts (puede venir de products o del submit directo)
         for (const p of currentProducts) {
@@ -394,6 +498,12 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         price: '',
         total: '',
         paymentMethod: 'efectivo',
+        paymentMethods: {
+          efectivo: 0,
+          mercadoPago: 0,
+          transferencia: 0,
+          tarjeta: 0
+        },
         date: new Date().toISOString().slice(0, 16),
         location: form.location, // Mantener el último lugar
         notes: ''
@@ -628,15 +738,29 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     // Sugerir precio según tipo de movimiento
     let suggestedPrice = '';
     if (form.type === 'venta') {
-      suggestedPrice = plant.purchasePrice || plant.basePrice || '';
+      suggestedPrice = plant.purchasePrice || plant.basePrice || ''; // Para ventas: usar purchasePrice (precio de venta)
     } else if (form.type === 'compra') {
-      suggestedPrice = plant.basePrice || plant.purchasePrice || '';
+      suggestedPrice = plant.basePrice || plant.purchasePrice || ''; // Para compras: usar basePrice (precio de compra)
     }
     // Solo autocompletar si el usuario no ha modificado el precio manualmente
     if (!productForm.price) {
       setProductForm(prev => ({ ...prev, price: suggestedPrice }));
     }
   }, [productForm.plantId, form.type, plants]);
+
+  // Inicializar paymentMethods cuando cambie el total de la venta/compra
+  useEffect(() => {
+    if ((form.type === 'venta' || form.type === 'compra') && ventaTotal > 0) {
+      const hasActiveMethods = Object.values(form.paymentMethods).some(amount => amount > 0);
+      if (!hasActiveMethods) {
+        const newPaymentMethods = createPaymentMethodsFromSingle(form.paymentMethod, ventaTotal);
+        setForm(prev => ({
+          ...prev,
+          paymentMethods: newPaymentMethods
+        }));
+      }
+    }
+  }, [ventaTotal, form.type, form.paymentMethod]);
 
   // Inicializar location desde localStorage si existe
   useEffect(() => {
@@ -689,6 +813,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 isSubmitting={isSubmitting}
                 errorMsg={errorMsg}
                 onProductsUpdated={handleProductsUpdated}
+                onPaymentMethodsChange={handlePaymentMethodsChange}
               />
             ) : (
               <CashMobileForm
@@ -715,6 +840,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 isSubmitting={isSubmitting}
                 errorMsg={errorMsg}
                 onProductsUpdated={handleProductsUpdated}
+                onPaymentMethodsChange={handlePaymentMethodsChange}
               />
             ) : (
               <CashDesktopForm
@@ -858,7 +984,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                               className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('paymentMethod', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'paymentMethod')}
                             >
-                              {PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod}
+                              {/* Mostrar resumen de pagos combinados si existe, sino método tradicional */}
+                              {mov.paymentSummary || (PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod)}
                             </td>
                             <td 
                               className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('type', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}

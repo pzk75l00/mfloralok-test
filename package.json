@@ -25,7 +25,11 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "monitor": "node monitor_duplicates.js",
+    "clean-duplicates": "node clean_mixed_payment_duplicates.js",
+    "clean-duplicates-force": "node clean_mixed_payment_duplicates.js --clean",
+    "analyze-duplicates": "node clean_mixed_payment_duplicates.js"
   },
   "browserslist": {
     "production": [

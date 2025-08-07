@@ -6,8 +6,8 @@ import { db } from '../firebase/firebaseConfig';
  * Crea un nuevo producto en la base de datos
  * @param {Object} productData - Datos del producto
  * @param {string} productData.name - Nombre del producto
- * @param {number} productData.purchasePrice - Precio de compra
- * @param {number} productData.basePrice - Precio base de venta
+ * @param {number} productData.basePrice - Precio de compra (precio base)
+ * @param {number} productData.purchasePrice - Precio de venta
  * @param {number} productData.stock - Stock inicial
  * @param {string} productData.type - Tipo: 'producto' para venta, 'insumo' para uso interno
  * @returns {Promise<string>} - ID del producto creado
@@ -16,8 +16,8 @@ export const createNewProduct = async (productData) => {
   try {
     const productDoc = {
       name: productData.name.trim(),
-      purchasePrice: parseFloat(productData.purchasePrice) || 0,
-      basePrice: parseFloat(productData.basePrice) || 0,
+      basePrice: parseFloat(productData.basePrice) || 0, // precio de compra
+      purchasePrice: parseFloat(productData.purchasePrice) || 0, // precio de venta
       stock: parseInt(productData.stock) || 0,
       type: productData.type || 'insumo', // Por defecto es insumo (uso interno)
       image: productData.image || '',
@@ -66,13 +66,13 @@ export const findSimilarProducts = (plants, searchTerm) => {
 };
 
 /**
- * Genera un precio base sugerido basado en el precio de compra
- * @param {number} purchasePrice - Precio de compra
+ * Genera un precio de venta sugerido basado en el precio de compra
+ * @param {number} basePrice - Precio de compra (basePrice en tu modelo)
  * @param {number} markup - Margen de ganancia (por defecto 2.5x)
- * @returns {number} - Precio base sugerido
+ * @returns {number} - Precio de venta sugerido (purchasePrice en tu modelo)
  */
-export const suggestBasePrice = (purchasePrice, markup = 2.5) => {
-  const price = parseFloat(purchasePrice) || 0;
+export const suggestBasePrice = (basePrice, markup = 2.5) => {
+  const price = parseFloat(basePrice) || 0;
   return Math.round(price * markup);
 };
 
@@ -92,12 +92,19 @@ export const validateProductData = (productData) => {
     errors.push('El nombre debe tener al menos 2 caracteres');
   }
   
-  if (productData.purchasePrice !== undefined && productData.purchasePrice < 0) {
+  if (productData.basePrice !== undefined && productData.basePrice < 0) {
     errors.push('El precio de compra no puede ser negativo');
   }
   
-  if (productData.basePrice !== undefined && productData.basePrice < 0) {
-    errors.push('El precio base no puede ser negativo');
+  if (productData.purchasePrice !== undefined && productData.purchasePrice < 0) {
+    errors.push('El precio de venta no puede ser negativo');
+  }
+  
+  // Validar que el precio de venta sea mayor al precio de compra
+  if (productData.basePrice > 0 && productData.purchasePrice > 0) {
+    if (productData.purchasePrice <= productData.basePrice) {
+      errors.push('El precio de venta debe ser mayor al precio de compra para obtener ganancia');
+    }
   }
   
   if (productData.stock !== undefined && productData.stock < 0) {
@@ -113,11 +120,11 @@ export const validateProductData = (productData) => {
 /**
  * Actualiza el precio de compra de un producto y mantiene historial
  * @param {string} productId - ID del producto
- * @param {number} newPurchasePrice - Nuevo precio de compra
+ * @param {number} newBasePrice - Nuevo precio de compra (basePrice en tu modelo)
  * @param {number} quantity - Cantidad comprada
  * @returns {Promise<boolean>} - true si se actualizó correctamente
  */
-export const updateProductPurchasePrice = async (productId, newPurchasePrice, quantity = 1) => {
+export const updateProductPurchasePrice = async (productId, newBasePrice, quantity = 1) => {
   try {
     const productRef = doc(db, 'plants', String(productId));
     const productSnap = await getDoc(productRef);
@@ -129,11 +136,11 @@ export const updateProductPurchasePrice = async (productId, newPurchasePrice, qu
     
     const currentData = productSnap.data();
     const currentHistory = currentData.purchaseHistory || [];
-    const currentPrice = parseFloat(newPurchasePrice);
+    const currentPrice = parseFloat(newBasePrice);
     
     // Validar precio
     if (isNaN(currentPrice) || currentPrice < 0) {
-      console.warn('Precio de compra inválido:', newPurchasePrice);
+      console.warn('Precio de compra inválido:', newBasePrice);
       return false;
     }
     
@@ -150,7 +157,7 @@ export const updateProductPurchasePrice = async (productId, newPurchasePrice, qu
     
     // Actualizar documento
     await updateDoc(productRef, {
-      purchasePrice: currentPrice,
+      basePrice: currentPrice, // basePrice es el precio de compra en tu modelo
       lastPurchaseDate: historyEntry.date,
       purchaseHistory: updatedHistory,
       updatedAt: new Date()

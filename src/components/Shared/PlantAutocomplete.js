@@ -10,7 +10,8 @@ const PlantAutocomplete = ({
   onChange, 
   placeholder, 
   onProductsUpdated,
-  allowCreateNew = true 
+  allowCreateNew = true,
+  movementType = 'venta' // Nuevo prop para determinar qué precio mostrar
 }) => {
   const [input, setInput] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,9 +27,26 @@ const PlantAutocomplete = ({
   // Sugerencias de productos similares
   const similar = showCreateOption ? findSimilarProducts(plants, input) : [];
 
+  // Función para obtener el precio correcto según el tipo de movimiento
+  const getDisplayPrice = (plant) => {
+    if (movementType === 'compra') {
+      return plant.basePrice || plant.purchasePrice || 0; // Para compras: basePrice (precio de compra)
+    } else {
+      return plant.purchasePrice || plant.basePrice || 0; // Para ventas: purchasePrice (precio de venta)
+    }
+  };
+
   const handleSelect = (p) => {
     onChange(p.id);
     setInput(''); // Limpiar el input después de seleccionar
+  };
+
+  const handleSelectChange = (e) => {
+    const selectedId = e.target.value;
+    if (selectedId) {
+      onChange(selectedId);
+      setInput(''); // Limpiar el autocomplete cuando se selecciona del dropdown
+    }
   };
 
   const handleCreateNew = () => {
@@ -49,15 +67,45 @@ const PlantAutocomplete = ({
     setInput('');
   };
 
+  // Obtener el producto seleccionado para mostrar información
+  const selectedProduct = plants.find(p => String(p.id) === String(value));
+
   return (
     <div className="mb-2">
+      {/* Autocomplete para búsqueda rápida */}
       <input
         type="text"
         value={input}
         onChange={e => setInput(e.target.value)}
         placeholder={placeholder || 'Buscar producto...'}
-        className="border rounded px-2 py-1 w-full mb-1"
+        className="border rounded px-2 py-1 w-full mb-2"
       />
+      
+      {/* Select tradicional para ver todos los productos */}
+      <select 
+        value={value || ''} 
+        onChange={handleSelectChange}
+        className="border rounded px-2 py-1 w-full mb-1"
+      >
+        <option value="">-- Seleccionar de la lista --</option>
+        {plants.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name} | Stock: {p.stock || 0} | ${getDisplayPrice(p)}
+          </option>
+        ))}
+      </select>
+      
+      {/* Información del producto seleccionado */}
+      {selectedProduct && (
+        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded mb-2">
+          <strong>Seleccionado:</strong> {selectedProduct.name}<br />
+          <strong>Stock:</strong> {selectedProduct.stock || 0} | 
+          <strong> Precio {movementType === 'compra' ? 'de compra' : 'de venta'}:</strong> ${getDisplayPrice(selectedProduct)} |
+          <strong> Tipo:</strong> {selectedProduct.type === 'insumo' ? 'Insumo' : 'Producto'}
+        </div>
+      )}
+      
+      {/* Dropdown de resultados del autocomplete */}
       {input && (
         <div className="border rounded bg-white max-h-40 overflow-y-auto shadow-lg">
           {/* Productos encontrados */}
@@ -69,7 +117,7 @@ const PlantAutocomplete = ({
             >
               <div className="font-medium">{p.name}</div>
               <div className="text-xs text-gray-500">
-                Stock: {p.stock || 0} | Precio: ${p.basePrice || 0}
+                Stock: {p.stock || 0} | Precio: ${getDisplayPrice(p)}
               </div>
             </div>
           ))}
@@ -131,6 +179,7 @@ const PlantAutocomplete = ({
         onClose={() => setShowCreateModal(false)}
         onProductCreated={handleProductCreated}
         initialProductName={input.trim()}
+        context={movementType === 'compra' ? 'purchase' : 'general'}
       />
     </div>
   );
@@ -143,6 +192,7 @@ PlantAutocomplete.propTypes = {
   placeholder: PropTypes.string,
   onProductsUpdated: PropTypes.func,
   allowCreateNew: PropTypes.bool,
+  movementType: PropTypes.oneOf(['venta', 'compra']),
 };
 
 export default PlantAutocomplete;

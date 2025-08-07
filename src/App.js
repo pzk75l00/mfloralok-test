@@ -5,6 +5,7 @@ import ReportsView from './components/Reports/ReportsView';
 import StatisticsView from './components/Desktop/statistics/StatisticsView';
 import NavigationMovil from './components/Movil/NavigationMovil';
 import DesktopLayout from './components/DesktopLayout';
+import { initializeDefaultPaymentMethods } from './utils/paymentMethodsInit';
 
 // Crear y exportar UserContext
 export const UserContext = createContext({ user: null, userData: null });
@@ -20,6 +21,19 @@ const App = () => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Inicializar métodos de pago por defecto
+  useEffect(() => {
+    const initPaymentMethods = async () => {
+      try {
+        await initializeDefaultPaymentMethods();
+      } catch (error) {
+        console.error('Error inicializando métodos de pago:', error);
+      }
+    };
+    
+    initPaymentMethods();
   }, []);
 
   // Aquí debería ir la lógica real de autenticación y carga de user/userData

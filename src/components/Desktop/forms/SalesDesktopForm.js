@@ -3,6 +3,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ProductFormFields from '../../Shared/ProductFormFields';
 import ProductTable from '../../Shared/ProductTable';
+import PaymentSelector from '../../Shared/PaymentSelector';
 
 const SalesDesktopForm = ({ 
   form, 
@@ -17,7 +18,8 @@ const SalesDesktopForm = ({
   onSubmit, 
   errorMsg, 
   isSubmitting,
-  onProductsUpdated 
+  onProductsUpdated,
+  onPaymentMethodsChange 
 }) => {
   const isVenta = form.type === 'venta';
   const buttonText = isVenta ? 'Registrar venta' : 'Registrar compra';
@@ -28,23 +30,32 @@ const SalesDesktopForm = ({
   const maxDate = new Date().toISOString().slice(0, 16);
   
   return (
-    <form onSubmit={onSubmit} className="flex flex-row gap-4 items-end">
-      <div className="flex flex-col gap-2 flex-1">
+    <form onSubmit={onSubmit} className="flex flex-row gap-6 items-start">
+      <div className="flex flex-col gap-2 w-80 flex-shrink-0">
         <ProductFormFields 
           productForm={productForm} 
           plants={plants} 
           handleProductFormChange={handleProductFormChange} 
           onProductsUpdated={onProductsUpdated}
+          movementType={form.type}
         />
         <button type="button" onClick={handleAddProduct} className="bg-blue-500 text-white rounded px-2 py-1">Agregar producto</button>
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <ProductTable products={products} handleRemoveProduct={handleRemoveProduct} />
-        <div className="font-bold text-right">Total: ${ventaTotal}</div>
-        <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} className="border rounded px-2 py-1 mb-2 w-full">
-          <option value="efectivo">Efectivo</option>
-          <option value="mercadoPago">Mercado Pago</option>
-        </select>
+        <div className="font-bold text-right mb-3">Total: ${ventaTotal}</div>
+        
+        {/* Sistema de pagos mejorado */}
+        <div className="mb-4">
+          <PaymentSelector
+            total={ventaTotal}
+            paymentMethods={form.paymentMethods}
+            onChange={onPaymentMethodsChange}
+            disabled={isSubmitting}
+            showManageButton={true}
+          />
+        </div>
+        
         <div className="flex flex-col">
           <label className="text-xs font-medium text-gray-700 mb-1">Fecha y hora del movimiento</label>
           <input 
@@ -86,6 +97,7 @@ SalesDesktopForm.propTypes = {
   errorMsg: PropTypes.string,
   isSubmitting: PropTypes.bool,
   onProductsUpdated: PropTypes.func,
+  onPaymentMethodsChange: PropTypes.func,
 };
 
 export default SalesDesktopForm;

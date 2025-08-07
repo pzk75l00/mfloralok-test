@@ -7,7 +7,8 @@ const ProductFormFields = ({
   productForm, 
   plants, 
   handleProductFormChange, 
-  onProductsUpdated 
+  onProductsUpdated,
+  movementType = 'venta' // Nuevo prop para pasar al PlantAutocomplete
 }) => {
   const selectedPlant = plants.find(p => String(p.id) === String(productForm.plantId));
   
@@ -21,13 +22,14 @@ const ProductFormFields = ({
         placeholder="Buscar o crear producto..."
         onProductsUpdated={onProductsUpdated}
         allowCreateNew={true}
+        movementType={movementType}
       />
       {selectedPlant && (
         <div className="text-xs text-gray-500 mb-2">
           <div><b>Stock disponible:</b> {selectedPlant.stock ?? 0}</div>
           <div><b>Tipo:</b> {selectedPlant.type === 'insumo' ? 'Insumo (uso interno)' : 'Producto (para venta)'}</div>
-          {selectedPlant.purchasePrice && (
-            <div><b>Último precio de compra:</b> ${selectedPlant.purchasePrice}</div>
+          {selectedPlant.basePrice && (
+            <div><b>Último precio de compra:</b> ${selectedPlant.basePrice}</div>
           )}
           {selectedPlant.lastPurchaseDate && (
             <div><b>Última compra:</b> {selectedPlant.lastPurchaseDate}</div>
@@ -61,6 +63,7 @@ ProductFormFields.propTypes = {
   plants: PropTypes.array.isRequired,
   handleProductFormChange: PropTypes.func.isRequired,
   onProductsUpdated: PropTypes.func,
+  movementType: PropTypes.oneOf(['venta', 'compra']),
 };
 
 export default ProductFormFields;

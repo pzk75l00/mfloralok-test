@@ -8,12 +8,13 @@ const NewProductModal = ({
   onClose, 
   onProductCreated, 
   initialProductName = '',
-  initialPurchasePrice = '' 
+  initialPurchasePrice = '',
+  context = 'general' // 'general' o 'purchase' para cambiar labels
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    purchasePrice: '',
-    basePrice: '',
+    basePrice: '', // basePrice = precio de compra
+    purchasePrice: '', // purchasePrice = precio de venta
     stock: '0',
     type: 'insumo' // Por defecto insumo (uso interno)
   });
@@ -26,22 +27,22 @@ const NewProductModal = ({
     if (isOpen) {
       setFormData({
         name: initialProductName || '',
-        purchasePrice: initialPurchasePrice || '',
-        basePrice: initialPurchasePrice ? suggestBasePrice(initialPurchasePrice).toString() : '',
-        stock: '0',
+        basePrice: initialPurchasePrice || '', // basePrice es precio de compra
+        purchasePrice: initialPurchasePrice ? suggestBasePrice(initialPurchasePrice).toString() : '', // purchasePrice es precio de venta
+        stock: context === 'purchase' ? '1' : '0', // En compras, sugerir 1 unidad
         type: 'insumo'
       });
       setErrors([]);
     }
-  }, [isOpen, initialProductName, initialPurchasePrice]);
+  }, [isOpen, initialProductName, initialPurchasePrice, context]);
 
-  // Auto-calcular precio base cuando cambia precio de compra
+  // Auto-calcular precio de venta cuando cambia precio de compra
   useEffect(() => {
-    if (formData.purchasePrice && !isNaN(formData.purchasePrice)) {
-      const suggested = suggestBasePrice(formData.purchasePrice);
-      setFormData(prev => ({ ...prev, basePrice: suggested.toString() }));
+    if (formData.basePrice && !isNaN(formData.basePrice)) {
+      const suggested = suggestBasePrice(formData.basePrice);
+      setFormData(prev => ({ ...prev, purchasePrice: suggested.toString() }));
     }
-  }, [formData.purchasePrice]);
+  }, [formData.basePrice]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,9 +54,14 @@ const NewProductModal = ({
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !isSubmitting) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
     // Validar datos
     const validation = validateProductData(formData);
     if (!validation.isValid) {
@@ -109,7 +115,7 @@ const NewProductModal = ({
           </p>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <div className="p-4 space-y-4">
           {/* Nombre del producto */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -120,6 +126,7 @@ const NewProductModal = ({
               name="name"
               value={formData.name}
               onChange={handleChange}
+              onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Ej: Potus Variegado"
@@ -127,15 +134,15 @@ const NewProductModal = ({
             />
           </div>
 
-          {/* Precio de compra */}
+          {/* Precio de compra (basePrice en tu modelo) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Precio de compra
             </label>
             <input
               type="number"
-              name="purchasePrice"
-              value={formData.purchasePrice}
+              name="basePrice"
+              value={formData.basePrice}
               onChange={handleChange}
               disabled={isSubmitting}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -145,15 +152,15 @@ const NewProductModal = ({
             />
           </div>
 
-          {/* Precio base (auto-calculado) */}
+          {/* Precio de venta (purchasePrice en tu modelo) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Precio de venta sugerido
             </label>
             <input
               type="number"
-              name="basePrice"
-              value={formData.basePrice}
+              name="purchasePrice"
+              value={formData.purchasePrice}
               onChange={handleChange}
               disabled={isSubmitting}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -169,7 +176,7 @@ const NewProductModal = ({
           {/* Stock inicial */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Stock inicial
+              {context === 'purchase' ? 'Cantidad a comprar' : 'Stock inicial'}
             </label>
             <input
               type="number"
@@ -181,6 +188,12 @@ const NewProductModal = ({
               placeholder="0"
               min="0"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {context === 'purchase' 
+                ? 'Cantidad de unidades que estás comprando en este movimiento'
+                : 'Cantidad inicial de stock para este producto'
+              }
+            </p>
           </div>
 
           {/* Tipo de producto */}
@@ -228,14 +241,15 @@ const NewProductModal = ({
               Cancelar
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isSubmitting}
               className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creando...' : 'Crear Producto'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -246,7 +260,8 @@ NewProductModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onProductCreated: PropTypes.func.isRequired,
   initialProductName: PropTypes.string,
-  initialPurchasePrice: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+  initialPurchasePrice: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  context: PropTypes.oneOf(['general', 'purchase'])
 };
 
 export default NewProductModal;
