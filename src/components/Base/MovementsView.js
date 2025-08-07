@@ -6,6 +6,7 @@ import PlantAutocomplete from './PlantAutocomplete';
 import { toZonedTime } from 'date-fns-tz';
 import { registrarVenta } from './saleUtils';
 import PropTypes from 'prop-types';
+import { updateProductPurchasePrice } from '../../utils/productManagement';
 import SalesMobileForm from '../Movil/forms/SalesMobileForm';
 import SalesDesktopForm from '../Desktop/forms/SalesDesktopForm';
 import CashMobileForm from '../Movil/forms/CashMobileForm';
@@ -322,6 +323,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             }
             const currentStock = plantSnap.data().stock || 0;
             await updateDoc(plantRef, { stock: currentStock + p.quantity });
+            
+            // 🆕 ACTUALIZAR PRECIO DE COMPRA Y MANTENER HISTORIAL
+            const purchasePrice = p.price / p.quantity; // Precio unitario
+            await updateProductPurchasePrice(p.plantId, purchasePrice, p.quantity);
           }
           const movementData = {
             ...form,
@@ -358,6 +363,26 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         delete movementData.quantity;
         delete movementData.plantId;
         await addDoc(collection(db, 'movements'), movementData);
+        
+        // 🆕 ACTUALIZAR STOCK Y PRECIO PARA COMPRAS SIMPLES
+        if (form.type === 'compra' && form.plantId && form.quantity && form.price) {
+          try {
+            const plantRef = doc(db, 'plants', String(form.plantId));
+            const plantSnap = await getDoc(plantRef);
+            if (plantSnap.exists()) {
+              const currentStock = plantSnap.data().stock || 0;
+              const newStock = currentStock + Number(form.quantity);
+              await updateDoc(plantRef, { stock: newStock });
+              
+              // Actualizar precio de compra y mantener historial
+              const purchasePrice = Number(form.price) / Number(form.quantity); // Precio unitario
+              await updateProductPurchasePrice(form.plantId, purchasePrice, Number(form.quantity));
+            }
+          } catch (stockError) {
+            console.error('Error actualizando stock/precio en compra simple:', stockError);
+          }
+        }
+        
         showToast({ type: 'success', text: 'Movimiento registrado correctamente' });
         if (onMovementAdded) onMovementAdded();
       }
@@ -546,6 +571,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     if (baseFields.includes(field)) return true;
     if ((movType === 'venta' || movType === 'compra') && salesPurchaseFields.includes(field)) return true;
     if ((movType === 'ingreso' || movType === 'egreso' || movType === 'gasto') && otherFields.includes(field)) return true;
+    // Permitir editar plantId como "detalle" para gastos/ingresos/egresos
+    if ((movType === 'ingreso' || movType === 'egreso' || movType === 'gasto') && field === 'plantId') return true;
     return false;
   };
   const handleEditSave = async () => {
@@ -721,7 +748,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 <thead>
                   <tr>
                     <th className="border border-gray-200 px-2 py-1">Fecha</th>
-                    <th className="border border-gray-200 px-2 py-1">Producto</th>
+                    <th className="border border-gray-200 px-2 py-1">Producto / Detalle</th>
                     <th className="border border-gray-200 px-2 py-1">Cantidad</th>
                     <th className="border border-gray-200 px-2 py-1">Precio</th>
                     <th className="border border-gray-200 px-2 py-1">Total</th>
@@ -753,6 +780,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                                   <option value="">-</option>
                                   {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
+                              ) : (editForm.type === 'gasto' || editForm.type === 'ingreso' || editForm.type === 'egreso') ? (
+                                <input name="detail" value={editForm.detail ?? ''} onChange={handleEditChange} onKeyDown={handleKeyDown} onBlur={handleFieldBlur} onFocus={handleFieldFocus} className="w-full text-xs border border-gray-300 rounded bg-white text-black px-1 py-0.5 focus:ring-2 focus:ring-blue-400" placeholder="Producto / Detalle" />
                               ) : '-'}
                             </td>
                             <td className="border border-gray-200 px-2 py-1">
@@ -795,9 +824,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                               className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('plantId', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'plantId')}
                             >
-                              {plants && mov.plantId
+                              {/* Para ventas/compras: mostrar nombre del producto */}
+                              {(mov.type === 'venta' || mov.type === 'compra') && plants && mov.plantId
                                 ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || mov.plantId || '-')
-                                : '-'}
+                                : /* Para gastos/ingresos/egresos: mostrar detalle */
+                                  (mov.type === 'gasto' || mov.type === 'ingreso' || mov.type === 'egreso') && mov.detail
+                                    ? mov.detail
+                                    : '-'}
                             </td>
                             <td 
                               className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('quantity', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}

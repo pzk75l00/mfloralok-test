@@ -26,6 +26,12 @@ const ProductFormFields = ({
         <div className="text-xs text-gray-500 mb-2">
           <div><b>Stock disponible:</b> {selectedPlant.stock ?? 0}</div>
           <div><b>Tipo:</b> {selectedPlant.type === 'insumo' ? 'Insumo (uso interno)' : 'Producto (para venta)'}</div>
+          {selectedPlant.purchasePrice && (
+            <div><b>Último precio de compra:</b> ${selectedPlant.purchasePrice}</div>
+          )}
+          {selectedPlant.lastPurchaseDate && (
+            <div><b>Última compra:</b> {selectedPlant.lastPurchaseDate}</div>
+          )}
         </div>
       )}
       <input

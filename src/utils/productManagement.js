@@ -1,5 +1,5 @@
 // Utilitarios para gestión de productos - reutilizable en móvil y escritorio
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 /**
@@ -107,5 +107,111 @@ export const validateProductData = (productData) => {
   return {
     isValid: errors.length === 0,
     errors
+  };
+};
+
+/**
+ * Actualiza el precio de compra de un producto y mantiene historial
+ * @param {string} productId - ID del producto
+ * @param {number} newPurchasePrice - Nuevo precio de compra
+ * @param {number} quantity - Cantidad comprada
+ * @returns {Promise<boolean>} - true si se actualizó correctamente
+ */
+export const updateProductPurchasePrice = async (productId, newPurchasePrice, quantity = 1) => {
+  try {
+    const productRef = doc(db, 'plants', String(productId));
+    const productSnap = await getDoc(productRef);
+    
+    if (!productSnap.exists()) {
+      console.warn('Producto no encontrado para actualizar precio:', productId);
+      return false;
+    }
+    
+    const currentData = productSnap.data();
+    const currentHistory = currentData.purchaseHistory || [];
+    const currentPrice = parseFloat(newPurchasePrice);
+    
+    // Validar precio
+    if (isNaN(currentPrice) || currentPrice < 0) {
+      console.warn('Precio de compra inválido:', newPurchasePrice);
+      return false;
+    }
+    
+    // Crear entrada de historial
+    const historyEntry = {
+      price: currentPrice,
+      date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      quantity: parseInt(quantity) || 1,
+      timestamp: new Date()
+    };
+    
+    // Agregar al historial (mantener últimas 10 entradas)
+    const updatedHistory = [...currentHistory, historyEntry].slice(-10);
+    
+    // Actualizar documento
+    await updateDoc(productRef, {
+      purchasePrice: currentPrice,
+      lastPurchaseDate: historyEntry.date,
+      purchaseHistory: updatedHistory,
+      updatedAt: new Date()
+    });
+    
+    console.log('✓ Precio de compra actualizado:', currentData.name, `$${currentPrice}`);
+    return true;
+    
+  } catch (error) {
+    console.error('Error actualizando precio de compra:', error);
+    return false;
+  }
+};
+
+/**
+ * Obtiene el historial de precios de compra de un producto
+ * @param {string} productId - ID del producto
+ * @returns {Promise<Array>} - Historial de compras
+ */
+export const getProductPurchaseHistory = async (productId) => {
+  try {
+    const productRef = doc(db, 'plants', String(productId));
+    const productSnap = await getDoc(productRef);
+    
+    if (!productSnap.exists()) {
+      return [];
+    }
+    
+    const data = productSnap.data();
+    return data.purchaseHistory || [];
+    
+  } catch (error) {
+    console.error('Error obteniendo historial de compras:', error);
+    return [];
+  }
+};
+
+/**
+ * Calcula estadísticas del historial de compras
+ * @param {Array} history - Historial de compras
+ * @returns {Object} - Estadísticas
+ */
+export const calculatePurchaseStats = (history) => {
+  if (!history || history.length === 0) {
+    return {
+      averagePrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+      totalQuantity: 0,
+      totalPurchases: 0
+    };
+  }
+  
+  const prices = history.map(h => h.price);
+  const quantities = history.map(h => h.quantity || 1);
+  
+  return {
+    averagePrice: prices.reduce((sum, price) => sum + price, 0) / prices.length,
+    minPrice: Math.min(...prices),
+    maxPrice: Math.max(...prices),
+    totalQuantity: quantities.reduce((sum, qty) => sum + qty, 0),
+    totalPurchases: history.length
   };
 };
