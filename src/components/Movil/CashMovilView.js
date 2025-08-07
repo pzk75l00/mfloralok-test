@@ -78,7 +78,6 @@ const CashMovilView = (props) => {
 
   // Forzar recarga de movimientos tras registrar uno nuevo
   const handleMovementAdded = (...args) => {
-    console.log('[CashMovilView] Movimiento registrado. Args:', args, 'Fecha:', new Date());
     setReloadKey(k => k + 1);
     setNow(new Date()); // Fuerza actualización de la fecha real
   };

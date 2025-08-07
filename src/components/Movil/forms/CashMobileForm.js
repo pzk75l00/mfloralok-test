@@ -1,12 +1,23 @@
 // Formulario de caja para móvil, usando componentes compartidos
 import React from 'react';
 import PropTypes from 'prop-types';
+import SmartInput from '../../Shared/SmartInput';
 
 const CashMobileForm = ({ form, handleChange, onSubmit, isSubmitting, errorMsg }) => {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 items-stretch">
       <textarea name="notes" value={form.notes} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Detalle del movimiento" />
-      <input type="number" name="price" value={form.price} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Monto" />
+      
+      <SmartInput
+        variant="price"
+        name="price"
+        value={form.price}
+        onChange={handleChange}
+        disabled={isSubmitting}
+        className="mb-2 w-full disabled:opacity-50"
+        placeholder="Monto"
+      />
+      
       <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50">
         <option value="efectivo">Efectivo</option>
         <option value="mercadoPago">Mercado Pago</option>

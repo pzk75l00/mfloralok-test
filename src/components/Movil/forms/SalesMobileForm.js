@@ -46,13 +46,23 @@ const SalesMobileForm = ({
     <input type="text" name="location" value={form.location} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Lugar" />
     <textarea name="notes" value={form.notes} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Notas" />
     {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
+    
+    {/* Botón de submit con protección anti-accidental */}
     <button 
       type="submit" 
       disabled={isSubmitting}
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       className="bg-green-600 text-white rounded px-4 py-2 font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
     >
-      {isSubmitting ? 'Procesando...' : 'Registrar venta'}
+      {isSubmitting ? 'Procesando...' : '✅ Confirmar Venta'}
     </button>
+    
+    <div className="text-xs text-gray-500 text-center mt-1">
+      ⚠️ Verificar método de pago antes de confirmar
+    </div>
   </form>
 );
 

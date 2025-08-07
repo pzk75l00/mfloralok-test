@@ -2,6 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import PlantAutocomplete from './PlantAutocomplete';
+import SmartInput from './SmartInput';
 
 const ProductFormFields = ({ 
   productForm, 
@@ -36,22 +37,22 @@ const ProductFormFields = ({
           )}
         </div>
       )}
-      <input
-        type="number"
+      
+      <SmartInput
+        variant="quantity"
         name="quantity"
-        min="1"
         value={productForm.quantity}
         onChange={handleProductFormChange}
-        className="border rounded px-2 py-1 mb-2 w-full"
+        className="mb-2 w-full"
         placeholder="Cantidad"
       />
-      <input
-        type="number"
+      
+      <SmartInput
+        variant="price"
         name="price"
-        min="0"
         value={productForm.price}
         onChange={handleProductFormChange}
-        className="border rounded px-2 py-1 mb-2 w-full"
+        className="mb-2 w-full"
         placeholder="Precio"
       />
     </>

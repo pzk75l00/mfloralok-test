@@ -122,6 +122,7 @@ const MixedPaymentModal = ({
             💰 {title}
           </h2>
           <button
+            type="button"
             onClick={handleCancel}
             className="text-gray-500 hover:text-gray-700 text-2xl"
           >
@@ -143,6 +144,7 @@ const MixedPaymentModal = ({
           {/* Tabs */}
           <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
             <button
+              type="button"
               onClick={() => setActiveTab('simple')}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'simple' 
@@ -153,6 +155,7 @@ const MixedPaymentModal = ({
               Pago Simple
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('mixto')}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === 'mixto' 
@@ -173,6 +176,7 @@ const MixedPaymentModal = ({
               
               {methods.map(method => (
                 <button
+                  type="button"
                   key={method.code}
                   onClick={() => handleQuickFill(method.code)}
                   className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
@@ -228,6 +232,7 @@ const MixedPaymentModal = ({
                       className="flex-1 px-3 py-2 border rounded-md text-right font-mono"
                     />
                     <button
+                      type="button"
                       onClick={() => handleAmountChange(method.code, remaining + localPayments[method.code])}
                       disabled={remaining <= 0}
                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
@@ -244,6 +249,7 @@ const MixedPaymentModal = ({
                 <div className="flex gap-2 flex-wrap">
                   {[100, 200, 500, 1000, 2000, 5000].filter(amount => amount <= total).map(amount => (
                     <button
+                      type="button"
                       key={amount}
                       onClick={() => {
                         const method = Object.keys(localPayments)[0];
@@ -287,12 +293,14 @@ const MixedPaymentModal = ({
         {/* Footer */}
         <div className="flex gap-3 p-6 border-t bg-gray-50">
           <button
+            type="button"
             onClick={handleCancel}
             className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleSave}
             disabled={!isValid}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"

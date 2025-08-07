@@ -62,6 +62,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [toastMsg, setToastMsg] = useState(null);
   const [toastError, setToastError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSubmitTime, setLastSubmitTime] = useState(0); // Prevenir submits muy rápidos
+  const [isChangingPayment, setIsChangingPayment] = useState(false); // Nuevo flag para métodos de pago
   const [editingMovement, setEditingMovement] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -191,54 +193,62 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   
   // Función para manejar cambios en métodos de pago combinados
   const handlePaymentMethodsChange = (paymentMethods) => {
+    // Marcar que se está cambiando el método de pago
+    setIsChangingPayment(true);
+    
     const mainMethod = getMainPaymentMethod(paymentMethods);
     setForm(prev => ({
       ...prev,
       paymentMethods,
       paymentMethod: mainMethod // Mantener compatibilidad
     }));
+    
+    // Resetear el flag después de un tiempo
+    setTimeout(() => {
+      setIsChangingPayment(false);
+    }, 1000);
   };
   
   const ventaTotal = products.reduce((sum, p) => sum + p.total, 0);
   
-  // Efecto para sincronizar paymentMethods con el total de venta cuando cambia
-  useEffect(() => {
-    if (form.type === 'venta' || form.type === 'compra') {
-      const hasPayments = Object.values(form.paymentMethods).some(amount => amount > 0);
-      if (!hasPayments && ventaTotal > 0) {
-        // Auto-inicializar con el total en efectivo si no hay pagos configurados
-        const newPaymentMethods = createPaymentMethodsFromSingle('efectivo', ventaTotal);
-        setForm(prev => ({
-          ...prev,
-          paymentMethods: newPaymentMethods
-        }));
-      } else if (hasPayments && ventaTotal === 0) {
-        // Limpiar pagos cuando no hay productos
-        setForm(prev => ({
-          ...prev,
-          paymentMethods: {
-            efectivo: 0,
-            mercadoPago: 0,
-            transferencia: 0,
-            tarjeta: 0
-          }
-        }));
-      }
-    }
-  }, [ventaTotal, form.type]);
+  // ELIMINAMOS EL useEffect PROBLEMÁTICO TEMPORALMENTE
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Prevenir doble envío
     if (isSubmitting) {
-      console.log('[MovementsView] Ya se está procesando un envío, ignorando...');
       return;
     }
     
+    // PROTECCIÓN CONTRA SUBMIT DURANTE CAMBIO DE MÉTODO DE PAGO
+    if (isChangingPayment) {
+      setErrorMsg('⚠️ Configurando método de pago, espere...');
+      setTimeout(() => setErrorMsg(''), 2000);
+      return;
+    }
+    
+    // PROTECCIÓN ANTI-SUBMIT AUTOMÁTICO PARA MÓVILES
+    const currentTime = Date.now();
+    if (isMobileDevice && (form.type === 'venta' || form.type === 'compra')) {
+      // Prevenir submits muy rápidos (menos de 2 segundos)
+      if (currentTime - lastSubmitTime < 2000) {
+        setErrorMsg('⚠️ Espere un momento antes de enviar otra transacción');
+        setTimeout(() => setErrorMsg(''), 3000);
+        return;
+      }
+      
+      // Verificar que el usuario realmente quiere proceder
+      const isIntentional = e?.isTrusted !== false; // Verificar que es un evento real del usuario
+      
+      if (!isIntentional) {
+        return;
+      }
+    }
+    
+    setLastSubmitTime(currentTime);
     setIsSubmitting(true);
     setErrorMsg('');
-    console.log('[MovementsView] handleSubmit called', {form, products, productForm});
     let total = form.total;
     let price = form.price;
     // --- AJUSTE FLUJO VENTA/COMPRA UN SOLO PRODUCTO EN MÓVIL ---
@@ -274,10 +284,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         currentProducts = [autoProduct];
         // No usar setProducts aquí, solo para el render visual
         setProductForm({ plantId: '', quantity: 1, price: '' });
-        console.log('[MovementsView] Producto agregado automáticamente (móvil, submit directo)', autoProduct);
       } else {
         setErrorMsg('Agregue al menos un producto.');
-        console.log('[MovementsView] ERROR: Campos incompletos para agregar producto automáticamente', {productForm});
         setIsSubmitting(false);
         return;
       }
@@ -363,7 +371,6 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     const isoArgentina = dateArg.toISOString();
 
     try {
-      console.log('DEBUG: Intentando guardar movimiento', form, products);
       
       // 🆕 VALIDAR PAGOS COMBINADOS
       if (form.type === 'venta' || form.type === 'compra' || form.type === 'ingreso' || form.type === 'egreso' || form.type === 'gasto') {
@@ -688,7 +695,6 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const handleEditSave = async () => {
     if (!editForm) return;
     setEditLoading(true);
-    console.log('DEBUG: handleEditSave called', editForm, editingMovement);
     try {
       if ((editForm.type === 'venta' || editForm.type === 'compra') && (!editForm.plantId || !editForm.quantity)) {
         showToast({ type: 'error', text: 'Producto y cantidad requeridos para ventas/compras.' });
@@ -708,7 +714,6 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       }
       data.total = editForm.total ? Number(editForm.total) : 0;
       const movRef = doc(db, 'movements', editingMovement);
-      console.log('DEBUG: updateDoc', movRef, data);
       await updateDoc(movRef, data);
       showToast({ type: 'success', text: 'Movimiento actualizado.' });
       setEditingMovement(null);
@@ -1018,13 +1023,6 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           </div>
         </>
       )}
-      {/* DEBUG: Mostrar datos en consola para ver si llegan desde Firebase */}
-      <div style={{ display: 'none' }}>
-        {useEffect(() => {
-          console.log('PLANTS:', plants);
-          console.log('MOVEMENTS:', movements);
-        }, [plants, movements])}
-      </div>
     </div>
   );
 };

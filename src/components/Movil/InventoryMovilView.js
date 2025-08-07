@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import ProductTypesManager from './ProductTypesManager';
+import SmartInput from '../Shared/SmartInput';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
@@ -145,11 +146,35 @@ const InventoryMovilView = () => {
                 ))}
               </select>
               <label className="text-sm font-medium text-gray-700">Stock</label>
-              <input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Stock" required />
+              <SmartInput 
+                name="stock" 
+                variant="stock" 
+                value={form.stock} 
+                onChange={handleChange} 
+                className="border rounded p-2 w-full" 
+                placeholder="Stock" 
+                required 
+              />
               <label className="text-sm font-medium text-gray-700">Precio de Venta</label>
-              <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Precio de Venta" required />
+              <SmartInput 
+                name="purchasePrice" 
+                variant="price" 
+                value={form.purchasePrice} 
+                onChange={handleChange} 
+                className="border rounded p-2 w-full" 
+                placeholder="Precio de Venta" 
+                required 
+              />
               <label className="text-sm font-medium text-gray-700">Precio de Compra</label>
-              <input name="basePrice" type="number" min="0" value={form.basePrice} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Precio de Compra" required />
+              <SmartInput 
+                name="basePrice" 
+                variant="price" 
+                value={form.basePrice} 
+                onChange={handleChange} 
+                className="border rounded p-2 w-full" 
+                placeholder="Precio de Compra" 
+                required 
+              />
               <label className="text-sm font-medium text-gray-700">Fecha de Compra</label>
               <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-2 w-full" />
               <label className="text-sm font-medium text-gray-700">Proveedor (opcional)</label>

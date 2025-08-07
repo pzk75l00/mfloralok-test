@@ -5,6 +5,7 @@ import InventoryMovilView from '../Movil/InventoryMovilView';
 import PlantCard from './PlantCard';
 import LoadPlantsToFirestore from '../Base/LoadPlantsToFirestore';
 import ProductTypesManager from './ProductTypesManager';
+import SmartInput from '../Shared/SmartInput';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
@@ -344,15 +345,39 @@ const InventoryView = () => {
             </div>
             <div>
               <label className="block text-xs font-medium">Stock</label>
-              <input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} className="border rounded p-1 w-full text-xs" required style={{maxWidth:'80px'}} />
+              <SmartInput 
+                name="stock" 
+                variant="stock" 
+                value={form.stock} 
+                onChange={handleChange} 
+                className="border rounded p-1 w-full text-xs" 
+                style={{maxWidth:'80px'}} 
+                required 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium">Precio Compra</label>
-              <input name="basePrice" type="number" min="0" value={form.basePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" required style={{maxWidth:'100px'}} />
+              <SmartInput 
+                name="basePrice" 
+                variant="price" 
+                value={form.basePrice} 
+                onChange={handleChange} 
+                className="border rounded p-1 w-full text-xs" 
+                style={{maxWidth:'100px'}} 
+                required 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium">Precio Venta</label>
-              <input name="purchasePrice" type="number" min="0" value={form.purchasePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" required style={{maxWidth:'100px'}} />
+              <SmartInput 
+                name="purchasePrice" 
+                variant="price" 
+                value={form.purchasePrice} 
+                onChange={handleChange} 
+                className="border rounded p-1 w-full text-xs" 
+                style={{maxWidth:'100px'}} 
+                required 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium">Fecha Compra</label>

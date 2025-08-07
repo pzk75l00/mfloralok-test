@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import SmartInput from './SmartInput';
 
 const PlantFormModal = ({ initialName, onCreate, onClose }) => {
   const [name, setName] = useState(initialName || '');
@@ -13,14 +14,6 @@ const PlantFormModal = ({ initialName, onCreate, onClose }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation && e.stopPropagation();
-    console.log('[DEBUG][PlantFormModal] handleSubmit', {
-      name,
-      type,
-      price,
-      salePrice,
-      quantity,
-      supplier
-    });
     if (!name.trim()) {
       setError('El nombre es obligatorio');
       return;
@@ -51,11 +44,29 @@ const PlantFormModal = ({ initialName, onCreate, onClose }) => {
           <label className="block text-sm mb-1">Tipo</label>
           <input className="border rounded px-2 py-1 mb-2 w-full" value={type} onChange={e => setType(e.target.value)} autoComplete="off" />
           <label className="block text-sm mb-1">Cantidad inicial</label>
-          <input className="border rounded px-2 py-1 mb-2 w-full" type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} autoComplete="off" />
+          <SmartInput 
+            variant="quantity" 
+            value={quantity} 
+            onChange={e => setQuantity(e.target.value)} 
+            className="border rounded px-2 py-1 mb-2 w-full" 
+            autoComplete="off" 
+          />
           <label className="block text-sm mb-1">Precio de compra</label>
-          <input className="border rounded px-2 py-1 mb-2 w-full" type="number" value={price} onChange={e => setPrice(e.target.value)} autoComplete="off" />
+          <SmartInput 
+            variant="price" 
+            value={price} 
+            onChange={e => setPrice(e.target.value)} 
+            className="border rounded px-2 py-1 mb-2 w-full" 
+            autoComplete="off" 
+          />
           <label className="block text-sm mb-1">Precio de venta</label>
-          <input className="border rounded px-2 py-1 mb-2 w-full" type="number" value={salePrice} onChange={e => setSalePrice(e.target.value)} autoComplete="off" />
+          <SmartInput 
+            variant="price" 
+            value={salePrice} 
+            onChange={e => setSalePrice(e.target.value)} 
+            className="border rounded px-2 py-1 mb-2 w-full" 
+            autoComplete="off" 
+          />
           <label className="block text-sm mb-1">Proveedor</label>
           <input className="border rounded px-2 py-1 mb-2 w-full" value={supplier} onChange={e => setSupplier(e.target.value)} autoComplete="off" />
           {error && <div className="text-red-500 text-xs mb-2">{error}</div>}
