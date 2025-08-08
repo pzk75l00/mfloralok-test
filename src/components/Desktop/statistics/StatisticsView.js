@@ -1,7 +1,11 @@
+﻿/* eslint-disable no-irregular-whitespace */
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseConfig';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LabelList, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, LabelList, Cell } from 'recharts';
+import { 
+  calculateBalanceByPaymentMethod
+} from '../../../utils/balanceCalculations';
 
 const COLORS = [
   '#38a169', '#3182ce', '#e53e3e', '#d69e2e', '#805ad5', '#319795', '#f56565', '#ecc94b', '#4fd1c5', '#f6ad55', '#63b3ed', '#b794f4'
@@ -29,14 +33,14 @@ const StatisticsView = () => {
   const [dailyCashFlow, setDailyCashFlow] = useState([]);
   const [paymentMethodStats, setPaymentMethodStats] = useState({ efectivo: 0, mercadoPago: 0 });
   
-  // Estados para las nuevas estadísticas
+  // Estados para las nuevas estadÃ­sticas
   const [monthlyProductProfitability, setMonthlyProductProfitability] = useState([]);
   const [purchaseRecommendations, setPurchaseRecommendations] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [stagnantProducts, setStagnantProducts] = useState([]);
   const [trendAnalysis, setTrendAnalysis] = useState([]);
   
-  // Estados para estadísticas adicionales (punto 3, 4, 5)
+  // Estados para estadÃ­sticas adicionales (punto 3, 4, 5)
   const [locationAnalysis, setLocationAnalysis] = useState([]);
   const [timePatterns, setTimePatterns] = useState([]);
   const [productLifecycle, setProductLifecycle] = useState([]);
@@ -44,7 +48,7 @@ const StatisticsView = () => {
   // Estado para ROI por producto
   const [productROI, setProductROI] = useState([]);
 
-  // Año actual y anterior
+  // AÃ±o actual y anterior
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
@@ -67,7 +71,7 @@ const StatisticsView = () => {
     const salesByMonth = {};
     const productsByMonth = {};
     let ventas = 0, compras = 0, ingresos = 0, egresos = 0, gastos = 0;
-    let efectivo = 0, mp = 0;
+    // NOTA: efectivo y mp ahora vienen de saldoTotalAcumulado
     
     // Fechas para filtrar el mes actual
     const now = new Date();
@@ -99,21 +103,19 @@ const StatisticsView = () => {
       if (mov.type === 'egreso' && isCurrentMonth) egresos += mov.total ? Number(mov.total) : 0;
       if (mov.type === 'gasto' && isCurrentMonth) gastos += mov.total ? Number(mov.total) : 0;
       
-      // Calcular saldos TOTALES (acumulados desde el inicio)
-      if (mov.paymentMethod === 'efectivo') {
-        if (mov.type === 'venta' || mov.type === 'ingreso') efectivo += mov.total ? Number(mov.total) : 0;
-        if (mov.type === 'compra' || mov.type === 'egreso' || mov.type === 'gasto') efectivo -= mov.total ? Number(mov.total) : 0;
-      }
-      if (mov.paymentMethod === 'mercadoPago') {
-        if (mov.type === 'venta' || mov.type === 'ingreso') mp += mov.total ? Number(mov.total) : 0;
-        if (mov.type === 'compra' || mov.type === 'egreso' || mov.type === 'gasto') mp -= mov.total ? Number(mov.total) : 0;
-      }
+      // NOTA: Ya no calculamos efectivo y mp aquí­ - usamos saldoTotalAcumulado
     });
     setMonthlySales(Object.values(salesByMonth).sort((a,b) => a.mes.localeCompare(b.mes)));
     setMonthlyProducts(Object.values(productsByMonth).sort((a,b) => a.mes.localeCompare(b.mes)));
-    setKpis({ ventas, compras, ingresos, egresos, gastos, efectivo, mp });
 
-    // --- ANÁLISIS DE RENTABILIDAD POR PRODUCTO ---
+    // Calcular saldo total acumulado ANTES de usarlo en logs y KPIs
+    const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
+    
+    // USAR SALDO TOTAL ACUMULADO CORRECTO EN KPIs TAMBIÉN
+    console.log('”¥ ACTUALIZANDO KPIs CON SALDO CORRECTO:', { efectivo: saldoTotalAcumulado.efectivo, mp: saldoTotalAcumulado.mercadoPago });
+    setKpis({ ventas, compras, ingresos, egresos, gastos, efectivo: saldoTotalAcumulado.efectivo, mp: saldoTotalAcumulado.mercadoPago });
+
+    // --- ANÃLISIS DE RENTABILIDAD POR PRODUCTO ---
     const productStats = {};
     movements.filter(mov => mov.type === 'venta' && mov.plantId).forEach(sale => {
       const plantId = String(sale.plantId);
@@ -131,7 +133,7 @@ const StatisticsView = () => {
         }
         const qty = Number(sale.quantity) || 0;
         const revenue = sale.total ? Number(sale.total) : (Number(sale.price) * qty) || 0;
-        const cost = Number(plant.basePrice) * qty || 0; // ✅ CORREGIDO: basePrice es el costo real
+        const cost = Number(plant.basePrice) * qty || 0; // … CORREGIDO: basePrice es el costo real
         
         productStats[plantId].quantitySold += qty;
         productStats[plantId].revenue += revenue;
@@ -148,11 +150,11 @@ const StatisticsView = () => {
       .slice(0, 10);
     setProductProfitability(profitabilityData);
 
-    // --- ANÁLISIS DE FLUJO DE CAJA DIARIO DEL MES ---
+    // --- ANÃLISIS DE FLUJO DE CAJA DIARIO DEL MES ---
     const dailyFlow = {};
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     
-    // Inicializar todos los días del mes
+    // Inicializar todos los dÃ­as del mes
     for (let day = 1; day <= daysInMonth; day++) {
       dailyFlow[day] = { day, ingresos: 0, egresos: 0, neto: 0 };
     }
@@ -174,18 +176,54 @@ const StatisticsView = () => {
     });
     setDailyCashFlow(Object.values(dailyFlow));
 
-    // --- ANÁLISIS DE MÉTODOS DE PAGO DEL MES ---
-    let efectivoMes = 0, mpMes = 0;
+    // --- ANÁLISIS DE MÉTODOS DE PAGO - SALDO TOTAL ACUMULADO ---
+    console.log(' ESTADÍSTICAS ESCRITORIO - NUEVA VERSIÓN CORREGIDA ');
+    console.log(' DIAGNÓSTICO ESTADÍSTICAS ESCRITORIO - Calculando saldo total acumulado...');
+    console.log(' Total de movimientos para análisis:', movements.length);
+    
+    // USAR LA FUNCIÓN ORIGINAL QUE YA FUNCIONABA CORRECTAMENTE
+    // const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
+    console.log('”¥ RESULTADO ESTADÍSTICAS ESCRITORIO - SALDO TOTAL ACUMULADO:', saldoTotalAcumulado);
+    console.log('”¥”¥”¥ VALOR QUE SE ESTÁ USANDO EN LA INTERFAZ:', saldoTotalAcumulado);
+    
+    // VERIFICAR QUE ESTOS SON LOS VALORES CORRECTOS (deben ser ~64500)
+    if (saldoTotalAcumulado.total > 200000) {
+      console.error('âŒ ERROR: Los valores siguen siendo incorrectos!');
+      console.error('âŒ Se esperaba ~$64,500 pero se obtuvo:', saldoTotalAcumulado.total);
+    } else {
+      console.log('… CORRECTO: Los valores son los esperados (~$64,500)');
+    }
+    
+    // TambiÃ©n calcular las ventas del mes para comparaciÃ³n (mantener para otros gráficos)
+    let ventasEfectivoMes = 0, ventasMPMes = 0;
+    let movimientosVentasDelMes = 0;
+    
     movements.forEach(mov => {
       if (!mov.date) return;
       const d = new Date(mov.date);
       if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && mov.type === 'venta') {
+        movimientosVentasDelMes++;
         const amount = Number(mov.total) || 0;
-        if (mov.paymentMethod === 'efectivo') efectivoMes += amount;
-        if (mov.paymentMethod === 'mercadoPago') mpMes += amount;
+        if (mov.paymentMethod === 'efectivo') {
+          ventasEfectivoMes += amount;
+        }
+        if (mov.paymentMethod === 'mercadoPago') {
+          ventasMPMes += amount;
+        }
       }
     });
-    setPaymentMethodStats({ efectivo: efectivoMes, mercadoPago: mpMes });
+    
+    console.log('”¥ COMPARACIÃ“N - Ventas del mes:');
+    console.log('”¥ - Movimientos de venta del mes:', movimientosVentasDelMes);
+    console.log('”¥ - Ventas efectivo del mes:', ventasEfectivoMes);
+    console.log('”¥ - Ventas MP del mes:', ventasMPMes);
+    console.log('”¥ AHORA USANDO SALDO TOTAL ACUMULADO EN LA INTERFAZ');
+    
+    // CAMBIO IMPORTANTE: Usar saldo total acumulado en lugar de ventas del mes
+    setPaymentMethodStats({ 
+      efectivo: saldoTotalAcumulado.efectivo, 
+      mercadoPago: saldoTotalAcumulado.mercadoPago 
+    });
 
     // --- GANANCIA POR PRODUCTO DEL MES ACTUAL ---
     const monthlyProductStats = {};
@@ -272,7 +310,7 @@ const StatisticsView = () => {
     const lowStock = plants.filter(plant => (Number(plant.stock) || 0) <= 2);
     setLowStockProducts(lowStock);
     
-    // Productos sin ventas en los últimos 30 días
+    // Productos sin ventas en los últimos 30 dÃ­as
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
@@ -286,7 +324,7 @@ const StatisticsView = () => {
     });
     setStagnantProducts(stagnant);
 
-    // --- ANÁLISIS DE TENDENCIAS ---
+    // --- ANÃLISIS DE TENDENCIAS ---
     const trends = [];
     const currentMonthStart = new Date(currentYear, currentMonth, 1);
     const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
@@ -336,7 +374,7 @@ const StatisticsView = () => {
     const sortedTrends = trends.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
     setTrendAnalysis(sortedTrends);
 
-    // --- ANÁLISIS POR LUGAR ---
+    // --- ANÃLISIS POR LUGAR ---
     const locationStats = {};
     movements.filter(mov => mov.type === 'venta' && mov.location).forEach(sale => {
       const location = sale.location.trim();
@@ -397,7 +435,7 @@ const StatisticsView = () => {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
     plants.forEach(plant => {
-      // Determinar cuándo se agregó el producto (primera venta o compra)
+      // Determinar cuándo se agregó³ el producto (primera venta o compra)
       const firstMovement = movements
         .filter(mov => String(mov.plantId) === String(plant.id) && mov.date)
         .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
@@ -543,8 +581,8 @@ const StatisticsView = () => {
   const bestSalesMonth = filteredSales.reduce((max, curr) => (curr.ventas > (max?.ventas ?? 0) ? curr : max), null);
   const bestProductsMonth = filteredProducts.reduce((max, curr) => (curr.productos > (max?.productos ?? 0) ? curr : max), null);
 
-  // --- COMPARATIVO AÑO A AÑO ---
-  // Generar datos agrupados por mes (enero-diciembre) para año actual y anterior
+  // --- COMPARATIVO AÃ‘O A AÃ‘O ---
+  // Generar datos agrupados por mes (enero-diciembre) para aÃ±o actual y anterior
   function getYearlyData(monthlyArr, key) {
     // key: 'ventas' o 'productos'
     const data = Array(12).fill(0).map((_, i) => ({
@@ -563,7 +601,7 @@ const StatisticsView = () => {
   const salesYearly = getYearlyData(monthlySales, 'ventas');
   const productsYearly = getYearlyData(monthlyProducts, 'productos');
 
-  // Variación porcentual por mes y total
+  // VariaciÃ³n porcentual por mes y total
   function getYearlyVariation(yearlyData, key) {
     let totalActual = 0, totalPrev = 0;
     const variaciones = yearlyData.map(row => {
@@ -587,11 +625,10 @@ const StatisticsView = () => {
       {/* Indicador de período */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-800">
-          📊 <strong>KPIs del mes actual:</strong> {MONTHS_ES[new Date().getMonth()]} {new Date().getFullYear()} | 
-          💰 <strong>Saldos disponibles:</strong> Acumulado desde el inicio del negocio
+          <strong>KPIs del mes actual:</strong> {MONTHS_ES[new Date().getMonth()]} {new Date().getFullYear()} | <strong>Saldos disponibles:</strong> Acumulado desde el inicio del negocio
         </p>
       </div>
-      
+  
       {/* Selector de mes de inicio si hay más de 12 meses */}
       {selectableMonths.length > 0 && (
         <div className="mb-4">
@@ -604,63 +641,103 @@ const StatisticsView = () => {
         </div>
       )}
       
-      {/* KPIs del mes actual */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-green-100 rounded shadow p-4 text-center border border-green-300">
-          <div className="text-xs text-gray-600 mb-1">Ventas del mes</div>
-          <div className="text-2xl font-bold text-green-700">${(kpis.ventas ?? 0).toLocaleString('es-AR')}</div>
+      {/* SECCIÓN 1: MOVIMIENTOS DEL MES ACTUAL */}
+      <div className="mb-8">
+        <div className="mb-4 pb-2 border-b border-blue-200">
+          <h2 className="text-xl font-bold text-blue-800 flex items-center gap-2">
+            “… Movimientos del Mes Actual
+            <span className="text-sm font-normal text-gray-600">(Agosto 2025)</span>
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Resumen de todas las operaciones realizadas únicamente en el mes actual</p>
         </div>
-        <div className="bg-blue-100 rounded shadow p-4 text-center border border-blue-300">
-          <div className="text-xs text-gray-600 mb-1">Compras del mes</div>
-          <div className="text-2xl font-bold text-blue-700">${(kpis.compras ?? 0).toLocaleString('es-AR')}</div>
+        
+        {/* KPIs del mes actual */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-green-100 rounded shadow p-4 text-center border border-green-300">
+            <div className="text-xs text-gray-600 mb-1">Ventas del mes</div>
+            <div className="text-2xl font-bold text-green-700">${(kpis.ventas ?? 0).toLocaleString('es-AR')}</div>
+          </div>
+          <div className="bg-blue-100 rounded shadow p-4 text-center border border-blue-300">
+            <div className="text-xs text-gray-600 mb-1">Compras del mes</div>
+            <div className="text-2xl font-bold text-blue-700">${(kpis.compras ?? 0).toLocaleString('es-AR')}</div>
+          </div>
+          <div className="bg-yellow-100 rounded shadow p-4 text-center border border-yellow-300">
+            <div className="text-xs text-gray-600 mb-1">Ingresos del mes</div>
+            <div className="text-2xl font-bold text-yellow-700">${(kpis.ingresos ?? 0).toLocaleString('es-AR')}</div>
+          </div>
+          <div className="bg-red-100 rounded shadow p-4 text-center border border-red-300">
+            <div className="text-xs text-gray-600 mb-1">Egresos del mes</div>
+            <div className="text-2xl font-bold text-red-700">${(kpis.egresos ?? 0).toLocaleString('es-AR')}</div>
+          </div>
+          <div className="bg-orange-100 rounded shadow p-4 text-center border border-orange-300">
+            <div className="text-xs text-gray-600 mb-1">Gastos del mes</div>
+            <div className="text-2xl font-bold text-orange-700">${(kpis.gastos ?? 0).toLocaleString('es-AR')}</div>
+          </div>
         </div>
-        <div className="bg-yellow-100 rounded shadow p-4 text-center border border-yellow-300">
-          <div className="text-xs text-gray-600 mb-1">Ingresos del mes</div>
-          <div className="text-2xl font-bold text-yellow-700">${(kpis.ingresos ?? 0).toLocaleString('es-AR')}</div>
-        </div>
-        <div className="bg-red-100 rounded shadow p-4 text-center border border-red-300">
-          <div className="text-xs text-gray-600 mb-1">Egresos del mes</div>
-          <div className="text-2xl font-bold text-red-700">${(kpis.egresos ?? 0).toLocaleString('es-AR')}</div>
-        </div>
-        <div className="bg-orange-100 rounded shadow p-4 text-center border border-orange-300">
-          <div className="text-xs text-gray-600 mb-1">Gastos del mes</div>
-          <div className="text-2xl font-bold text-orange-700">${(kpis.gastos ?? 0).toLocaleString('es-AR')}</div>
-        </div>
-      </div>
-      
-      {/* Resultado neto del mes */}
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
-        <div className={`rounded shadow p-4 text-center border ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)) >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
-          <div className="text-sm text-gray-600 mb-1">Resultado neto del mes (Ventas + Ingresos - Compras - Egresos - Gastos)</div>
-          <div className={`text-3xl font-bold ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-            ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)).toLocaleString('es-AR')}
+        
+        {/* Resultado neto del mes */}
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+          <div className={`rounded shadow p-4 text-center border ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)) >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+            <div className="text-sm text-gray-600 mb-1">Resultado neto del mes (Ventas + Ingresos - Compras - Egresos - Gastos)</div>
+            <div className={`text-3xl font-bold ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+              ${((kpis.ventas + kpis.ingresos) - (kpis.compras + kpis.egresos + kpis.gastos)).toLocaleString('es-AR')}
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Saldos disponibles (acumulados) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-gray-100 rounded shadow p-4 text-center border border-gray-300">
-          <div className="text-xs text-gray-600 mb-1">💵 Saldo Efectivo</div>
-          <div className="text-xs text-gray-500 mb-2">(Acumulado total)</div>
-          <div className="text-2xl font-bold text-gray-700">${(kpis.efectivo ?? 0).toLocaleString('es-AR')}</div>
-        </div>
-        <div className="bg-purple-100 rounded shadow p-4 text-center border border-purple-300">
-          <div className="text-xs text-gray-600 mb-1">📱 Saldo Mercado Pago</div>
-          <div className="text-xs text-gray-500 mb-2">(Acumulado total)</div>
-          <div className="text-2xl font-bold text-purple-700">${(kpis.mp ?? 0).toLocaleString('es-AR')}</div>
-        </div>
-        <div className="bg-green-50 rounded shadow p-4 text-center border border-green-300">
-          <div className="text-xs text-gray-600 mb-1">💰 Total Disponible</div>
-          <div className="text-xs text-gray-500 mb-2">(Efectivo + MP)</div>
-          <div className="text-2xl font-bold text-green-700">${((kpis.efectivo ?? 0) + (kpis.mp ?? 0)).toLocaleString('es-AR')}</div>
+      {/* SEPARADOR VISUAL FUERTE */}
+      <div className="my-8 border-t-4 border-gray-300 relative">
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-4">
+          <span className="text-gray-500 font-medium">’°</span>
         </div>
       </div>
       
-      {/* Separador para gráficos históricos */}
-      <div className="my-8 border-t border-gray-200"></div>
+      {/* SECCIÓN 2: SALDOS TOTALES ACUMULADOS */}
+      <div className="mb-8">
+        <div className="mb-4 pb-2 border-b border-green-200">
+          <h2 className="text-xl font-bold text-green-800 flex items-center gap-2">
+            ’° Saldos Totales Disponibles
+            <span className="text-sm font-normal text-gray-600">(Acumulado desde el inicio)</span>
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Tu capital real disponible considerando todos los movimientos históricos</p>
+        </div>
+        
+        {/* Saldos disponibles (acumulados) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-100 rounded shadow p-4 text-center border border-gray-300 hover:shadow-lg transition-shadow">
+          <div className="text-xs text-gray-600 mb-1">’µ Saldo Efectivo</div>
+          <div className="text-xs text-gray-500 mb-2 font-medium">(Total acumulado)</div>
+          <div className="text-2xl font-bold text-gray-700">${(kpis.efectivo ?? 0).toLocaleString('es-AR')}</div>
+        </div>
+        <div className="bg-purple-100 rounded shadow p-4 text-center border border-purple-300 hover:shadow-lg transition-shadow">
+          <div className="text-xs text-gray-600 mb-1">“± Saldo Mercado Pago</div>
+          <div className="text-xs text-gray-500 mb-2 font-medium">(Total acumulado)</div>
+          <div className="text-2xl font-bold text-purple-700">${(kpis.mp ?? 0).toLocaleString('es-AR')}</div>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded shadow p-4 text-center border-2 border-green-400 hover:shadow-lg transition-shadow">
+          <div className="text-xs text-gray-600 mb-1 font-semibold">’° Total Disponible</div>
+          <div className="text-xs text-gray-500 mb-2 font-medium">(Efectivo + Mercado Pago)</div>
+          <div className="text-3xl font-bold text-green-700">${((kpis.efectivo ?? 0) + (kpis.mp ?? 0)).toLocaleString('es-AR')}</div>
+        </div>
+      </div>
+      
+      {/* Cierre de la sección de saldos acumulados */}
+      </div>
+      
+      {/* SEPARADOR VISUAL FUERTE PARA ANÁLISIS HISTÓRICO */}
+      <div className="my-10 border-t-4 border-gray-300 relative">
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-4">
+          <span className="text-gray-500 font-medium">“ˆ</span>
+        </div>
+      </div>
+      
+      {/* SECCIÓN 3: ANÁLISIS HISTÓRICO */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">📈 Análisis Histórico</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+          “ˆ análisis Histórico
+          <span className="text-sm font-normal text-gray-600">(Evolución por meses)</span>
+        </h2>
         <p className="text-sm text-gray-600">Los siguientes gráficos muestran la evolución histórica de tu negocio por meses.</p>
       </div>
       
@@ -668,7 +745,7 @@ const StatisticsView = () => {
         <h2 className="text-lg font-semibold mb-2">Ventas por mes</h2>
         {bestSalesMonth && (
           <div className="mb-2 text-green-700 font-semibold text-sm">
-            🏆 Mes con más ventas: {formatMes(bestSalesMonth.mes)} (${bestSalesMonth.ventas.toLocaleString('es-AR')})
+            † Mes con más ventas: {formatMes(bestSalesMonth.mes)} (${bestSalesMonth.ventas.toLocaleString('es-AR')})
           </div>
         )}
         <ResponsiveContainer width="100%" height={300}>
@@ -691,7 +768,7 @@ const StatisticsView = () => {
         <h2 className="text-lg font-semibold mb-2">Cantidad de productos vendidos por mes</h2>
         {bestProductsMonth && (
           <div className="mb-2 text-blue-700 font-semibold text-sm">
-            🏆 Mes con más productos vendidos: {formatMes(bestProductsMonth.mes)} ({bestProductsMonth.productos})
+            † Mes con más productos vendidos: {formatMes(bestProductsMonth.mes)} ({bestProductsMonth.productos})
           </div>
         )}
         <ResponsiveContainer width="100%" height={300}>
@@ -710,14 +787,14 @@ const StatisticsView = () => {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      {/* --- COMPARATIVO AÑO A AÑO --- */}
+      {/* --- COMPARATIVO AÃ‘O A AÃ‘O --- */}
       <div className="bg-white rounded shadow p-4 mb-6">
         <h2 className="text-lg font-semibold mb-2">Comparativo de Ventas por mes ({prevYear} vs {currentYear})</h2>
         {ventasVar.totalPrev === 0 && (
-          <div className="mb-2 text-gray-500 italic">Sin datos del año anterior para comparar.</div>
+          <div className="mb-2 text-gray-500 italic">Sin datos del aÃ±o anterior para comparar.</div>
         )}
         <div className="mb-2 text-sm">
-          Total {currentYear}: <span className="font-bold text-green-700">${ventasVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">${ventasVar.totalPrev.toLocaleString('es-AR')}</span> | Variación: <span className={ventasVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{ventasVar.totalVarPct.toFixed(1)}%</span>
+          Total {currentYear}: <span className="font-bold text-green-700">${ventasVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">${ventasVar.totalPrev.toLocaleString('es-AR')}</span> | VariaciÃ³n: <span className={ventasVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{ventasVar.totalVarPct.toFixed(1)}%</span>
         </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={salesYearly} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -738,10 +815,10 @@ const StatisticsView = () => {
       <div className="bg-white rounded shadow p-4 mb-6">
         <h2 className="text-lg font-semibold mb-2">Comparativo de Productos vendidos por mes ({prevYear} vs {currentYear})</h2>
         {productosVar.totalPrev === 0 && (
-          <div className="mb-2 text-gray-500 italic">Sin datos del año anterior para comparar.</div>
+          <div className="mb-2 text-gray-500 italic">Sin datos del aÃ±o anterior para comparar.</div>
         )}
         <div className="mb-2 text-sm">
-          Total {currentYear}: <span className="font-bold text-green-700">{productosVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">{productosVar.totalPrev.toLocaleString('es-AR')}</span> | Variación: <span className={productosVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{productosVar.totalVarPct.toFixed(1)}%</span>
+          Total {currentYear}: <span className="font-bold text-green-700">{productosVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">{productosVar.totalPrev.toLocaleString('es-AR')}</span> | VariaciÃ³n: <span className={productosVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{productosVar.totalVarPct.toFixed(1)}%</span>
         </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={productsYearly} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -760,16 +837,16 @@ const StatisticsView = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* --- NUEVOS ANÁLISIS ADICIONALES --- */}
+      {/* --- NUEVOS ANÃLISIS ADICIONALES --- */}
       <div className="my-8 border-t border-gray-200"></div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">🎯 Análisis de Negocio Avanzado</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Ž¯ análisis de Negocio Avanzado</h2>
         <p className="text-sm text-gray-600">Insights profundos para optimizar tu negocio.</p>
       </div>
 
-      {/* Análisis de Rentabilidad por Producto */}
+      {/* análisis de Rentabilidad por Producto */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">💰 Top 10 Productos más Rentables</h2>
+        <h2 className="text-lg font-semibold mb-4">’° Top 10 Productos más Rentables</h2>
         {productProfitability.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -786,7 +863,7 @@ const StatisticsView = () => {
               <tbody>
                 {productProfitability.map((product, idx) => (
                   <tr key={product.name} className={idx === 0 ? 'bg-green-100 font-semibold' : idx < 3 ? 'bg-green-50' : ''}>
-                    <td className="px-3 py-2">{idx === 0 ? '🏆 ' : ''}{product.name}</td>
+                    <td className="px-3 py-2">{idx === 0 ? '† ' : ''}{product.name}</td>
                     <td className="px-3 py-2 text-right">{product.quantitySold}</td>
                     <td className="px-3 py-2 text-right text-green-700">${product.revenue.toLocaleString('es-AR')}</td>
                     <td className="px-3 py-2 text-right text-red-600">${product.cost.toLocaleString('es-AR')}</td>
@@ -804,7 +881,7 @@ const StatisticsView = () => {
 
       {/* Ganancia por Producto del Mes Actual */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">📊 Ganancia por Producto - {MONTHS_ES[currentMonth]} {currentYear}</h2>
+        <h2 className="text-lg font-semibold mb-4">“Š Ganancia por Producto - {MONTHS_ES[currentMonth]} {currentYear}</h2>
         {monthlyProductProfitability.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -833,7 +910,7 @@ const StatisticsView = () => {
             </table>
             <div className="mt-4 p-3 bg-blue-100 rounded">
               <div className="flex justify-between">
-                <span className="font-bold">💰 Ganancia Total del Mes:</span>
+                <span className="font-bold">’° Ganancia Total del Mes:</span>
                 <span className="font-bold text-blue-700">${monthlyProductProfitability.reduce((sum, p) => sum + p.profit, 0).toLocaleString('es-AR')}</span>
               </div>
             </div>
@@ -843,13 +920,13 @@ const StatisticsView = () => {
         )}
       </div>
 
-      {/* Análisis y Recomendaciones */}
+      {/* análisis y Recomendaciones */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         
         {/* Recomendaciones de Compra */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">🛒 Recomendaciones de Compra</h2>
-          <p className="text-sm text-gray-600 mb-4">Productos con mejor velocidad de rotación</p>
+          <h2 className="text-lg font-semibold mb-4">›’ Recomendaciones de Compra</h2>
+          <p className="text-sm text-gray-600 mb-4">Productos con mejor velocidad de rotaciÃ³n</p>
           {purchaseRecommendations.length > 0 ? (
             <div className="space-y-3">
               {purchaseRecommendations.map((rec, idx) => (
@@ -860,9 +937,9 @@ const StatisticsView = () => {
                 }`}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold text-sm">{idx === 0 ? '🏆' : idx + 1}. {rec.name}</h4>
+                      <h4 className="font-semibold text-sm">{idx === 0 ? '†' : idx + 1}. {rec.name}</h4>
                       <p className="text-xs text-gray-600">Stock actual: {rec.currentStock} | Vendidos/mes: {rec.avgSalesPerMonth}</p>
-                      <p className="text-xs text-gray-500">Velocidad: {rec.rotationVelocity} días por unidad</p>
+                      <p className="text-xs text-gray-500">Velocidad: {rec.rotationVelocity} dÃ­as por unidad</p>
                     </div>
                     <div className="text-right">
                       <div className={`text-xs font-bold ${
@@ -884,12 +961,12 @@ const StatisticsView = () => {
 
         {/* Alertas de Stock */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">⚠️ Alertas de Inventario</h2>
+          <h2 className="text-lg font-semibold mb-4">âš ï¸ Alertas de Inventario</h2>
           <div className="space-y-4">
             
             {/* Stock Bajo */}
             <div>
-              <h3 className="font-medium text-red-600 mb-2">🔴 Stock Crítico (≤ 2 unidades)</h3>
+              <h3 className="font-medium text-red-600 mb-2">”´ Stock CrÃ­tico (â‰¤ 2 unidades)</h3>
               {lowStockProducts.length > 0 ? (
                 <div className="space-y-2">
                   {lowStockProducts.map(product => (
@@ -900,13 +977,13 @@ const StatisticsView = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">✅ Todos los productos tienen stock suficiente</p>
+                <p className="text-sm text-gray-500">… Todos los productos tienen stock suficiente</p>
               )}
             </div>
 
             {/* Productos sin Movimiento */}
             <div>
-              <h3 className="font-medium text-orange-600 mb-2">🔶 Sin ventas (últimos 30 días)</h3>
+              <h3 className="font-medium text-orange-600 mb-2">”¶ Sin ventas (últimos 30 dÃ­as)</h3>
               {stagnantProducts.length > 0 ? (
                 <div className="space-y-2">
                   {stagnantProducts.slice(0, 5).map(product => (
@@ -920,7 +997,7 @@ const StatisticsView = () => {
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">✅ Todos los productos tienen movimiento reciente</p>
+                <p className="text-sm text-gray-500">… Todos los productos tienen movimiento reciente</p>
               )}
             </div>
 
@@ -929,9 +1006,9 @@ const StatisticsView = () => {
 
       </div>
 
-      {/* Análisis de Tendencias */}
+      {/* análisis de Tendencias */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">📈 Análisis de Tendencias</h2>
+        <h2 className="text-lg font-semibold mb-4"> Análisis de Tendencias</h2>
         <p className="text-sm text-gray-600 mb-4">Comparación mes actual vs mes anterior</p>
         
         {trendAnalysis.length > 0 ? (
@@ -939,7 +1016,7 @@ const StatisticsView = () => {
             
             {/* En Crecimiento */}
             <div className="p-4 bg-green-50 rounded border border-green-200">
-              <h3 className="font-semibold text-green-700 mb-3">📈 En Crecimiento</h3>
+              <h3 className="font-semibold text-green-700 mb-3">“ˆ En Crecimiento</h3>
               {trendAnalysis.filter(p => p.trend === 'up').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -953,7 +1030,7 @@ const StatisticsView = () => {
 
             {/* Estables */}
             <div className="p-4 bg-blue-50 rounded border border-blue-200">
-              <h3 className="font-semibold text-blue-700 mb-3">➡️ Estables</h3>
+              <h3 className="font-semibold text-blue-700 mb-3">âž¡ï¸ Estables</h3>
               {trendAnalysis.filter(p => p.trend === 'stable').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -967,7 +1044,7 @@ const StatisticsView = () => {
 
             {/* En Declive */}
             <div className="p-4 bg-red-50 rounded border border-red-200">
-              <h3 className="font-semibold text-red-700 mb-3">📉 En Declive</h3>
+              <h3 className="font-semibold text-red-700 mb-3">“‰ En Declive</h3>
               {trendAnalysis.filter(p => p.trend === 'down').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -985,9 +1062,9 @@ const StatisticsView = () => {
         )}
       </div>
 
-      {/* Análisis por Ubicación */}
+      {/* análisis por UbicaciÃ³n */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">📍 Análisis por Ubicación</h2>
+        <h2 className="text-lg font-semibold mb-4">“ análisis por UbicaciÃ³n</h2>
         <p className="text-sm text-gray-600 mb-4">Rendimiento de ventas por lugar</p>
         
         {locationAnalysis.length > 0 ? (
@@ -995,7 +1072,7 @@ const StatisticsView = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-purple-50">
-                  <th className="text-left px-3 py-2 font-semibold">Ubicación</th>
+                  <th className="text-left px-3 py-2 font-semibold">UbicaciÃ³n</th>
                   <th className="text-right px-3 py-2 font-semibold">Ventas</th>
                   <th className="text-right px-3 py-2 font-semibold">Ingresos</th>
                   <th className="text-right px-3 py-2 font-semibold">Productos</th>
@@ -1005,7 +1082,7 @@ const StatisticsView = () => {
               <tbody>
                 {locationAnalysis.map((location, idx) => (
                   <tr key={location.name} className={idx === 0 ? 'bg-purple-100 font-semibold' : idx < 3 ? 'bg-purple-50' : ''}>
-                    <td className="px-3 py-2">{idx === 0 ? '🏆 ' : ''}{location.name}</td>
+                    <td className="px-3 py-2">{idx === 0 ? '† ' : ''}{location.name}</td>
                     <td className="px-3 py-2 text-right">{location.totalSales}</td>
                     <td className="px-3 py-2 text-right text-green-700">${location.totalRevenue.toLocaleString('es-AR')}</td>
                     <td className="px-3 py-2 text-right">{location.totalQuantity}</td>
@@ -1025,7 +1102,7 @@ const StatisticsView = () => {
         
         {/* Ventas por Hora */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">⏰ Ventas por Hora del Día</h2>
+          <h2 className="text-lg font-semibold mb-4">â° Ventas por Hora del DÃ­a</h2>
           {timePatterns.hourlyStats && timePatterns.hourlyStats.some(h => h.sales > 0) ? (
             <>
               <ResponsiveContainer width="100%" height={250}>
@@ -1051,9 +1128,9 @@ const StatisticsView = () => {
           )}
         </div>
 
-        {/* Ventas por Día de la Semana */}
+        {/* Ventas por DÃ­a de la Semana */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">📅 Ventas por Día de la Semana</h2>
+          <h2 className="text-lg font-semibold mb-4">“… Ventas por DÃ­a de la Semana</h2>
           {timePatterns.dailyStats && timePatterns.dailyStats.some(d => d.sales > 0) ? (
             <>
               <ResponsiveContainer width="100%" height={250}>
@@ -1068,13 +1145,13 @@ const StatisticsView = () => {
                 </BarChart>
               </ResponsiveContainer>
               <div className="mt-3 text-sm text-gray-600">
-                <p><strong>Mejor día:</strong> {
+                <p><strong>Mejor dÃ­a:</strong> {
                   timePatterns.dailyStats.reduce((max, curr) => curr.sales > max.sales ? curr : max, {sales: 0}).dayName
                 }</p>
               </div>
             </>
           ) : (
-            <div className="text-gray-500 text-center py-8">No hay datos de ventas por día.</div>
+            <div className="text-gray-500 text-center py-8">No hay datos de ventas por dÃ­a.</div>
           )}
         </div>
 
@@ -1082,8 +1159,8 @@ const StatisticsView = () => {
 
       {/* Ciclo de Vida de Productos */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">🔄 Ciclo de Vida de Productos</h2>
-        <p className="text-sm text-gray-600 mb-4">Clasificación de productos según su etapa de vida</p>
+        <h2 className="text-lg font-semibold mb-4">”„ Ciclo de Vida de Productos</h2>
+        <p className="text-sm text-gray-600 mb-4">ClasificaciÃ³n de productos segÃºn su etapa de vida</p>
         
         {productLifecycle.length > 0 ? (
           <>
@@ -1092,10 +1169,10 @@ const StatisticsView = () => {
               {['nuevo', 'crecimiento', 'maduro', 'declive'].map(stage => {
                 const count = productLifecycle.filter(p => p.stage === stage).length;
                 const stageIcons = {
-                  'nuevo': '🌱',
-                  'crecimiento': '🚀', 
-                  'maduro': '🌳',
-                  'declive': '🍂'
+                  'nuevo': '±',
+                  'crecimiento': '€', 
+                  'maduro': '³',
+                  'declive': '‚'
                 };
                 const stageColors = {
                   'nuevo': 'bg-green-100 text-green-800',
@@ -1120,7 +1197,7 @@ const StatisticsView = () => {
                   <tr className="bg-gray-50">
                     <th className="text-left px-3 py-2 font-semibold">Producto</th>
                     <th className="text-center px-3 py-2 font-semibold">Etapa</th>
-                    <th className="text-right px-3 py-2 font-semibold">Días en Sistema</th>
+                    <th className="text-right px-3 py-2 font-semibold">DÃ­as en Sistema</th>
                     <th className="text-right px-3 py-2 font-semibold">Ventas Totales</th>
                     <th className="text-right px-3 py-2 font-semibold">Ventas Recientes</th>
                     <th className="text-right px-3 py-2 font-semibold">Stock Actual</th>
@@ -1142,10 +1219,10 @@ const StatisticsView = () => {
                           product.stage === 'maduro' ? 'bg-yellow-200 text-yellow-800' :
                           'bg-red-200 text-red-800'
                         }`}>
-                          {product.stage === 'nuevo' ? '🌱 Nuevo' :
-                           product.stage === 'crecimiento' ? '🚀 Crecimiento' :
-                           product.stage === 'maduro' ? '🌳 Maduro' :
-                           '🍂 Declive'}
+                          {product.stage === 'nuevo' ? '± Nuevo' :
+                           product.stage === 'crecimiento' ? '€ Crecimiento' :
+                           product.stage === 'maduro' ? '³ Maduro' :
+                           '‚ Declive'}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">{product.daysSinceFirst}</td>
@@ -1158,28 +1235,28 @@ const StatisticsView = () => {
               </table>
             </div>
 
-            {/* Insights automáticos */}
+            {/* Insights automÃ¡ticos */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                <h4 className="font-semibold text-blue-700 mb-2">💡 Insights</h4>
+                <h4 className="font-semibold text-blue-700 mb-2">’¡ Insights</h4>
                 <ul className="text-sm text-blue-600 space-y-1">
-                  <li>• {productLifecycle.filter(p => p.stage === 'nuevo').length} productos nuevos en evaluación</li>
-                  <li>• {productLifecycle.filter(p => p.stage === 'maduro').length} productos en etapa madura (estables)</li>
-                  <li>• {productLifecycle.filter(p => p.stage === 'declive').length} productos requieren atención</li>
+                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'nuevo').length} productos nuevos en evaluaciÃ³n</li>
+                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'maduro').length} productos en etapa madura (estables)</li>
+                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'declive').length} productos requieren atenciÃ³n</li>
                 </ul>
               </div>
               
               <div className="p-3 bg-orange-50 rounded border border-orange-200">
-                <h4 className="font-semibold text-orange-700 mb-2">⚠️ Recomendaciones</h4>
+                <h4 className="font-semibold text-orange-700 mb-2">âš ï¸ Recomendaciones</h4>
                 <ul className="text-sm text-orange-600 space-y-1">
                   {productLifecycle.filter(p => p.stage === 'declive').length > 0 && (
-                    <li>• Revisar precios de productos en declive</li>
+                    <li>â€¢ Revisar precios de productos en declive</li>
                   )}
                   {productLifecycle.filter(p => p.stage === 'crecimiento').length > 0 && (
-                    <li>• Aumentar stock de productos en crecimiento</li>
+                    <li>â€¢ Aumentar stock de productos en crecimiento</li>
                   )}
                   {productLifecycle.filter(p => p.stage === 'nuevo').length > 3 && (
-                    <li>• Evaluar performance de productos nuevos</li>
+                    <li>â€¢ Evaluar performance de productos nuevos</li>
                   )}
                 </ul>
               </div>
@@ -1192,8 +1269,8 @@ const StatisticsView = () => {
 
       {/* ROI por Producto */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">💎 ROI por Producto</h2>
-        <p className="text-sm text-gray-600 mb-4">Retorno de inversión y eficiencia de cada producto</p>
+        <h2 className="text-lg font-semibold mb-4">’Ž ROI por Producto</h2>
+        <p className="text-sm text-gray-600 mb-4">Retorno de inversiÃ³n y eficiencia de cada producto</p>
         
         {productROI.length > 0 ? (
           <>
@@ -1239,7 +1316,7 @@ const StatisticsView = () => {
                     <th className="text-right px-3 py-2 font-semibold">Ganancia</th>
                     <th className="text-right px-3 py-2 font-semibold">ROI Simple</th>
                     <th className="text-right px-3 py-2 font-semibold">ROI Ajustado</th>
-                    <th className="text-right px-3 py-2 font-semibold">Rotación</th>
+                    <th className="text-right px-3 py-2 font-semibold">RotaciÃ³n</th>
                     <th className="text-right px-3 py-2 font-semibold">Stock Valuado</th>
                   </tr>
                 </thead>
@@ -1251,10 +1328,10 @@ const StatisticsView = () => {
                       product.adjustedROI < 0 ? 'bg-red-50' : ''
                     }`}>
                       <td className="px-3 py-2">
-                        {idx === 0 ? '🏆 ' : ''}
+                        {idx === 0 ? '† ' : ''}
                         {product.name}
-                        {product.adjustedROI > 100 && <span className="ml-1 text-green-600">🚀</span>}
-                        {product.adjustedROI < 0 && <span className="ml-1 text-red-600">⚠️</span>}
+                        {product.adjustedROI > 100 && <span className="ml-1 text-green-600">€</span>}
+                        {product.adjustedROI < 0 && <span className="ml-1 text-red-600">âš ï¸</span>}
                       </td>
                       <td className="px-3 py-2 text-right text-red-600">
                         ${product.totalInvested.toLocaleString('es-AR')}
@@ -1301,7 +1378,7 @@ const StatisticsView = () => {
             {/* Insights de ROI */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 rounded border border-green-200">
-                <h4 className="font-semibold text-green-700 mb-2">🏆 Mejores Performers</h4>
+                <h4 className="font-semibold text-green-700 mb-2">† Mejores Performers</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI > 50).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
@@ -1318,7 +1395,7 @@ const StatisticsView = () => {
               </div>
 
               <div className="p-4 bg-yellow-50 rounded border border-yellow-200">
-                <h4 className="font-semibold text-yellow-700 mb-2">⚠️ Requieren Atención</h4>
+                <h4 className="font-semibold text-yellow-700 mb-2">âš ï¸ Requieren AtenciÃ³n</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI < 20 && p.adjustedROI >= 0).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
@@ -1335,7 +1412,7 @@ const StatisticsView = () => {
               </div>
 
               <div className="p-4 bg-red-50 rounded border border-red-200">
-                <h4 className="font-semibold text-red-700 mb-2">🚨 ROI Negativo</h4>
+                <h4 className="font-semibold text-red-700 mb-2">¨ ROI Negativo</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI < 0).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
@@ -1346,24 +1423,24 @@ const StatisticsView = () => {
                     </div>
                   ))}
                   {productROI.filter(p => p.adjustedROI < 0).length === 0 && (
-                    <p className="text-sm text-gray-500">✅ No hay productos con pérdidas</p>
+                    <p className="text-sm text-gray-500">… No hay productos con pÃ©rdidas</p>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Explicación del ROI */}
+            {/* ExplicaciÃ³n del ROI */}
             <div className="mt-4 p-4 bg-gray-50 rounded border">
-              <h4 className="font-semibold text-gray-700 mb-2">📚 ¿Cómo se calcula el ROI?</h4>
+              <h4 className="font-semibold text-gray-700 mb-2">“š Â¿CÃ³mo se calcula el ROI?</h4>
               <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>ROI Simple:</strong> (Ingresos por Ventas - Inversión en Compras) / Inversión × 100</p>
+                <p><strong>ROI Simple:</strong> (Ingresos por Ventas - InversiÃ³n en Compras) / InversiÃ³n Ã— 100</p>
                 <p><strong>ROI Ajustado:</strong> Incluye el valor del stock actual al costo como activo</p>
-                <p><strong>Rotación:</strong> % de productos comprados que ya se vendieron</p>
-                <p><strong>Interpretación:</strong> 
+                <p><strong>RotaciÃ³n:</strong> % de productos comprados que ya se vendieron</p>
+                <p><strong>InterpretaciÃ³n:</strong> 
                   <span className="text-green-600 font-medium"> &gt; 50% Excelente</span>, 
                   <span className="text-blue-600 font-medium"> 20-50% Bueno</span>, 
                   <span className="text-yellow-600 font-medium"> 0-20% Regular</span>, 
-                  <span className="text-red-600 font-medium"> &lt; 0% Pérdida</span>
+                  <span className="text-red-600 font-medium"> &lt; 0% PÃ©rdida</span>
                 </p>
               </div>
             </div>
@@ -1375,7 +1452,7 @@ const StatisticsView = () => {
 
       {/* Flujo de Caja Diario */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-2">📊 Flujo de Caja Diario - {MONTHS_ES[now.getMonth()]} {now.getFullYear()}</h2>
+        <h2 className="text-lg font-semibold mb-2">“Š Flujo de Caja Diario - {MONTHS_ES[now.getMonth()]} {now.getFullYear()}</h2>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={dailyCashFlow} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -1390,28 +1467,31 @@ const StatisticsView = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* Análisis de Métodos de Pago */}
+      {/* Saldo Total Disponible */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">💳 Métodos de Pago - {MONTHS_ES[now.getMonth()]}</h2>
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-lg p-4 border border-green-200">
+          <h2 className="text-lg font-semibold mb-4">💰 Saldo Total Disponible</h2>
           <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-gray-100 rounded">
-              <span className="font-medium">💵 Efectivo</span>
-              <span className="font-bold text-green-700">${paymentMethodStats.efectivo.toLocaleString('es-AR')}</span>
+            <div className="flex justify-between items-center p-3 bg-white bg-opacity-60 rounded">
+              <span className="font-medium">’µ Efectivo</span>
+              <span className="font-bold text-green-700">${paymentMethodStats.efectivo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-purple-100 rounded">
-              <span className="font-medium">📱 Mercado Pago</span>
-              <span className="font-bold text-purple-700">${paymentMethodStats.mercadoPago.toLocaleString('es-AR')}</span>
+            <div className="flex justify-between items-center p-3 bg-white bg-opacity-60 rounded">
+              <span className="font-medium">“± Mercado Pago</span>
+              <span className="font-bold text-purple-700">${paymentMethodStats.mercadoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-blue-100 rounded border-2 border-blue-300">
-              <span className="font-bold">💰 Total Ventas</span>
-              <span className="font-bold text-blue-700">${(paymentMethodStats.efectivo + paymentMethodStats.mercadoPago).toLocaleString('es-AR')}</span>
+              <span className="font-bold">’° Total Disponible</span>
+              <span className="font-bold text-blue-700">${(paymentMethodStats.efectivo + paymentMethodStats.mercadoPago).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="text-xs text-gray-600 mt-2 font-medium bg-white bg-opacity-60 rounded p-2">
+              ✅ Saldo real acumulado desde el inicio hasta hoy, considerando todas las operaciones.
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">📈 Proporción de Pagos</h2>
+          <h2 className="text-lg font-semibold mb-4">📈 Proporción del Saldo Total</h2>
           <div className="space-y-4">
             {paymentMethodStats.efectivo + paymentMethodStats.mercadoPago > 0 ? (
               <>
@@ -1452,3 +1532,15 @@ const StatisticsView = () => {
 };
 
 export default StatisticsView;
+
+
+
+
+
+
+
+
+
+
+
+

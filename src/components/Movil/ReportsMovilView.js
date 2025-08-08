@@ -60,7 +60,12 @@ const ReportsMovilView = () => {
 
   // --- CÁLCULOS DE SALDO MEJORADOS ---
   // Saldo total acumulado (desde el inicio de todos los tiempos)
+  console.log('🔥 DIAGNÓSTICO REPORTES MÓVIL - Calculando saldos...');
+  console.log('🔥 Total de movimientos para cálculo:', movements.length);
+  
+  // USAR LA FUNCIÓN ORIGINAL QUE YA FUNCIONABA CORRECTAMENTE
   const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
+  console.log('🔥 RESULTADO saldoTotalAcumulado (función original):', saldoTotalAcumulado);
   
   // Saldos del día actual (para mostrar movimientos del día)
   const saldoDelDia = calculatePeriodBalance(movements, 'day', now);

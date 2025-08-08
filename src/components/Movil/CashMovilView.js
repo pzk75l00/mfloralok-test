@@ -69,8 +69,12 @@ const CashMovilView = (props) => {
 
   // --- Totales del mes o del día ---
   // Usar la función reutilizable de utils
+  console.log('🔥 DIAGNÓSTICO CASH MÓVIL - Calculando totales...');
+  console.log('🔥 Movimientos para el día:', movementsToday.length);
+  console.log('🔥 Movimientos para el mes:', movementsThisMonth.length);
   const totalsForDay = isCurrentMonth && movementsToday.length > 0 ? calculateDetailedTotals(movementsToday) : null;
   const totalsForMonth = calculateDetailedTotals(movementsThisMonth);
+  console.log('🔥 RESULTADO totalsForMonth:', totalsForMonth);
   
   // --- Panel superior dinámico ---
   const showDayTotals = isCurrentMonth && movementsToday.length > 0;

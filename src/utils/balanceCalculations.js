@@ -235,6 +235,7 @@ const getAmountForPaymentMethod = (movement, paymentMethod) => {
  * @returns {Object} - Totales detallados incluyendo gastos
  */
 export const calculateDetailedTotals = (movements) => {
+  console.log('🔥 calculateDetailedTotals - Total movimientos:', movements.length);
   const ventasEfectivo = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
   const ventasMP = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
   const comprasEfectivo = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
@@ -246,10 +247,31 @@ export const calculateDetailedTotals = (movements) => {
   const gastosEfectivo = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
   const gastosMP = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
   
+  console.log('🔥 calculateDetailedTotals EFECTIVO:', {
+    ventas: ventasEfectivo,
+    compras: comprasEfectivo,
+    ingresos: ingresosEfectivo,
+    egresos: egresosEfectivo,
+    gastos: gastosEfectivo
+  });
+  console.log('🔥 calculateDetailedTotals MERCADO PAGO:', {
+    ventas: ventasMP,
+    compras: comprasMP,
+    ingresos: ingresosMP,
+    egresos: egresosMP,
+    gastos: gastosMP
+  });
+  
   // Calcular saldos de caja (ingresos + ventas - egresos - compras - gastos)
   const cajaFisica = ingresosEfectivo + ventasEfectivo - comprasEfectivo - egresosEfectivo - gastosEfectivo;
   const cajaMP = ingresosMP + ventasMP - comprasMP - egresosMP - gastosMP;
   const totalGeneral = cajaFisica + cajaMP;
+  
+  console.log('🔥 calculateDetailedTotals RESULTADO FINAL:', {
+    cajaFisica,
+    cajaMP,
+    totalGeneral
+  });
   
   // Cantidad de productos vendidos
   const cantidadProductosVendidos = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);

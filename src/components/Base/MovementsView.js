@@ -538,6 +538,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     return d.getDate() === currentDay && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
   // --- TOTALES DEL DÍA (para móvil) ---
+  console.log('🔥 DIAGNÓSTICO ESCRITORIO MovementsView - Calculando totales...');
+  console.log('🔥 Movimientos hoy:', movementsToday.length);
+  console.log('🔥 Movimientos del mes:', movementsThisMonth.length);
   const totalVentasDia = movementsToday.filter(m => m.type === 'venta').reduce((sum, m) => sum + (m.total || 0), 0);
   const totalComprasDia = movementsToday.filter(m => m.type === 'compra').reduce((sum, m) => sum + (m.total || 0), 0);
   const totalEgresosEfectivoDia = movementsToday.filter(m => m.type === 'egreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
@@ -548,10 +551,27 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const comprasMPDia = movementsToday.filter(m => m.type === 'compra' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
   const ingresosEfectivoDia = movementsToday.filter(m => m.type === 'ingreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (m.total || 0), 0);
   const ingresosMPDia = movementsToday.filter(m => m.type === 'ingreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (m.total || 0), 0);
+  console.log('🔥 ESCRITORIO EFECTIVO:', {
+    ventas: ventasEfectivoDia,
+    compras: comprasEfectivoDia,
+    ingresos: ingresosEfectivoDia,
+    egresos: totalEgresosEfectivoDia
+  });
+  console.log('🔥 ESCRITORIO MERCADO PAGO:', {
+    ventas: ventasMPDia,
+    compras: comprasMPDia,
+    ingresos: ingresosMPDia,
+    egresos: totalEgresosMPDia
+  });
   // Ahora restamos compras y egresos
   const cajaFisicaDia = ingresosEfectivoDia + ventasEfectivoDia - comprasEfectivoDia - totalEgresosEfectivoDia;
   const cajaMPDia = ingresosMPDia + ventasMPDia - comprasMPDia - totalEgresosMPDia;
   const totalGeneralDia = cajaFisicaDia + cajaMPDia;
+  console.log('🔥 ESCRITORIO RESULTADO FINAL:', {
+    cajaFisicaDia,
+    cajaMPDia,
+    totalGeneralDia
+  });
   // Cantidad total de productos vendidos en el día
   const cantidadProductosVendidosDia = movementsToday.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
 
