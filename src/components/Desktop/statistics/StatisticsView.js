@@ -645,7 +645,7 @@ const StatisticsView = () => {
       <div className="mb-8">
         <div className="mb-4 pb-2 border-b border-blue-200">
           <h2 className="text-xl font-bold text-blue-800 flex items-center gap-2">
-            “… Movimientos del Mes Actual
+            📆 Movimientos del Mes Actual
             <span className="text-sm font-normal text-gray-600">(Agosto 2025)</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">Resumen de todas las operaciones realizadas únicamente en el mes actual</p>
@@ -689,7 +689,7 @@ const StatisticsView = () => {
       {/* SEPARADOR VISUAL FUERTE */}
       <div className="my-8 border-t-4 border-gray-300 relative">
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-4">
-          <span className="text-gray-500 font-medium">’°</span>
+          <span className="text-gray-500 font-medium">•</span>
         </div>
       </div>
       
@@ -697,7 +697,7 @@ const StatisticsView = () => {
       <div className="mb-8">
         <div className="mb-4 pb-2 border-b border-green-200">
           <h2 className="text-xl font-bold text-green-800 flex items-center gap-2">
-            ’° Saldos Totales Disponibles
+            Saldos Totales Disponibles
             <span className="text-sm font-normal text-gray-600">(Acumulado desde el inicio)</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">Tu capital real disponible considerando todos los movimientos históricos</p>
@@ -706,17 +706,17 @@ const StatisticsView = () => {
         {/* Saldos disponibles (acumulados) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gray-100 rounded shadow p-4 text-center border border-gray-300 hover:shadow-lg transition-shadow">
-          <div className="text-xs text-gray-600 mb-1">’µ Saldo Efectivo</div>
+          <div className="text-xs text-gray-600 mb-1">Saldo Efectivo</div>
           <div className="text-xs text-gray-500 mb-2 font-medium">(Total acumulado)</div>
           <div className="text-2xl font-bold text-gray-700">${(kpis.efectivo ?? 0).toLocaleString('es-AR')}</div>
         </div>
         <div className="bg-purple-100 rounded shadow p-4 text-center border border-purple-300 hover:shadow-lg transition-shadow">
-          <div className="text-xs text-gray-600 mb-1">“± Saldo Mercado Pago</div>
+          <div className="text-xs text-gray-600 mb-1">Saldo Mercado Pago</div>
           <div className="text-xs text-gray-500 mb-2 font-medium">(Total acumulado)</div>
           <div className="text-2xl font-bold text-purple-700">${(kpis.mp ?? 0).toLocaleString('es-AR')}</div>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded shadow p-4 text-center border-2 border-green-400 hover:shadow-lg transition-shadow">
-          <div className="text-xs text-gray-600 mb-1 font-semibold">’° Total Disponible</div>
+          <div className="text-xs text-gray-600 mb-1 font-semibold">Total Disponible</div>
           <div className="text-xs text-gray-500 mb-2 font-medium">(Efectivo + Mercado Pago)</div>
           <div className="text-3xl font-bold text-green-700">${((kpis.efectivo ?? 0) + (kpis.mp ?? 0)).toLocaleString('es-AR')}</div>
         </div>
@@ -735,7 +735,7 @@ const StatisticsView = () => {
       {/* SECCIÓN 3: ANÁLISIS HISTÓRICO */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-          “ˆ análisis Histórico
+          Análisis Histórico
           <span className="text-sm font-normal text-gray-600">(Evolución por meses)</span>
         </h2>
         <p className="text-sm text-gray-600">Los siguientes gráficos muestran la evolución histórica de tu negocio por meses.</p>
@@ -745,7 +745,7 @@ const StatisticsView = () => {
         <h2 className="text-lg font-semibold mb-2">Ventas por mes</h2>
         {bestSalesMonth && (
           <div className="mb-2 text-green-700 font-semibold text-sm">
-            † Mes con más ventas: {formatMes(bestSalesMonth.mes)} (${bestSalesMonth.ventas.toLocaleString('es-AR')})
+            🏆 Mes con más ventas: {formatMes(bestSalesMonth.mes)} (${bestSalesMonth.ventas.toLocaleString('es-AR')})
           </div>
         )}
         <ResponsiveContainer width="100%" height={300}>
@@ -768,7 +768,7 @@ const StatisticsView = () => {
         <h2 className="text-lg font-semibold mb-2">Cantidad de productos vendidos por mes</h2>
         {bestProductsMonth && (
           <div className="mb-2 text-blue-700 font-semibold text-sm">
-            † Mes con más productos vendidos: {formatMes(bestProductsMonth.mes)} ({bestProductsMonth.productos})
+            🏆 Mes con más productos vendidos: {formatMes(bestProductsMonth.mes)} ({bestProductsMonth.productos})
           </div>
         )}
         <ResponsiveContainer width="100%" height={300}>
@@ -791,10 +791,10 @@ const StatisticsView = () => {
       <div className="bg-white rounded shadow p-4 mb-6">
         <h2 className="text-lg font-semibold mb-2">Comparativo de Ventas por mes ({prevYear} vs {currentYear})</h2>
         {ventasVar.totalPrev === 0 && (
-          <div className="mb-2 text-gray-500 italic">Sin datos del aÃ±o anterior para comparar.</div>
+          <div className="mb-2 text-gray-500 italic">Sin datos del año anterior para comparar.</div>
         )}
         <div className="mb-2 text-sm">
-          Total {currentYear}: <span className="font-bold text-green-700">${ventasVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">${ventasVar.totalPrev.toLocaleString('es-AR')}</span> | VariaciÃ³n: <span className={ventasVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{ventasVar.totalVarPct.toFixed(1)}%</span>
+          Total {currentYear}: <span className="font-bold text-green-700">${ventasVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">${ventasVar.totalPrev.toLocaleString('es-AR')}</span> | Variación: <span className={ventasVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{ventasVar.totalVarPct.toFixed(1)}%</span>
         </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={salesYearly} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -815,10 +815,10 @@ const StatisticsView = () => {
       <div className="bg-white rounded shadow p-4 mb-6">
         <h2 className="text-lg font-semibold mb-2">Comparativo de Productos vendidos por mes ({prevYear} vs {currentYear})</h2>
         {productosVar.totalPrev === 0 && (
-          <div className="mb-2 text-gray-500 italic">Sin datos del aÃ±o anterior para comparar.</div>
+          <div className="mb-2 text-gray-500 italic">Sin datos del año anterior para comparar.</div>
         )}
         <div className="mb-2 text-sm">
-          Total {currentYear}: <span className="font-bold text-green-700">{productosVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">{productosVar.totalPrev.toLocaleString('es-AR')}</span> | VariaciÃ³n: <span className={productosVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{productosVar.totalVarPct.toFixed(1)}%</span>
+          Total {currentYear}: <span className="font-bold text-green-700">{productosVar.totalActual.toLocaleString('es-AR')}</span> | {prevYear}: <span className="font-bold text-blue-700">{productosVar.totalPrev.toLocaleString('es-AR')}</span> | Variación: <span className={productosVar.totalVarPct >= 0 ? 'text-green-700' : 'text-red-700'}>{productosVar.totalVarPct.toFixed(1)}%</span>
         </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={productsYearly} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -840,13 +840,13 @@ const StatisticsView = () => {
       {/* --- NUEVOS ANÃLISIS ADICIONALES --- */}
       <div className="my-8 border-t border-gray-200"></div>
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Ž¯ análisis de Negocio Avanzado</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">🧠 Análisis de Negocio Avanzado</h2>
         <p className="text-sm text-gray-600">Insights profundos para optimizar tu negocio.</p>
       </div>
 
       {/* análisis de Rentabilidad por Producto */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">’° Top 10 Productos más Rentables</h2>
+        <h2 className="text-lg font-semibold mb-4">Top 10 Productos más Rentables</h2>
         {productProfitability.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -881,7 +881,7 @@ const StatisticsView = () => {
 
       {/* Ganancia por Producto del Mes Actual */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">“Š Ganancia por Producto - {MONTHS_ES[currentMonth]} {currentYear}</h2>
+        <h2 className="text-lg font-semibold mb-4">💵 Ganancia por Producto - {MONTHS_ES[currentMonth]} {currentYear}</h2>
         {monthlyProductProfitability.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -910,7 +910,7 @@ const StatisticsView = () => {
             </table>
             <div className="mt-4 p-3 bg-blue-100 rounded">
               <div className="flex justify-between">
-                <span className="font-bold">’° Ganancia Total del Mes:</span>
+                <span className="font-bold">Ganancia Total del Mes:</span>
                 <span className="font-bold text-blue-700">${monthlyProductProfitability.reduce((sum, p) => sum + p.profit, 0).toLocaleString('es-AR')}</span>
               </div>
             </div>
@@ -925,8 +925,8 @@ const StatisticsView = () => {
         
         {/* Recomendaciones de Compra */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">›’ Recomendaciones de Compra</h2>
-          <p className="text-sm text-gray-600 mb-4">Productos con mejor velocidad de rotaciÃ³n</p>
+          <h2 className="text-lg font-semibold mb-4">🛒 Recomendaciones de Compra</h2>
+          <p className="text-sm text-gray-600 mb-4">Productos con mejor velocidad de rotación</p>
           {purchaseRecommendations.length > 0 ? (
             <div className="space-y-3">
               {purchaseRecommendations.map((rec, idx) => (
@@ -937,9 +937,9 @@ const StatisticsView = () => {
                 }`}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold text-sm">{idx === 0 ? '†' : idx + 1}. {rec.name}</h4>
+                      <h4 className="font-semibold text-sm">{idx === 0 ? '🏆' : idx + 1}. {rec.name}</h4>
                       <p className="text-xs text-gray-600">Stock actual: {rec.currentStock} | Vendidos/mes: {rec.avgSalesPerMonth}</p>
-                      <p className="text-xs text-gray-500">Velocidad: {rec.rotationVelocity} dÃ­as por unidad</p>
+                      <p className="text-xs text-gray-500">Velocidad: {rec.rotationVelocity} días por unidad</p>
                     </div>
                     <div className="text-right">
                       <div className={`text-xs font-bold ${
@@ -961,12 +961,12 @@ const StatisticsView = () => {
 
         {/* Alertas de Stock */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">âš ï¸ Alertas de Inventario</h2>
+          <h2 className="text-lg font-semibold mb-4">⚠️ Alertas de Inventario</h2>
           <div className="space-y-4">
             
             {/* Stock Bajo */}
             <div>
-              <h3 className="font-medium text-red-600 mb-2">”´ Stock CrÃ­tico (â‰¤ 2 unidades)</h3>
+              <h3 className="font-medium text-red-600 mb-2">⚠️ Stock Crítico (≤ 2 unidades)</h3>
               {lowStockProducts.length > 0 ? (
                 <div className="space-y-2">
                   {lowStockProducts.map(product => (
@@ -977,13 +977,13 @@ const StatisticsView = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">… Todos los productos tienen stock suficiente</p>
+                <p className="text-sm text-gray-500">Todos los productos tienen stock suficiente</p>
               )}
             </div>
 
             {/* Productos sin Movimiento */}
             <div>
-              <h3 className="font-medium text-orange-600 mb-2">”¶ Sin ventas (últimos 30 dÃ­as)</h3>
+              <h3 className="font-medium text-orange-600 mb-2">Sin ventas (últimos 30 días)</h3>
               {stagnantProducts.length > 0 ? (
                 <div className="space-y-2">
                   {stagnantProducts.slice(0, 5).map(product => (
@@ -997,7 +997,7 @@ const StatisticsView = () => {
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">… Todos los productos tienen movimiento reciente</p>
+                <p className="text-sm text-gray-500">Todos los productos tienen movimiento reciente</p>
               )}
             </div>
 
@@ -1016,7 +1016,7 @@ const StatisticsView = () => {
             
             {/* En Crecimiento */}
             <div className="p-4 bg-green-50 rounded border border-green-200">
-              <h3 className="font-semibold text-green-700 mb-3">“ˆ En Crecimiento</h3>
+              <h3 className="font-semibold text-green-700 mb-3">📈 En Crecimiento</h3>
               {trendAnalysis.filter(p => p.trend === 'up').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -1030,7 +1030,7 @@ const StatisticsView = () => {
 
             {/* Estables */}
             <div className="p-4 bg-blue-50 rounded border border-blue-200">
-              <h3 className="font-semibold text-blue-700 mb-3">âž¡ï¸ Estables</h3>
+              <h3 className="font-semibold text-blue-700 mb-3">➡️ Estables</h3>
               {trendAnalysis.filter(p => p.trend === 'stable').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -1044,7 +1044,7 @@ const StatisticsView = () => {
 
             {/* En Declive */}
             <div className="p-4 bg-red-50 rounded border border-red-200">
-              <h3 className="font-semibold text-red-700 mb-3">“‰ En Declive</h3>
+              <h3 className="font-semibold text-red-700 mb-3">📉 En Declive</h3>
               {trendAnalysis.filter(p => p.trend === 'down').slice(0, 5).map(product => (
                 <div key={product.name} className="flex justify-between text-sm mb-2">
                   <span>{product.name}</span>
@@ -1064,7 +1064,7 @@ const StatisticsView = () => {
 
       {/* análisis por UbicaciÃ³n */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">“ análisis por UbicaciÃ³n</h2>
+        <h2 className="text-lg font-semibold mb-4">📍 Análisis por Ubicación</h2>
         <p className="text-sm text-gray-600 mb-4">Rendimiento de ventas por lugar</p>
         
         {locationAnalysis.length > 0 ? (
@@ -1072,7 +1072,7 @@ const StatisticsView = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-purple-50">
-                  <th className="text-left px-3 py-2 font-semibold">UbicaciÃ³n</th>
+                  <th className="text-left px-3 py-2 font-semibold">Ubicación</th>
                   <th className="text-right px-3 py-2 font-semibold">Ventas</th>
                   <th className="text-right px-3 py-2 font-semibold">Ingresos</th>
                   <th className="text-right px-3 py-2 font-semibold">Productos</th>
@@ -1102,7 +1102,7 @@ const StatisticsView = () => {
         
         {/* Ventas por Hora */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">â° Ventas por Hora del DÃ­a</h2>
+          <h2 className="text-lg font-semibold mb-4">🕒 Ventas por Hora del Día</h2>
           {timePatterns.hourlyStats && timePatterns.hourlyStats.some(h => h.sales > 0) ? (
             <>
               <ResponsiveContainer width="100%" height={250}>
@@ -1130,7 +1130,7 @@ const StatisticsView = () => {
 
         {/* Ventas por DÃ­a de la Semana */}
         <div className="bg-white rounded shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">“… Ventas por DÃ­a de la Semana</h2>
+          <h2 className="text-lg font-semibold mb-4">📅 Ventas por Día de la Semana</h2>
           {timePatterns.dailyStats && timePatterns.dailyStats.some(d => d.sales > 0) ? (
             <>
               <ResponsiveContainer width="100%" height={250}>
@@ -1145,13 +1145,13 @@ const StatisticsView = () => {
                 </BarChart>
               </ResponsiveContainer>
               <div className="mt-3 text-sm text-gray-600">
-                <p><strong>Mejor dÃ­a:</strong> {
+                <p><strong>Mejor día:</strong> {
                   timePatterns.dailyStats.reduce((max, curr) => curr.sales > max.sales ? curr : max, {sales: 0}).dayName
                 }</p>
               </div>
             </>
           ) : (
-            <div className="text-gray-500 text-center py-8">No hay datos de ventas por dÃ­a.</div>
+            <div className="text-gray-500 text-center py-8">No hay datos de ventas por día.</div>
           )}
         </div>
 
@@ -1159,8 +1159,8 @@ const StatisticsView = () => {
 
       {/* Ciclo de Vida de Productos */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">”„ Ciclo de Vida de Productos</h2>
-        <p className="text-sm text-gray-600 mb-4">ClasificaciÃ³n de productos segÃºn su etapa de vida</p>
+        <h2 className="text-lg font-semibold mb-4">🔄 Ciclo de Vida de Productos</h2>
+        <p className="text-sm text-gray-600 mb-4">Clasificación de productos según su etapa de vida</p>
         
         {productLifecycle.length > 0 ? (
           <>
@@ -1169,10 +1169,10 @@ const StatisticsView = () => {
               {['nuevo', 'crecimiento', 'maduro', 'declive'].map(stage => {
                 const count = productLifecycle.filter(p => p.stage === stage).length;
                 const stageIcons = {
-                  'nuevo': '±',
-                  'crecimiento': '€', 
-                  'maduro': '³',
-                  'declive': '‚'
+                  'nuevo': '🆕',
+                  'crecimiento': '📈', 
+                  'maduro': '🟡',
+                  'declive': '📉'
                 };
                 const stageColors = {
                   'nuevo': 'bg-green-100 text-green-800',
@@ -1197,7 +1197,7 @@ const StatisticsView = () => {
                   <tr className="bg-gray-50">
                     <th className="text-left px-3 py-2 font-semibold">Producto</th>
                     <th className="text-center px-3 py-2 font-semibold">Etapa</th>
-                    <th className="text-right px-3 py-2 font-semibold">DÃ­as en Sistema</th>
+                    <th className="text-right px-3 py-2 font-semibold">Días en Sistema</th>
                     <th className="text-right px-3 py-2 font-semibold">Ventas Totales</th>
                     <th className="text-right px-3 py-2 font-semibold">Ventas Recientes</th>
                     <th className="text-right px-3 py-2 font-semibold">Stock Actual</th>
@@ -1219,10 +1219,10 @@ const StatisticsView = () => {
                           product.stage === 'maduro' ? 'bg-yellow-200 text-yellow-800' :
                           'bg-red-200 text-red-800'
                         }`}>
-                          {product.stage === 'nuevo' ? '± Nuevo' :
-                           product.stage === 'crecimiento' ? '€ Crecimiento' :
-                           product.stage === 'maduro' ? '³ Maduro' :
-                           '‚ Declive'}
+                          {product.stage === 'nuevo' ? '🆕 Nuevo' :
+                           product.stage === 'crecimiento' ? '📈 Crecimiento' :
+                           product.stage === 'maduro' ? '🟡 Maduro' :
+                           '📉 Declive'}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">{product.daysSinceFirst}</td>
@@ -1238,25 +1238,25 @@ const StatisticsView = () => {
             {/* Insights automÃ¡ticos */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                <h4 className="font-semibold text-blue-700 mb-2">’¡ Insights</h4>
+                <h4 className="font-semibold text-blue-700 mb-2">💡 Insights</h4>
                 <ul className="text-sm text-blue-600 space-y-1">
-                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'nuevo').length} productos nuevos en evaluaciÃ³n</li>
-                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'maduro').length} productos en etapa madura (estables)</li>
-                  <li>â€¢ {productLifecycle.filter(p => p.stage === 'declive').length} productos requieren atenciÃ³n</li>
+                  <li>• {productLifecycle.filter(p => p.stage === 'nuevo').length} productos nuevos en evaluación</li>
+                  <li>• {productLifecycle.filter(p => p.stage === 'maduro').length} productos en etapa madura (estables)</li>
+                  <li>• {productLifecycle.filter(p => p.stage === 'declive').length} productos requieren atención</li>
                 </ul>
               </div>
               
               <div className="p-3 bg-orange-50 rounded border border-orange-200">
-                <h4 className="font-semibold text-orange-700 mb-2">âš ï¸ Recomendaciones</h4>
+                <h4 className="font-semibold text-orange-700 mb-2">⚠️ Recomendaciones</h4>
                 <ul className="text-sm text-orange-600 space-y-1">
                   {productLifecycle.filter(p => p.stage === 'declive').length > 0 && (
-                    <li>â€¢ Revisar precios de productos en declive</li>
+                    <li>• Revisar precios de productos en declive</li>
                   )}
                   {productLifecycle.filter(p => p.stage === 'crecimiento').length > 0 && (
-                    <li>â€¢ Aumentar stock de productos en crecimiento</li>
+                    <li>• Aumentar stock de productos en crecimiento</li>
                   )}
                   {productLifecycle.filter(p => p.stage === 'nuevo').length > 3 && (
-                    <li>â€¢ Evaluar performance de productos nuevos</li>
+                    <li>• Evaluar performance de productos nuevos</li>
                   )}
                 </ul>
               </div>
@@ -1269,8 +1269,8 @@ const StatisticsView = () => {
 
       {/* ROI por Producto */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4">’Ž ROI por Producto</h2>
-        <p className="text-sm text-gray-600 mb-4">Retorno de inversiÃ³n y eficiencia de cada producto</p>
+        <h2 className="text-lg font-semibold mb-4">💹 ROI por Producto</h2>
+        <p className="text-sm text-gray-600 mb-4">Retorno de inversión y eficiencia de cada producto</p>
         
         {productROI.length > 0 ? (
           <>
@@ -1316,7 +1316,7 @@ const StatisticsView = () => {
                     <th className="text-right px-3 py-2 font-semibold">Ganancia</th>
                     <th className="text-right px-3 py-2 font-semibold">ROI Simple</th>
                     <th className="text-right px-3 py-2 font-semibold">ROI Ajustado</th>
-                    <th className="text-right px-3 py-2 font-semibold">RotaciÃ³n</th>
+                    <th className="text-right px-3 py-2 font-semibold">Rotación</th>
                     <th className="text-right px-3 py-2 font-semibold">Stock Valuado</th>
                   </tr>
                 </thead>
@@ -1395,7 +1395,7 @@ const StatisticsView = () => {
               </div>
 
               <div className="p-4 bg-yellow-50 rounded border border-yellow-200">
-                <h4 className="font-semibold text-yellow-700 mb-2">âš ï¸ Requieren AtenciÃ³n</h4>
+                <h4 className="font-semibold text-yellow-700 mb-2">⚠️ Requieren Atención</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI < 20 && p.adjustedROI >= 0).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
@@ -1412,7 +1412,7 @@ const StatisticsView = () => {
               </div>
 
               <div className="p-4 bg-red-50 rounded border border-red-200">
-                <h4 className="font-semibold text-red-700 mb-2">¨ ROI Negativo</h4>
+                <h4 className="font-semibold text-red-700 mb-2">🚫 ROI Negativo</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI < 0).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
@@ -1423,7 +1423,7 @@ const StatisticsView = () => {
                     </div>
                   ))}
                   {productROI.filter(p => p.adjustedROI < 0).length === 0 && (
-                    <p className="text-sm text-gray-500">… No hay productos con pÃ©rdidas</p>
+                    <p className="text-sm text-gray-500">No hay productos con pérdidas</p>
                   )}
                 </div>
               </div>
@@ -1431,16 +1431,16 @@ const StatisticsView = () => {
 
             {/* ExplicaciÃ³n del ROI */}
             <div className="mt-4 p-4 bg-gray-50 rounded border">
-              <h4 className="font-semibold text-gray-700 mb-2">“š Â¿CÃ³mo se calcula el ROI?</h4>
+              <h4 className="font-semibold text-gray-700 mb-2">ℹ️ ¿Cómo se calcula el ROI?</h4>
               <div className="text-sm text-gray-600 space-y-1">
-                <p><strong>ROI Simple:</strong> (Ingresos por Ventas - InversiÃ³n en Compras) / InversiÃ³n Ã— 100</p>
+                <p><strong>ROI Simple:</strong> (Ingresos por Ventas - Inversión en Compras) / Inversión × 100</p>
                 <p><strong>ROI Ajustado:</strong> Incluye el valor del stock actual al costo como activo</p>
-                <p><strong>RotaciÃ³n:</strong> % de productos comprados que ya se vendieron</p>
-                <p><strong>InterpretaciÃ³n:</strong> 
+                <p><strong>Rotación:</strong> % de productos comprados que ya se vendieron</p>
+                <p><strong>Interpretación:</strong> 
                   <span className="text-green-600 font-medium"> &gt; 50% Excelente</span>, 
                   <span className="text-blue-600 font-medium"> 20-50% Bueno</span>, 
                   <span className="text-yellow-600 font-medium"> 0-20% Regular</span>, 
-                  <span className="text-red-600 font-medium"> &lt; 0% PÃ©rdida</span>
+                  <span className="text-red-600 font-medium"> &lt; 0% Pérdida</span>
                 </p>
               </div>
             </div>
@@ -1452,7 +1452,7 @@ const StatisticsView = () => {
 
       {/* Flujo de Caja Diario */}
       <div className="bg-white rounded shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-2">“Š Flujo de Caja Diario - {MONTHS_ES[now.getMonth()]} {now.getFullYear()}</h2>
+        <h2 className="text-lg font-semibold mb-2">📊 Flujo de Caja Diario - {MONTHS_ES[now.getMonth()]} {now.getFullYear()}</h2>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={dailyCashFlow} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
