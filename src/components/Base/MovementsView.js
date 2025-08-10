@@ -12,7 +12,8 @@ import {
   generatePaymentSummary, 
   getMainPaymentMethod,
   createPaymentMethodsFromSingle,
-  calculateTotalsByPaymentMethod 
+  calculateTotalsByPaymentMethod,
+  scalePaymentMethods 
 } from '../../utils/mixedPaymentUtils';
 import SalesMobileForm from '../Movil/forms/SalesMobileForm';
 import SalesDesktopForm from '../Desktop/forms/SalesDesktopForm';
@@ -68,6 +69,32 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
   const [blurTimeout, setBlurTimeout] = useState(null);
+
+  // Helper para mostrar método de pago correcto por fila
+  const renderPaymentSummary = (mov) => {
+    try {
+      const rowTotal = parseFloat(mov?.total) || 0;
+      if (rowTotal <= 0) {
+        // Si el total es 0, no mostrar montos heredados; solo etiqueta del método si existe
+        return (PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod || '-');
+      }
+      // Si tiene estructura nueva, calcular proporcional al total de la fila si hace falta
+      if (mov && mov.paymentMethods && typeof mov.total !== 'undefined') {
+        const fullTotal = Object.values(mov.paymentMethods).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+        if (fullTotal > 0 && rowTotal > 0) {
+          if (Math.abs(fullTotal - rowTotal) < 0.01) {
+            return generatePaymentSummary(mov.paymentMethods);
+          }
+          const scaled = scalePaymentMethods(mov.paymentMethods, rowTotal, fullTotal);
+          return generatePaymentSummary(scaled);
+        }
+      }
+      // Si no hay estructura nueva, usar resumen guardado o el método simple
+      return mov.paymentSummary || (PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod || '-');
+    } catch (e) {
+      return mov.paymentSummary || (PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod || '-');
+    }
+  };
 
   // --- FILTRO MENSUAL ---
   const [reloadKey, setReloadKey] = useState(0);
@@ -405,7 +432,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       
       if (form.type === 'venta' || form.type === 'compra') {
         // Usar currentProducts (puede venir de products o del submit directo)
-        for (const p of currentProducts) {
+  // Calcular total global para prorrateo
+  const totalGlobal = currentProducts.reduce((sum, x) => sum + (x.total || 0), 0);
+  for (const p of currentProducts) {
           // Validar stock antes de registrar venta
           if (form.type === 'venta') {
             const plantRef = doc(db, 'plants', String(p.plantId));
@@ -439,12 +468,19 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             const purchasePrice = p.price / p.quantity; // Precio unitario
             await updateProductPurchasePrice(p.plantId, purchasePrice, p.quantity);
           }
+          // Prorratear métodos de pago del movimiento al total de este ítem
+          const itemPaymentMethods = scalePaymentMethods(form.paymentMethods, p.total, totalGlobal);
+          const itemPaymentSummary = generatePaymentSummary(itemPaymentMethods);
+
           const movementData = {
             ...form,
             plantId: p.plantId,
             quantity: p.quantity,
             price: p.price,
             total: p.total,
+            paymentMethods: itemPaymentMethods,
+            paymentSummary: itemPaymentSummary,
+            paymentMethod: getMainPaymentMethod(itemPaymentMethods),
             detail: form.notes || '', // <-- ahora guarda lo que el usuario escribió en Detalle
             date: isoArgentina
           };
@@ -1009,8 +1045,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                               className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('paymentMethod', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'paymentMethod')}
                             >
-                              {/* Mostrar resumen de pagos combinados si existe, sino método tradicional */}
-                              {mov.paymentSummary || (PAYMENT_METHODS.find(m => m.value === mov.paymentMethod)?.label || mov.paymentMethod)}
+                              {/* Mostrar resumen de pagos combinados proporcional al total de la fila */}
+                              {renderPaymentSummary(mov)}
                             </td>
                             <td 
                               className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('type', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}

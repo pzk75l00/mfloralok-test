@@ -4,7 +4,8 @@ import { db } from '../../firebase/firebaseConfig';
 import { Bar } from 'react-chartjs-2';
 import { 
   calculateBalanceByPaymentMethod, 
-  calculatePeriodBalance 
+  calculatePeriodBalance,
+  calculateDetailedTotals
 } from '../../utils/balanceCalculations';
 import {
   Chart as ChartJS,
@@ -59,12 +60,19 @@ const ReportsMovilView = () => {
   const totalIngresos = hoy.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
 
   // --- CÁLCULOS DE SALDO MEJORADOS ---
-  // Saldo total acumulado (desde el inicio de todos los tiempos)
+  // Saldo total acumulado (desde el inicio HASTA HOY inclusive)
   console.log('🔥 DIAGNÓSTICO REPORTES MÓVIL - Calculando saldos...');
   console.log('🔥 Total de movimientos para cálculo:', movements.length);
   
-  // USAR LA FUNCIÓN ORIGINAL QUE YA FUNCIONABA CORRECTAMENTE
-  const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
+  // Filtrar movimientos con fecha válida y no posteriores a "ahora" para respetar el texto de la tarjeta
+  const movimientosHastaHoy = movements.filter(m => {
+    if (!m?.date) return false;
+    const d = new Date(m.date);
+    return d <= now; // incluye hoy y excluye futuras
+  });
+
+  // Calcular usando únicamente movimientos hasta hoy
+  const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movimientosHastaHoy);
   console.log('🔥 RESULTADO saldoTotalAcumulado (función original):', saldoTotalAcumulado);
   
   // Saldos del día actual (para mostrar movimientos del día)
@@ -171,18 +179,18 @@ const ReportsMovilView = () => {
   // Total productos vendidos en el mes
   const totalProductosVendidosMes = movimientosMes2.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
 
-  // Totales por método de pago y tipo
-  const sumMov = (arr, type, method) => arr.filter(m => m.type === type && m.paymentMethod === method).reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  // Día
-  const gastosEfectivo = sumMov(hoy, 'egreso', 'efectivo') + sumMov(hoy, 'compra', 'efectivo');
-  const gastosMP = sumMov(hoy, 'egreso', 'mercadoPago') + sumMov(hoy, 'compra', 'mercadoPago');
+  // Totales por método de pago y tipo usando pagos mixtos
+  const totalsHoy = calculateDetailedTotals(hoy);
+  const gastosEfectivo = totalsHoy.egresosEfectivo + totalsHoy.comprasEfectivo + totalsHoy.gastosEfectivo;
+  const gastosMP = totalsHoy.egresosMP + totalsHoy.comprasMP + totalsHoy.gastosMP;
   // Variables ya definidas arriba con los nuevos cálculos
 
   // Mes
-  const gastosEfectivoMes = sumMov(movimientosMes2, 'egreso', 'efectivo') + sumMov(movimientosMes2, 'compra', 'efectivo') + sumMov(movimientosMes2, 'gasto', 'efectivo');
-  const gastosMPMes = sumMov(movimientosMes2, 'egreso', 'mercadoPago') + sumMov(movimientosMes2, 'compra', 'mercadoPago') + sumMov(movimientosMes2, 'gasto', 'mercadoPago');
-  const ventasEfectivoMes = sumMov(movimientosMes2, 'venta', 'efectivo');
-  const ventasMPMes = sumMov(movimientosMes2, 'venta', 'mercadoPago');
+  const totalsMes = calculateDetailedTotals(movimientosMes2);
+  const gastosEfectivoMes = totalsMes.egresosEfectivo + totalsMes.comprasEfectivo + totalsMes.gastosEfectivo;
+  const gastosMPMes = totalsMes.egresosMP + totalsMes.comprasMP + totalsMes.gastosMP;
+  const ventasEfectivoMes = totalsMes.ventasEfectivo;
+  const ventasMPMes = totalsMes.ventasMP;
 
   // --- GRÁFICO MENSUAL POR DÍA ---
   const diasEnMes = new Date(nowYear, nowMonth + 1, 0).getDate();
@@ -278,12 +286,12 @@ const ReportsMovilView = () => {
   const bajoStock2 = plants.filter(p => Number(p.stock) <= bajoStockMin).sort((a, b) => a.stock - b.stock);
 
   // --- GRAFICO DE GASTOS DEL MES POR TIPO Y METODO DE PAGO (egreso, compra, gasto) ---
-  const gastosEfectivoMesEgreso = movimientosMes2.filter(m => m.type === 'egreso' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  const gastosEfectivoMesCompra = movimientosMes2.filter(m => m.type === 'compra' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  const gastosEfectivoMesGasto = movimientosMes2.filter(m => m.type === 'gasto' && m.paymentMethod === 'efectivo').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  const gastosMPMesEgreso = movimientosMes2.filter(m => m.type === 'egreso' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  const gastosMPMesCompra = movimientosMes2.filter(m => m.type === 'compra' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
-  const gastosMPMesGasto = movimientosMes2.filter(m => m.type === 'gasto' && m.paymentMethod === 'mercadoPago').reduce((sum, m) => sum + (Number(m.total) || 0), 0);
+  const gastosEfectivoMesEgreso = totalsMes.egresosEfectivo;
+  const gastosEfectivoMesCompra = totalsMes.comprasEfectivo;
+  const gastosEfectivoMesGasto = totalsMes.gastosEfectivo;
+  const gastosMPMesEgreso = totalsMes.egresosMP;
+  const gastosMPMesCompra = totalsMes.comprasMP;
+  const gastosMPMesGasto = totalsMes.gastosMP;
 
   const barDataGastosMes = {
     labels: [

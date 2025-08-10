@@ -192,6 +192,48 @@ export const getMainPaymentMethod = (paymentMethods) => {
 };
 
 /**
+ * Distribuye (prorratea) un objeto de métodos de pago a un subtotal dado
+ * manteniendo las proporciones del total original y corrigiendo redondeos.
+ * @param {Object} paymentMethods - Métodos con montos del total completo
+ * @param {number} itemTotal - Subtotal deseado (por ejemplo, total de un producto)
+ * @param {number} fullTotal - Total original al que pertenecen los métodos
+ * @returns {Object} - Nuevo objeto de métodos con montos prorrateados al subtotal
+ */
+export const scalePaymentMethods = (paymentMethods, itemTotal, fullTotal) => {
+  const result = { efectivo: 0, mercadoPago: 0, transferencia: 0, tarjeta: 0 };
+  const full = parseFloat(fullTotal) || 0;
+  const target = parseFloat(itemTotal) || 0;
+  if (!paymentMethods || full <= 0 || target <= 0) {
+    return result;
+  }
+
+  // Paso 1: proporción y redondeo a 2 decimales
+  let sum = 0;
+  let maxMethod = null;
+  let maxValue = -Infinity;
+  Object.entries(paymentMethods).forEach(([method, amount]) => {
+    const base = parseFloat(amount) || 0;
+    const scaled = +(base * (target / full)).toFixed(2);
+    if (Object.prototype.hasOwnProperty.call(result, method)) {
+      result[method] = scaled;
+      sum += scaled;
+      if (scaled > maxValue) {
+        maxValue = scaled;
+        maxMethod = method;
+      }
+    }
+  });
+
+  // Paso 2: ajustar centavos perdidos/ganados por redondeo
+  const delta = +(target - sum).toFixed(2);
+  if (Math.abs(delta) >= 0.01 && maxMethod && Object.prototype.hasOwnProperty.call(result, maxMethod)) {
+    result[maxMethod] = +(result[maxMethod] + delta).toFixed(2);
+  }
+
+  return result;
+};
+
+/**
  * Calcula totales por método de pago (compatible con formatos antiguo y nuevo)
  * @param {Array} movements - Array de movimientos
  * @returns {Object} Totales por método
@@ -343,10 +385,20 @@ export const migrateAllMovementsToMixedPayments = async () => {
  */
 export const getMovementAmountForPaymentMethod = (movement, paymentMethod) => {
   if (!movement) return 0;
+  const rowTotal = parseFloat(movement.total) || 0;
+  if (rowTotal <= 0) return 0;
 
   // Formato nuevo con paymentMethods (pagos mixtos)
   if (movement.paymentMethods && typeof movement.paymentMethods === 'object') {
-    return parseFloat(movement.paymentMethods[paymentMethod]) || 0;
+  const raw = parseFloat(movement.paymentMethods[paymentMethod]) || 0;
+    const sumPM = Object.values(movement.paymentMethods).reduce((t, a) => t + (parseFloat(a) || 0), 0);
+  // rowTotal ya calculado arriba
+    if (sumPM > 0 && rowTotal > 0 && Math.abs(sumPM - rowTotal) > 0.01) {
+      // Escalar proporcionalmente al total de la fila (corrige ventas multiproducto antiguas)
+      const factor = rowTotal / sumPM;
+      return +(raw * factor).toFixed(2);
+    }
+    return raw;
   }
   
   // Formato antiguo con paymentMethod único
@@ -364,12 +416,17 @@ export const getMovementAmountForPaymentMethod = (movement, paymentMethod) => {
  */
 export const getTotalMovementAmount = (movement) => {
   if (!movement) return 0;
+  const rowTotal = parseFloat(movement.total) || 0;
+  if (rowTotal <= 0) return 0;
 
   // Formato nuevo con paymentMethods
   if (movement.paymentMethods && typeof movement.paymentMethods === 'object') {
-    return Object.values(movement.paymentMethods).reduce((total, amount) => {
-      return total + (parseFloat(amount) || 0);
-    }, 0);
+  const sumPM = Object.values(movement.paymentMethods).reduce((total, amount) => total + (parseFloat(amount) || 0), 0);
+    if (sumPM > 0 && rowTotal > 0 && Math.abs(sumPM - rowTotal) > 0.01) {
+      // Preferir el total del movimiento cuando la suma de métodos no cuadra (caso histórico)
+      return rowTotal;
+    }
+    return sumPM;
   }
   
   // Formato antiguo

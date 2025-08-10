@@ -35,14 +35,51 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
     console.log(`⚠️ REMOVED ${movements.length - uniqueMovements.length} DUPLICATE MOVEMENTS!`);
   }
 
-  // Use the new mixed payment calculation function
-  const balance = calculateMixedPaymentBalance(uniqueMovements, paymentMethod);
+  // Optional: filter likely duplicate mixed-payments created within a short window
+  const byDate = [...uniqueMovements].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+  const toleranceSec = 60; // movimientos dentro de 60s con misma distribución y total se consideran duplicados
+  const filtered = [];
+  for (let i = 0; i < byDate.length; i++) {
+    const curr = byDate[i];
+    const currDate = new Date(curr.date || 0);
+    const currTotal = getTotalMovementAmount(curr);
+    // construir firma de distribución
+    const dist = curr.paymentMethods
+      ? Object.entries(curr.paymentMethods)
+          .filter(([, amount]) => (parseFloat(amount) || 0) > 0)
+          .map(([method, amount]) => `${method}:${parseFloat(amount) || 0}`)
+          .sort()
+          .join('|')
+      : curr.paymentMethod || 'single';
+
+    // buscar en los últimos agregados si existe uno muy cercano y equivalente
+    const isDup = filtered.some(prev => {
+      if (prev.type !== curr.type) return false;
+      const prevDate = new Date(prev.date || 0);
+      const secs = Math.abs((currDate - prevDate) / 1000);
+      if (secs > toleranceSec) return false;
+      const prevTotal = getTotalMovementAmount(prev);
+      if (Math.abs(prevTotal - currTotal) > 0.01) return false;
+      const prevDist = prev.paymentMethods
+        ? Object.entries(prev.paymentMethods)
+            .filter(([, amount]) => (parseFloat(amount) || 0) > 0)
+            .map(([method, amount]) => `${method}:${parseFloat(amount) || 0}`)
+            .sort()
+            .join('|')
+        : prev.paymentMethod || 'single';
+      return prevDist === dist;
+    });
+    if (!isDup) filtered.push(curr);
+  }
+
+  // Use the new mixed payment calculation function sobre la lista filtrada
+  const balance = calculateMixedPaymentBalance(filtered, paymentMethod);
 
   // Calculate summary statistics for debugging
   let totalVentas = 0, totalCompras = 0, totalEgresos = 0, totalGastos = 0, totalIngresos = 0;
   let largeTransactions = [];
 
-  uniqueMovements.forEach(movement => {
+  filtered.forEach(movement => {
     let amount = 0;
     
     if (paymentMethod) {
@@ -211,23 +248,9 @@ export const calculatePeriodBalance = (movements, period, referenceDate = new Da
   return calculateBalanceByPaymentMethod(filteredMovements);
 };
 
-/**
- * Función auxiliar para obtener el monto de un movimiento por método de pago
- * @param {Object} movement - Movimiento
- * @param {string} paymentMethod - Método de pago
- * @returns {number} - Monto para ese método
- */
-const getAmountForPaymentMethod = (movement, paymentMethod) => {
-  // Si tiene paymentMethods (nuevo formato)
-  if (movement.paymentMethods && movement.paymentMethods[paymentMethod]) {
-    return Number(movement.paymentMethods[paymentMethod]) || 0;
-  }
-  // Si usa formato antiguo y coincide el método
-  else if (movement.paymentMethod === paymentMethod) {
-    return Number(movement.total) || 0; // Usar total para el monto del movimiento
-  }
-  return 0;
-};
+// Nota: usamos getMovementAmountForPaymentMethod de mixedPaymentUtils
+// que además corrige casos históricos prorrateando si la suma de métodos
+// no coincide con el total de la fila.
 
 /**
  * Calcula totales detallados por tipo de movimiento y método de pago
@@ -236,16 +259,16 @@ const getAmountForPaymentMethod = (movement, paymentMethod) => {
  */
 export const calculateDetailedTotals = (movements) => {
   console.log('🔥 calculateDetailedTotals - Total movimientos:', movements.length);
-  const ventasEfectivo = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
-  const ventasMP = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
-  const comprasEfectivo = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
-  const comprasMP = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
-  const ingresosEfectivo = movements.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
-  const ingresosMP = movements.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
-  const egresosEfectivo = movements.filter(m => m.type === 'egreso').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
-  const egresosMP = movements.filter(m => m.type === 'egreso').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
-  const gastosEfectivo = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'efectivo'), 0);
-  const gastosMP = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getAmountForPaymentMethod(m, 'mercadoPago'), 0);
+  const ventasEfectivo = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
+  const ventasMP = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
+  const comprasEfectivo = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
+  const comprasMP = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
+  const ingresosEfectivo = movements.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
+  const ingresosMP = movements.filter(m => m.type === 'ingreso').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
+  const egresosEfectivo = movements.filter(m => m.type === 'egreso').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
+  const egresosMP = movements.filter(m => m.type === 'egreso').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
+  const gastosEfectivo = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
+  const gastosMP = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
   
   console.log('🔥 calculateDetailedTotals EFECTIVO:', {
     ventas: ventasEfectivo,
