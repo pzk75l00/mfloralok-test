@@ -65,6 +65,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSubmitTime, setLastSubmitTime] = useState(0); // Prevenir submits muy rápidos
   const [isChangingPayment, setIsChangingPayment] = useState(false); // Nuevo flag para métodos de pago
+  const [isPaymentManual, setIsPaymentManual] = useState(false); // Si el usuario configuró pagos manualmente
   const [editingMovement, setEditingMovement] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -218,10 +219,37 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     setPlants(updatedPlants);
   };
   
+  // Agregar automáticamente el producto recién creado al movimiento actual (solo para compras)
+  const handleCreateAndAdd = (newProduct) => {
+    try {
+      if (form.type !== 'compra') {
+        // Por ahora solo auto-agregamos en Compras para evitar ventas con stock 0
+        return;
+      }
+      const qty = Math.max(1, parseInt(newProduct?.stock) || 1);
+      const unitPrice = parseFloat(newProduct?.basePrice) || 0; // En compras usamos basePrice (precio de compra)
+      setProducts(prev => [
+        ...prev,
+        {
+          plantId: newProduct.id,
+          name: newProduct.name || '',
+          quantity: qty,
+          price: unitPrice,
+          total: qty * unitPrice
+        }
+      ]);
+      setProductForm({ plantId: '', quantity: 1, price: '' });
+      setErrorMsg('');
+    } catch (e) {
+      console.warn('No se pudo auto-agregar el producto recién creado:', e);
+    }
+  };
+  
   // Función para manejar cambios en métodos de pago combinados
   const handlePaymentMethodsChange = (paymentMethods) => {
     // Marcar que se está cambiando el método de pago
     setIsChangingPayment(true);
+  setIsPaymentManual(true);
     
     const mainMethod = getMainPaymentMethod(paymentMethods);
     setForm(prev => ({
@@ -491,6 +519,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         showToast({ type: 'success', text: (form.type === 'venta' ? 'Venta' : 'Compra') + ' registrada correctamente' });
         setProducts([]);
         setProductForm({ plantId: '', quantity: 1, price: '' });
+  setIsPaymentManual(false);
         if (onMovementAdded) onMovementAdded();
       } else {
         let movementData = {
@@ -809,19 +838,19 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     }
   }, [productForm.plantId, form.type, plants]);
 
-  // Inicializar paymentMethods cuando cambie el total de la venta/compra
+  // Sincronizar paymentMethods por defecto con el total cuando no hay selección manual
   useEffect(() => {
-    if ((form.type === 'venta' || form.type === 'compra') && ventaTotal > 0) {
-      const hasActiveMethods = Object.values(form.paymentMethods).some(amount => amount > 0);
-      if (!hasActiveMethods) {
-        const newPaymentMethods = createPaymentMethodsFromSingle(form.paymentMethod, ventaTotal);
-        setForm(prev => ({
-          ...prev,
-          paymentMethods: newPaymentMethods
-        }));
-      }
-    }
-  }, [ventaTotal, form.type, form.paymentMethod]);
+    if (!(form.type === 'venta' || form.type === 'compra')) return;
+    const total = ventaTotal;
+    if (total <= 0) return;
+    if (isPaymentManual) return; // no pisar lo que configuró el usuario
+    // Siempre setear el método simple actual con el total completo
+    const newPaymentMethods = createPaymentMethodsFromSingle(form.paymentMethod, total);
+    setForm(prev => ({
+      ...prev,
+      paymentMethods: newPaymentMethods
+    }));
+  }, [ventaTotal, form.type, form.paymentMethod, isPaymentManual]);
 
   // Inicializar location desde localStorage si existe
   useEffect(() => {
@@ -875,6 +904,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 errorMsg={errorMsg}
                 onProductsUpdated={handleProductsUpdated}
                 onPaymentMethodsChange={handlePaymentMethodsChange}
+                onCreateAndAdd={handleCreateAndAdd}
               />
             ) : (
               <CashMobileForm
@@ -902,6 +932,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 errorMsg={errorMsg}
                 onProductsUpdated={handleProductsUpdated}
                 onPaymentMethodsChange={handlePaymentMethodsChange}
+                onCreateAndAdd={handleCreateAndAdd}
               />
             ) : (
               <CashDesktopForm

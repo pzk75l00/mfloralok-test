@@ -10,6 +10,7 @@ const PlantAutocomplete = ({
   onChange, 
   placeholder, 
   onProductsUpdated,
+  onCreateAndAdd,
   allowCreateNew = true,
   movementType = 'venta' // Nuevo prop para determinar qué precio mostrar
 }) => {
@@ -65,6 +66,11 @@ const PlantAutocomplete = ({
     // Seleccionar automáticamente el nuevo producto
     onChange(newProduct.id);
     setInput('');
+
+    // Solicitar al padre que lo agregue automáticamente al movimiento actual (si corresponde)
+    if (typeof onCreateAndAdd === 'function') {
+      onCreateAndAdd(newProduct);
+    }
   };
 
   // Obtener el producto seleccionado para mostrar información
@@ -191,6 +197,7 @@ PlantAutocomplete.propTypes = {
   onChange: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
   onProductsUpdated: PropTypes.func,
+  onCreateAndAdd: PropTypes.func,
   allowCreateNew: PropTypes.bool,
   movementType: PropTypes.oneOf(['venta', 'compra']),
 };

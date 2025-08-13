@@ -83,6 +83,13 @@ export const suggestBasePrice = (basePrice, markup = 2.5) => {
  */
 export const validateProductData = (productData) => {
   const errors = [];
+  // Normalizar a números para evitar comparaciones lexicográficas entre strings
+  const base = productData.basePrice !== undefined && productData.basePrice !== ''
+    ? parseFloat(productData.basePrice)
+    : 0;
+  const sale = productData.purchasePrice !== undefined && productData.purchasePrice !== ''
+    ? parseFloat(productData.purchasePrice)
+    : 0;
   
   if (!productData.name || !productData.name.trim()) {
     errors.push('El nombre del producto es obligatorio');
@@ -92,22 +99,25 @@ export const validateProductData = (productData) => {
     errors.push('El nombre debe tener al menos 2 caracteres');
   }
   
-  if (productData.basePrice !== undefined && productData.basePrice < 0) {
+  if (!isNaN(base) && base < 0) {
     errors.push('El precio de compra no puede ser negativo');
   }
   
-  if (productData.purchasePrice !== undefined && productData.purchasePrice < 0) {
+  if (!isNaN(sale) && sale < 0) {
     errors.push('El precio de venta no puede ser negativo');
   }
   
   // Validar que el precio de venta sea mayor al precio de compra
-  if (productData.basePrice > 0 && productData.purchasePrice > 0) {
-    if (productData.purchasePrice <= productData.basePrice) {
+  if (!isNaN(base) && base > 0 && !isNaN(sale) && sale > 0) {
+    if (sale <= base) {
       errors.push('El precio de venta debe ser mayor al precio de compra para obtener ganancia');
     }
   }
   
-  if (productData.stock !== undefined && productData.stock < 0) {
+  const stockVal = productData.stock !== undefined && productData.stock !== ''
+    ? parseInt(productData.stock)
+    : 0;
+  if (!isNaN(stockVal) && stockVal < 0) {
     errors.push('El stock no puede ser negativo');
   }
   

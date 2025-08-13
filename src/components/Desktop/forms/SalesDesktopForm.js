@@ -19,7 +19,8 @@ const SalesDesktopForm = ({
   errorMsg, 
   isSubmitting,
   onProductsUpdated,
-  onPaymentMethodsChange 
+  onPaymentMethodsChange,
+  onCreateAndAdd 
 }) => {
   const isVenta = form.type === 'venta';
   const buttonText = isVenta ? 'Registrar venta' : 'Registrar compra';
@@ -37,6 +38,7 @@ const SalesDesktopForm = ({
           plants={plants} 
           handleProductFormChange={handleProductFormChange} 
           onProductsUpdated={onProductsUpdated}
+          onCreateAndAdd={onCreateAndAdd}
           movementType={form.type}
         />
         <button type="button" onClick={handleAddProduct} className="bg-blue-500 text-white rounded px-2 py-1">Agregar producto</button>
@@ -98,6 +100,7 @@ SalesDesktopForm.propTypes = {
   isSubmitting: PropTypes.bool,
   onProductsUpdated: PropTypes.func,
   onPaymentMethodsChange: PropTypes.func,
+  onCreateAndAdd: PropTypes.func,
 };
 
 export default SalesDesktopForm;
