@@ -493,7 +493,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             await updateDoc(plantRef, { stock: currentStock + p.quantity });
             
             // 🆕 ACTUALIZAR PRECIO DE COMPRA Y MANTENER HISTORIAL
-            const purchasePrice = p.price / p.quantity; // Precio unitario
+            // price ya es precio unitario; NO dividir por la cantidad
+            const purchasePrice = p.price; // Precio unitario
             await updateProductPurchasePrice(p.plantId, purchasePrice, p.quantity);
           }
           // Prorratear métodos de pago del movimiento al total de este ítem
