@@ -144,9 +144,9 @@ export const updateProductPurchasePrice = async (productId, newBasePrice, quanti
       return false;
     }
     
-    const currentData = productSnap.data();
-    const currentHistory = currentData.purchaseHistory || [];
-    const currentPrice = parseFloat(newBasePrice);
+  const currentData = productSnap.data();
+  const currentHistory = currentData.purchaseHistory || [];
+  const currentPrice = parseFloat(newBasePrice);
     
     // Validar precio
     if (isNaN(currentPrice) || currentPrice < 0) {
@@ -164,16 +164,30 @@ export const updateProductPurchasePrice = async (productId, newBasePrice, quanti
     
     // Agregar al historial (mantener últimas 10 entradas)
     const updatedHistory = [...currentHistory, historyEntry].slice(-10);
+
+    // Calcular nuevo basePrice:
+    // - Si había stock previo, usar promedio ponderado (stock previo + compra actual)
+    // - Si no había stock previo, usar directamente el precio de esta compra
+    const addedQty = parseInt(quantity) || 1;
+    const currentStockOnDoc = parseInt(currentData.stock) || 0; // OJO: ya incluye la compra (stock actualizado previamente)
+    const previousStock = Math.max(0, currentStockOnDoc - addedQty);
+    const previousBase = parseFloat(currentData.basePrice) || 0;
+    let nextBasePrice = currentPrice;
+    if (previousStock > 0) {
+      const totalCost = previousStock * previousBase + addedQty * currentPrice;
+      const totalQty = previousStock + addedQty;
+      nextBasePrice = totalQty > 0 ? +(totalCost / totalQty).toFixed(2) : currentPrice;
+    }
     
     // Actualizar documento
     await updateDoc(productRef, {
-      basePrice: currentPrice, // basePrice es el precio de compra en tu modelo
+      basePrice: nextBasePrice, // basePrice es el costo promedio ponderado si había stock previo, o el último precio si no
       lastPurchaseDate: historyEntry.date,
       purchaseHistory: updatedHistory,
       updatedAt: new Date()
     });
     
-    console.log('✓ Precio de compra actualizado:', currentData.name, `$${currentPrice}`);
+    console.log('✓ Precio de compra actualizado:', currentData.name, `$${nextBasePrice}`);
     return true;
     
   } catch (error) {
