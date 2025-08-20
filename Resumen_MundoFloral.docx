@@ -1,0 +1,175 @@
+Resumen del Sistema de Gestión de Vivero - Mundo Floral
+
+1. Estructura de Carpetas y Archivos
+-------------------------------------
+- src/App.js: Navegación y renderizado modular de los módulos principales.
+- src/components/Inventory/InventoryView.js: Inventario de plantas (alta, baja, edición, listado, validaciones, stock).
+- src/components/Sales/SalesView.js: Registro de ventas (formulario, historial, validaciones, actualización de stock).
+- src/components/Purchases/PurchasesView.js: Registro de compras (formulario, historial, validaciones, actualización de stock).
+- src/components/Cash/CashView.js: Caja y movimientos (registro central de todos los movimientos: ventas, compras, ingresos, egresos).
+- src/components/Reports/ReportsView.js: Reportes y estadísticas (gráfico mensual, totales, stock).
+- src/firebase/firebaseConfig.js: Configuración de Firestore.
+
+2. Funcionalidad de Cada Módulo
+-------------------------------
+- Inventario:
+Listado, alta, edición y eliminación de productos.
+
+Validaciones estrictas en todos los campos obligatorios.
+
+Stock actualizado en tiempo real.
+
+Campos de Inventario:
+
+Nombre: Nombre del producto (obligatorio).
+Tipo: Categoría del producto (obligatorio). Opciones: Plantas de Interior, Plantas de Exterior, Macetas, Otros.
+Stock: Cantidad disponible en inventario (obligatorio, numérico).
+Precio de Venta: Precio al público (obligatorio, numérico).
+Precio de Compra: Costo de adquisición (obligatorio, numérico).
+Fecha de Compra: Fecha en que se adquirió el producto (editable, tipo fecha).
+Proveedor: A quién se compró (opcional, texto libre).
+Todos los campos obligatorios deben ser completados y válidos para guardar o editar un producto.
+
+La tabla de inventario muestra todos estos campos y permite editar/eliminar cada producto.
+
+- Ventas:
+  - Formulario para registrar ventas.
+  - Validaciones (planta válida, stock suficiente, valores positivos).
+  - Actualización automática de stock.
+  - Historial de ventas.
+
+- Compras:
+Carga de compras en caja/movimientos:
+
+Cuando vuelves del proveedor, cargas el movimiento de compra en la caja/movimientos (esto refleja el egreso de dinero y el registro contable de la compra).
+Este movimiento NO suma automáticamente productos al inventario.
+Alta de productos en inventario:
+
+Luego, das de alta o sumas los productos comprados en el módulo de inventario (esto sí suma stock real y permite registrar detalles como proveedor, fecha, etc.).
+Cálculo de compras y stock:
+
+El movimiento de compra en caja/movimientos es solo para el flujo de caja y reportes contables.
+El alta en inventario es lo que realmente suma stock y permite el control físico de productos.
+No se debe duplicar el egreso ni el stock: El movimiento de compra y el alta en inventario son acciones separadas y no deben sumarse dos veces para el cálculo de compras o stock.
+
+
+¡Quedó clarísimo! Resumo y aclaro la lógica para el módulo de Caja/Movimientos según tu explicación y la documentación:
+
+### 1. Tipos de movimiento y campos requeridos
+
+#### Compra
+- Se usa para registrar cualquier gasto (no solo compra de plantas/productos).
+- Campos:
+  - Detalle (dónde/comprador/explicación del gasto, obligatorio)
+  - Total (importe gastado, obligatorio)
+  - Fecha de compra (editable, obligatorio)
+  - Método de pago (Efectivo o Mercado Pago, obligatorio)
+- No siempre suma stock. Si es compra de productos, el stock se suma solo al dar de alta en Inventario.
+
+#### Venta
+- Se usa para registrar ventas de productos.
+- Campos:
+  - Planta/producto vendido (obligatorio)
+  - Cantidad (obligatorio)
+  - Precio unitario (obligatorio)
+  - Total (calculado, obligatorio)
+  - Fecha de venta (automática, no editable)
+  - Método de pago (Efectivo o Mercado Pago, obligatorio)
+  - Lugar (opcional)
+- Valida stock y datos obligatorios antes de registrar.
+
+#### Ingreso
+- Entrada de dinero por cualquier motivo (no venta).
+- Campos:
+  - Detalle (motivo del ingreso, obligatorio)
+  - Total (importe ingresado, obligatorio)
+  - Fecha (editable, obligatorio)
+  - Método de pago (Efectivo o Mercado Pago, obligatorio)
+
+#### Egreso
+- Salida de dinero por cualquier motivo (no compra).
+- Campos:
+  - Detalle (motivo del egreso, obligatorio)
+  - Total (importe egresado, obligatorio)
+  - Fecha (editable, obligatorio)
+  - Método de pago (Efectivo o Mercado Pago, obligatorio)
+
+### 2. Validaciones clave
+- Todos los campos obligatorios deben estar completos y ser válidos.
+- En ventas, validar stock suficiente y datos de producto.
+- En compras, ingresos y egresos, el campo "detalle" es obligatorio para registrar el motivo.
+- El método de pago siempre debe estar especificado.
+
+### 3. Lógica de stock
+- Solo las ventas afectan el stock (restan).
+- Las compras solo afectan stock si se da de alta en Inventario, no desde caja/movimientos.
+
+### 4. UX
+- Formularios claros y adaptados al tipo de movimiento.
+- Mensajes de error profesionales si falta algún dato obligatorio o hay inconsistencia.
+
+-------------------------------------
+
+3. Firestore en Tiempo Real
+---------------------------
+- Todos los módulos usan Firestore: los datos se actualizan automáticamente sin recargar la página.
+- El stock se actualiza correctamente en ventas y compras.
+
+4. UI Profesional y Responsive
+------------------------------
+- Todo el sistema usa Tailwind CSS para un diseño moderno y adaptable a escritorio/móvil.
+
+5. ¿Cómo restaurar o pedir cualquier parte?
+-------------------------------------------
+- Un módulo: “Dame el código de src/components/Sales/SalesView.js” (o el archivo que quieras)
+- La estructura base: “Dame la estructura base del sistema de gestión de vivero.”
+- La navegación: “Dame el código de src/App.js con la navegación modular.”
+
+6. Notas
+--------
+- Cada módulo es independiente y fácil de mantener.
+- Puedes personalizar cualquier módulo editando solo su archivo.
+- Si necesitas ayuda para agregar funciones avanzadas, exportar datos, usuarios, backup, etc., solo pídelo.
+
+Fin del resumen.
+
+
+
+La lógica principal de MovementsView.js es la gestión de movimientos de caja, incluyendo ventas, compras, ingresos y egresos. Aquí tienes el resumen de la lógica relevante:
+
+1. Formulario de movimientos
+Permite registrar diferentes tipos de movimientos: venta, compra, ingreso, egreso.
+Los campos clave son: tipo, planta (si aplica), cantidad, precio, total, método de pago, fecha, lugar, notas.
+
+2. Registro de ventas (unificado)
+Si el tipo es venta, utiliza la función utilitaria registrarVenta:
+Valida el stock disponible antes de registrar.
+Registra la venta en ambas colecciones: sales y movements.
+Si hay error (por ejemplo, stock insuficiente), muestra un mensaje profesional.
+Para otros tipos (compra, ingreso, egreso), registra solo en la colección movements.
+
+3. Estado y visualización
+Muestra los movimientos del mes en una tabla.
+Calcula y muestra totales del mes: ventas, compras, ingresos, egresos, productos vendidos, caja física, caja Mercado Pago, total disponible, etc.
+Permite alternar entre solo formulario, solo tabla, o ambos (según props).
+
+4. UX
+- Si el usuario intenta registrar una venta sin stock suficiente, se muestra un mensaje de error.
+- Si el usuario intenta registrar una venta sin precio o sin un producto (planta de interior, Planta de exterior, Macetas u Otros), se muestra mensaje de error.
+- Si se ingresa una compra de una planta no existente, sugiere dar de alta la planta.
+- En el formulario de ventas, la fecha se registra automáticamente con la hora local de Argentina y no es editable ni visible para el usuario.
+- En el formulario de caja/movimientos, el usuario puede elegir la fecha manualmente (para cargar movimientos atrasados o corregir registros); si no la modifica, se toma la hora local actual de Argentina al registrar.
+- En ambos casos, la fecha guardada en Firestore es siempre la hora local de Argentina, asegurando coherencia en los reportes y registros.
+
+Campos de Inventario
+
+Nombre: Nombre del producto (obligatorio).
+Precio de Venta: Precio al público (obligatorio).
+Precio de Compra: Costo de adquisición (obligatorio).
+Stock: Cantidad disponible en inventario (obligatorio).
+Tipo: Categoría del producto (obligatorio).
+Opciones:
+Plantas de Interior
+Plantas de Exterior
+Macetas
+Otros

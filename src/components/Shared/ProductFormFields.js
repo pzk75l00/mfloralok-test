@@ -1,0 +1,73 @@
+// Campos reutilizables para formularios de productos (ventas/caja) con soporte para crear nuevos
+import React from 'react';
+import PropTypes from 'prop-types';
+import PlantAutocomplete from './PlantAutocomplete';
+import SmartInput from './SmartInput';
+
+const ProductFormFields = ({ 
+  productForm, 
+  plants, 
+  handleProductFormChange, 
+  onProductsUpdated,
+  onCreateAndAdd,
+  movementType = 'venta' // Nuevo prop para pasar al PlantAutocomplete
+}) => {
+  const selectedPlant = plants.find(p => String(p.id) === String(productForm.plantId));
+  
+  return (
+    <>
+      <label className="text-xs font-semibold">Producto</label>
+      <PlantAutocomplete
+        plants={plants}
+        value={productForm.plantId}
+        onChange={id => handleProductFormChange({ target: { name: 'plantId', value: id } })}
+        placeholder="Buscar o crear producto..."
+        onProductsUpdated={onProductsUpdated}
+  onCreateAndAdd={onCreateAndAdd}
+        allowCreateNew={true}
+        movementType={movementType}
+      />
+      {selectedPlant && (
+        <div className="text-xs text-gray-500 mb-2">
+          <div><b>Stock disponible:</b> {selectedPlant.stock ?? 0}</div>
+          <div><b>Tipo:</b> {selectedPlant.type === 'insumo' ? 'Insumo (uso interno)' : 'Producto (para venta)'}</div>
+          {selectedPlant.basePrice && (
+            <div><b>Último precio de compra:</b> ${selectedPlant.basePrice}</div>
+          )}
+          {selectedPlant.lastPurchaseDate && (
+            <div><b>Última compra:</b> {selectedPlant.lastPurchaseDate}</div>
+          )}
+        </div>
+      )}
+      
+      <SmartInput
+        variant="quantity"
+        name="quantity"
+        value={productForm.quantity}
+        onChange={handleProductFormChange}
+        className="mb-2 w-full"
+        placeholder="Cantidad"
+      />
+      
+      <SmartInput
+        variant="price"
+        name="price"
+        value={productForm.price}
+        onChange={handleProductFormChange}
+        className="mb-2 w-full"
+        placeholder="Precio"
+      />
+    </>
+  );
+};
+
+ProductFormFields.propTypes = {
+  productForm: PropTypes.object.isRequired,
+  plants: PropTypes.array.isRequired,
+  handleProductFormChange: PropTypes.func.isRequired,
+  onProductsUpdated: PropTypes.func,
+  onCreateAndAdd: PropTypes.func,
+  movementType: PropTypes.oneOf(['venta', 'compra']),
+};
+
+export default ProductFormFields;
