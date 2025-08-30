@@ -7,7 +7,8 @@
     "chart.js": "^4.3.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "express": "^5.1.0",
+  "express": "^5.1.0",
+  "docx": "^8.5.0",
     "file-saver": "^2.0.5",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.4.0",
@@ -29,7 +30,8 @@
     "monitor": "node monitor_duplicates.js",
     "clean-duplicates": "node clean_mixed_payment_duplicates.js",
     "clean-duplicates-force": "node clean_mixed_payment_duplicates.js --clean",
-    "analyze-duplicates": "node clean_mixed_payment_duplicates.js"
+  "analyze-duplicates": "node clean_mixed_payment_duplicates.js",
+  "export:plan-docx": "node scripts/export_plan_to_docx.js"
   },
   "browserslist": {
     "production": [

@@ -3,7 +3,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 // import getNow from '../../utils/mockDate'; // Eliminar mock
 import MovementsView from '../Base/MovementsView';
-import { calculateDetailedTotals } from '../../utils/balanceCalculations';
+import { calculateDetailedTotals, calculateAvailableTotalsFromFiltered } from '../../utils/balanceCalculations';
 import PropTypes from 'prop-types';
 
 // Vista móvil para Caja: muestra totales del día y formulario
@@ -50,7 +50,15 @@ const CashMovilView = (props) => {
     };
   }, [reloadKey]);
 
-  // --- Lógica para filtrar movimientos del mes seleccionado ---
+  // --- Lógica para filtrar movimientos hasta el final del mes seleccionado ---
+  const endOfSelectedMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999); // Último día del mes a las 23:59:59
+  const movementsUpToMonthEnd = movements.filter(mov => {
+    if (!mov.date) return false;
+    const d = new Date(mov.date);
+    if (isNaN(d.getTime())) return false;
+    return d <= endOfSelectedMonth;
+  });
+  // --- Lógica para filtrar movimientos del mes seleccionado (para productos vendidos) ---
   const movementsThisMonth = movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
@@ -61,9 +69,9 @@ const CashMovilView = (props) => {
   const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
   const currentDay = now.getDate();
   const movementsToday = isCurrentMonth
-    ? movementsThisMonth.filter(mov => {
+    ? movementsUpToMonthEnd.filter(mov => {
         const d = new Date(mov.date);
-        return d.getDate() === currentDay;
+        return d.getDate() === currentDay && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
       })
     : [];
 
@@ -71,9 +79,18 @@ const CashMovilView = (props) => {
   // Usar la función reutilizable de utils
   console.log('🔥 DIAGNÓSTICO CASH MÓVIL - Calculando totales...');
   console.log('🔥 Movimientos para el día:', movementsToday.length);
-  console.log('🔥 Movimientos para el mes:', movementsThisMonth.length);
-  const totalsForDay = isCurrentMonth && movementsToday.length > 0 ? calculateDetailedTotals(movementsToday) : null;
-  const totalsForMonth = calculateDetailedTotals(movementsThisMonth);
+  console.log('🔥 Movimientos hasta fin del mes:', movementsUpToMonthEnd.length);
+  const totalsForDay = isCurrentMonth && movementsToday.length > 0 ? calculateAvailableTotalsFromFiltered(movementsToday) : null;
+  if (totalsForDay) {
+    // Para el día, los productos vendidos son del día
+    const cantidadProductosVendidosDia = movementsToday.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+    totalsForDay.cantidadProductosVendidos = cantidadProductosVendidosDia;
+  }
+  const totalsForMonth = calculateAvailableTotalsFromFiltered(movementsUpToMonthEnd);
+  // Calcular productos vendidos del mes seleccionado
+  const cantidadProductosVendidosMes = movementsThisMonth.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+  // Ajustar totalsForMonth para usar la cantidad del mes
+  totalsForMonth.cantidadProductosVendidos = cantidadProductosVendidosMes;
   console.log('🔥 RESULTADO totalsForMonth:', totalsForMonth);
   
   // --- Panel superior dinámico ---

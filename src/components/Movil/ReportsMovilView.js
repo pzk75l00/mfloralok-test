@@ -5,7 +5,8 @@ import { Bar } from 'react-chartjs-2';
 import { 
   calculateBalanceByPaymentMethod, 
   calculatePeriodBalance,
-  calculateDetailedTotals
+  calculateDetailedTotals,
+  calculateAvailableTotalsFromFiltered
 } from '../../utils/balanceCalculations';
 import {
   Chart as ChartJS,
@@ -44,6 +45,8 @@ const ReportsMovilView = () => {
 
   // Filtrar movimientos de hoy (ajustado para comparar solo año, mes y día, ignorando hora/min/seg y desfases de zona horaria)
   const now = new Date();
+  const nowMonth = now.getMonth();
+  const nowYear = now.getFullYear();
   const hoy = movements.filter(mov => {
     if (!mov.date) return false;
     // Soporta tanto timestamps como strings ISO
@@ -78,8 +81,13 @@ const ReportsMovilView = () => {
   // Saldos del día actual (para mostrar movimientos del día)
   const saldoDelDia = calculatePeriodBalance(movements, 'day', now);
   
-  // Saldos del mes actual (para comparación)
-  const saldoDelMes = calculatePeriodBalance(movements, 'month', now);
+  // Saldos del mes actual (para comparación) - unificado con Cash usando wrapper normalizado
+  const movimientosMes2 = movements.filter(mov => {
+    if (!mov.date) return false;
+    const d = new Date(mov.date);
+    return d.getMonth() === nowMonth && d.getFullYear() === nowYear;
+  });
+  const saldoDelMes = calculateAvailableTotalsFromFiltered(movimientosMes2);
 
   // Mantener compatibilidad con variables existentes para el resto del código
   const totalDisponibleEfectivo = saldoTotalAcumulado.efectivo;
@@ -126,8 +134,6 @@ const ReportsMovilView = () => {
   };
 
   // --- Productos vendidos del mes ---
-  const nowMonth = now.getMonth();
-  const nowYear = now.getFullYear();
   const movimientosMes = movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
@@ -171,11 +177,6 @@ const ReportsMovilView = () => {
   // --- REEMPLAZAR bajoStock y movimientosMes para evitar duplicados ---
   // --- NUEVOS TOTALES Y SEPARACIÓN MP/EFECTIVO ---
   // Totales del mes
-  const movimientosMes2 = movements.filter(mov => {
-    if (!mov.date) return false;
-    const d = new Date(mov.date);
-    return d.getMonth() === nowMonth && d.getFullYear() === nowYear;
-  });
   // Total productos vendidos en el mes
   const totalProductosVendidosMes = movimientosMes2.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
 
@@ -419,9 +420,9 @@ const ReportsMovilView = () => {
 
   // NOTA: Los cálculos de saldo ahora usan las utilidades para mostrar el saldo real acumulado
   // Mantener las variables del mes para comparación si es necesario
-  const cajaEfectivoMes = saldoDelMes.efectivo;
-  const cajaMPMes = saldoDelMes.mercadoPago;
-  const totalDisponibleMes = saldoDelMes.total;
+  const cajaEfectivoMes = saldoDelMes.cajaFisica;
+  const cajaMPMes = saldoDelMes.cajaMP;
+  const totalDisponibleMes = saldoDelMes.totalGeneral;
 
   return (
     <div className="p-3">

@@ -4,15 +4,28 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 
-// Inicializa el proyecto de origen
-const sourceServiceAccount = require('./src/firebase/serviceAccountSource.json');
+function loadServiceAccount(pathHint) {
+  if (!pathHint) return null;
+  if (fs.existsSync(pathHint)) return require(pathHint);
+  return null;
+}
+
+// Rutas: preferir variables de entorno para no depender de archivos en repo
+const sourcePath = process.env.SOURCE_SA_PATH || './src/firebase/serviceAccountSource.json';
+const targetPath = process.env.TARGET_SA_PATH || './src/firebase/serviceAccountTarget.json';
+
+const sourceServiceAccount = loadServiceAccount(sourcePath);
+const targetServiceAccount = loadServiceAccount(targetPath);
+
+if (!sourceServiceAccount || !targetServiceAccount) {
+  throw new Error('Faltan service accounts para source o target. Define SOURCE_SA_PATH/TARGET_SA_PATH o coloca los JSON en src/firebase/');
+}
+
 const sourceApp = admin.initializeApp({
   credential: admin.credential.cert(sourceServiceAccount)
 }, 'source');
 const sourceDb = sourceApp.firestore();
 
-// Inicializa el proyecto de destino
-const targetServiceAccount = require('./src/firebase/serviceAccountTarget.json');
 const targetApp = admin.initializeApp({
   credential: admin.credential.cert(targetServiceAccount)
 }, 'target');

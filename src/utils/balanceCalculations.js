@@ -316,3 +316,33 @@ export const calculateDetailedTotals = (movements) => {
     gastosMP
   };
 };
+
+/**
+ * Wrapper que devuelve totales disponibles usando la lógica "contable"
+ * (aplica limpieza/normalización usada por calculateTotalBalance)
+ * Devuelve la misma forma mínima que usa la UI: { cajaFisica, cajaMP, totalGeneral, cantidadProductosVendidos }
+ * @param {Array} movements - movimientos ya filtrados para el periodo deseado
+ */
+export const calculateAvailableTotalsFromFiltered = (movements) => {
+  if (!movements || movements.length === 0) {
+    return {
+      cajaFisica: 0,
+      cajaMP: 0,
+      totalGeneral: 0,
+      cantidadProductosVendidos: 0
+    };
+  }
+
+  // Reuse existing normalized calculation which removes duplicates y normaliza pagos mixtos
+  const balanceByMethod = calculateBalanceByPaymentMethod(movements);
+
+  // Cantidad de productos vendidos (suma de quantity en ventas)
+  const cantidadProductosVendidos = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+
+  return {
+    cajaFisica: balanceByMethod.efectivo || 0,
+    cajaMP: balanceByMethod.mercadoPago || 0,
+    totalGeneral: (balanceByMethod.efectivo || 0) + (balanceByMethod.mercadoPago || 0),
+    cantidadProductosVendidos
+  };
+};

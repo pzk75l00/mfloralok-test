@@ -1,16 +1,7 @@
 // Script Node.js para recalcular el stock de todas las plantas según los movimientos históricos
 // No lo ejecutes sin revisar y hacer backup de tu base de datos
 
-const { initializeApp, applicationDefault } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
-const serviceAccount = require('./serviceAccountKey.json');
-const admin = require('firebase-admin');
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-
-const db = getFirestore();
+const { db } = require('./src/firebase/admin');
 
 async function recalcularStock() {
   // 1. Obtener todas las plantas
