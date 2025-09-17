@@ -10,7 +10,8 @@ const PaymentSelector = ({
   paymentMethods, 
   onChange, 
   disabled = false,
-  showManageButton = true 
+  showManageButton = true,
+  onConfirmAndSubmit // NUEVO: si viene, confirmar pago también guarda
 }) => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -134,6 +135,7 @@ const PaymentSelector = ({
         total={total}
         paymentMethods={paymentMethods}
         onChange={handlePaymentChange}
+  onConfirmAndSubmit={onConfirmAndSubmit}
         title="Configurar Pago"
       />
 
@@ -151,7 +153,8 @@ PaymentSelector.propTypes = {
   paymentMethods: PropTypes.object.isRequired,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
-  showManageButton: PropTypes.bool
+  showManageButton: PropTypes.bool,
+  onConfirmAndSubmit: PropTypes.func
 };
 
 export default PaymentSelector;

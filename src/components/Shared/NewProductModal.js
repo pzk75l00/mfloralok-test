@@ -74,7 +74,14 @@ const NewProductModal = ({
     setErrors([]);
     
     try {
-      const productId = await createNewProduct(formData);
+      // Si el contexto es compra, no persistimos el stock ingresado para evitar doble conteo.
+      // Guardamos la cantidad ingresada como intendedQty para el auto-agregado del movimiento.
+      const qtyToPurchase = context === 'purchase' ? (parseInt(formData.stock) || 1) : (parseInt(formData.stock) || 0);
+      const creationData = context === 'purchase'
+        ? { ...formData, stock: '0' }
+        : formData;
+
+      const productId = await createNewProduct(creationData);
       
       // Crear objeto producto para el callback
       const newProduct = {
@@ -82,7 +89,8 @@ const NewProductModal = ({
         name: formData.name.trim(),
         purchasePrice: parseFloat(formData.purchasePrice) || 0,
         basePrice: parseFloat(formData.basePrice) || 0,
-        stock: parseInt(formData.stock) || 0,
+        stock: context === 'purchase' ? 0 : (parseInt(formData.stock) || 0),
+        intendedQty: context === 'purchase' ? (qtyToPurchase || 1) : undefined,
         type: formData.type,
         image: '',
         createdAt: new Date(),

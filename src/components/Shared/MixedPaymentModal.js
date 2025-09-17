@@ -10,7 +10,8 @@ const MixedPaymentModal = ({
   total, 
   paymentMethods, 
   onChange, 
-  title = "Configurar Pago" 
+  title = "Configurar Pago",
+  onConfirmAndSubmit // NUEVO: confirma y persiste el movimiento
 }) => {
   const [localPayments, setLocalPayments] = useState({
     efectivo: 0,
@@ -20,6 +21,7 @@ const MixedPaymentModal = ({
   });
   const [availableMethods, setAvailableMethods] = useState([]);
   const [activeTab, setActiveTab] = useState('simple');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cargar métodos de pago disponibles desde Firebase
   useEffect(() => {
@@ -96,14 +98,29 @@ const MixedPaymentModal = ({
     setLocalPayments(newPayments);
   };
 
-  const handleSave = () => {
-    if (!isValid) {
-      alert('El total de pagos debe ser igual al monto de la venta');
+  const handleSave = async () => {
+    if (!isValid || isSubmitting) {
+      if (!isValid) {
+        alert('El total de pagos debe ser igual al monto del movimiento');
+      }
       return;
     }
     
-    onChange(localPayments);
-    onClose();
+    if (typeof onConfirmAndSubmit === 'function') {
+      try {
+        setIsSubmitting(true);
+        const confirmedAt = new Date();
+        await onConfirmAndSubmit({ payments: { ...localPayments }, confirmedAt });
+        onClose();
+      } catch (e) {
+        console.error('Error confirmando pago y guardando movimiento:', e);
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      onChange(localPayments);
+      onClose();
+    }
   };
 
   const handleCancel = () => {
@@ -302,10 +319,10 @@ const MixedPaymentModal = ({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar Pago
+            {isSubmitting ? 'Procesando…' : 'Confirmar Pago'}
           </button>
         </div>
       </div>
@@ -319,7 +336,8 @@ MixedPaymentModal.propTypes = {
   total: PropTypes.number.isRequired,
   paymentMethods: PropTypes.object.isRequired,
   onChange: PropTypes.func.isRequired,
-  title: PropTypes.string
+  title: PropTypes.string,
+  onConfirmAndSubmit: PropTypes.func
 };
 
 export default MixedPaymentModal;

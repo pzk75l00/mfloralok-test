@@ -226,7 +226,8 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         // Por ahora solo auto-agregamos en Compras para evitar ventas con stock 0
         return;
       }
-      const qty = Math.max(1, parseInt(newProduct?.stock) || 1);
+  // Usar cantidad prevista (intendedQty) provista por el modal para compras; fallback a 1
+  const qty = Math.max(1, parseInt(newProduct?.intendedQty) || 1);
       const unitPrice = parseFloat(newProduct?.basePrice) || 0; // En compras usamos basePrice (precio de compra)
       setProducts(prev => [
         ...prev,
@@ -262,6 +263,23 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
     setTimeout(() => {
       setIsChangingPayment(false);
     }, 1000);
+  };
+
+  // Confirmar pago desde el modal y enviar el movimiento inmediatamente
+  const handleConfirmPaymentAndSubmit = async ({ payments, confirmedAt }) => {
+    try {
+      // Cargar métodos confirmados y marcar como manual
+      setForm(prev => ({ ...prev, paymentMethods: payments }));
+      setIsPaymentManual(true);
+      setIsChangingPayment(false);
+      // Ejecutar el submit con un pequeño delay para que se aplique el estado
+      setTimeout(() => {
+        const fakeEvent = { preventDefault: () => {}, isTrusted: true };
+        handleSubmit(fakeEvent);
+      }, 0);
+    } catch (e) {
+      console.error('Error al confirmar pago y enviar:', e);
+    }
   };
   
   const ventaTotal = products.reduce((sum, p) => sum + p.total, 0);
@@ -906,6 +924,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 onProductsUpdated={handleProductsUpdated}
                 onPaymentMethodsChange={handlePaymentMethodsChange}
                 onCreateAndAdd={handleCreateAndAdd}
+                onConfirmAndSubmit={handleConfirmPaymentAndSubmit}
               />
             ) : (
               <CashMobileForm

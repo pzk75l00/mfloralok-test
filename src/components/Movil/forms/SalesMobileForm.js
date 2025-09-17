@@ -20,7 +20,8 @@ const SalesMobileForm = ({
   errorMsg,
   onProductsUpdated,
   onPaymentMethodsChange,
-  onCreateAndAdd
+  onCreateAndAdd,
+  onConfirmAndSubmit
 }) => (
   <form onSubmit={onSubmit} className="flex flex-col gap-3 items-stretch">
     <ProductFormFields 
@@ -43,6 +44,7 @@ const SalesMobileForm = ({
       onChange={onPaymentMethodsChange}
       disabled={isSubmitting}
       showManageButton={true}
+  onConfirmAndSubmit={onConfirmAndSubmit}
     />
     
     <input type="text" name="location" value={form.location} onChange={handleChange} disabled={isSubmitting} className="border rounded px-2 py-1 mb-2 w-full disabled:opacity-50" placeholder="Lugar" />
@@ -84,6 +86,7 @@ SalesMobileForm.propTypes = {
   onProductsUpdated: PropTypes.func,
   onPaymentMethodsChange: PropTypes.func,
   onCreateAndAdd: PropTypes.func,
+  onConfirmAndSubmit: PropTypes.func,
 };
 
 export default SalesMobileForm;
