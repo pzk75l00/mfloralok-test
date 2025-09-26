@@ -456,14 +456,6 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         // Verificar si se están usando pagos combinados
         const overridePM = options?.overridePaymentMethods;
         const hasPaymentMethods = (overridePM && Object.values(overridePM).some(v => v > 0)) || (form.paymentMethods && Object.values(form.paymentMethods).some(amount => amount > 0));
-        // En móvil ventas/compras: exigir configuración explícita del pago
-        if (isMobileDevice && (form.type === 'venta' || form.type === 'compra') && !hasPaymentMethods) {
-          setErrorMsg('Configurar método de pago antes de confirmar. Toque "Configurar pago" y elija Efectivo, Mercado Pago o Mixto.');
-          showToast({ type: 'error', text: 'Configure el método de pago antes de confirmar.' });
-          setToastError(true);
-          setIsSubmitting(false);
-          return;
-        }
         let finalPaymentMethods = overridePM || form.paymentMethods;
         
         if (!hasPaymentMethods) {
@@ -871,8 +863,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   // Sincronizar paymentMethods por defecto con el total cuando no hay selección manual
   useEffect(() => {
     if (!(form.type === 'venta' || form.type === 'compra')) return;
-    // En móvil NO auto-configuramos el método de pago para evitar que quede "efectivo" por defecto
-    if (isMobile) return;
+    // Autoconfigurar método simple actual con el total completo cuando no hubo selección manual
     const total = ventaTotal;
     if (total <= 0) return;
     if (isPaymentManual) return; // no pisar lo que configuró el usuario

@@ -30,6 +30,19 @@ const PaymentSelector = ({
     onChange(newPaymentMethods);
   };
 
+  // Acciones rápidas: Efectivo 100% o Mercado Pago 100%
+  const quickSet = (method) => {
+    if (disabled || total <= 0) return;
+    const payments = {
+      efectivo: 0,
+      mercadoPago: 0,
+      transferencia: 0,
+      tarjeta: 0
+    };
+    payments[method] = Number(total);
+    onChange(payments);
+  };
+
   return (
     <>
       <div className="space-y-3">
@@ -49,7 +62,36 @@ const PaymentSelector = ({
           )}
         </div>
 
-        {/* Botón principal para configurar pago */}
+        {/* Acciones rápidas */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={disabled || total <= 0}
+            onClick={() => quickSet('efectivo')}
+            className={`flex-1 p-2 rounded border ${disabled || total <= 0 ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 hover:border-green-500'}`}
+          >
+            Efectivo
+          </button>
+          <button
+            type="button"
+            disabled={disabled || total <= 0}
+            onClick={() => quickSet('mercadoPago')}
+            className={`flex-1 p-2 rounded border ${disabled || total <= 0 ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 hover:border-blue-500'}`}
+          >
+            Mercado Pago
+          </button>
+          <button
+            type="button"
+            disabled={disabled || total <= 0}
+            onClick={handleOpenPaymentModal}
+            className={`p-2 rounded border ${disabled || total <= 0 ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 hover:border-purple-500'}`}
+            title="Pago mixto"
+          >
+            Mixto…
+          </button>
+        </div>
+
+        {/* Botón principal para ver/ajustar el estado actual del pago */}
         <button
           type="button"
           onClick={handleOpenPaymentModal}
