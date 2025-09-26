@@ -142,6 +142,26 @@ export const calculateBalanceUntilDate = (movements, dateLimit, paymentMethod = 
 };
 
 /**
+ * Versión NORMALIZADA: calcula saldo acumulado hasta una fecha usando la lógica unificada
+ * y permitiendo filtrar por método correctamente incluso con pagos mixtos.
+ * Importante: aquí NO filtramos por movement.paymentMethod, solo por fecha.
+ * El método se aplica dentro de calculateTotalBalance para considerar paymentMethods.
+ * @param {Array} movements
+ * @param {Date} dateLimit - fecha límite INCLUSIVA
+ * @param {'efectivo'|'mercadoPago'|null} paymentMethod
+ * @returns {number}
+ */
+export const calculateBalanceUntilDateNormalized = (movements, dateLimit, paymentMethod = null) => {
+  if (!movements || movements.length === 0) return 0;
+  const filteredMovements = movements.filter(movement => {
+    if (!movement?.date) return false;
+    const movementDate = new Date(movement.date);
+    return movementDate <= dateLimit; // sólo recortamos por fecha
+  });
+  return calculateTotalBalance(filteredMovements, paymentMethod);
+};
+
+/**
  * Calcula saldos separados por método de pago
  * @param {Array} movements - Array de todos los movimientos
  * @returns {Object} - { efectivo: number, mercadoPago: number, total: number }
@@ -345,4 +365,42 @@ export const calculateAvailableTotalsFromFiltered = (movements) => {
     totalGeneral: (balanceByMethod.efectivo || 0) + (balanceByMethod.mercadoPago || 0),
     cantidadProductosVendidos
   };
+};
+
+/**
+ * Genera un desglose mensual acumulado por método (efectivo/mercadoPago) desde el arranque
+ * Devuelve por cada mes: inflow, outflow, net, start, end y key YYYY-MM, usando pagos mixtos normalizados.
+ * @param {Array} movements
+ * @param {'efectivo'|'mercadoPago'} method
+ */
+export const computeMonthlyRunningByMethod = (movements, method = 'mercadoPago') => {
+  if (!movements || movements.length === 0) return [];
+
+  // 1) Agregar por mes entradas/salidas según tipo de movimiento
+  const monthly = new Map();
+  for (const m of movements) {
+    if (!m?.date) continue;
+    const amount = getMovementAmountForPaymentMethod(m, method);
+    if (!amount || amount === 0) continue;
+    const d = new Date(m.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthly.has(key)) monthly.set(key, { key, year: d.getFullYear(), month: d.getMonth() + 1, inflow: 0, outflow: 0, net: 0, start: 0, end: 0 });
+    const row = monthly.get(key);
+    // Determinar signo contable
+    const isInflow = m.type === 'venta' || m.type === 'ingreso';
+    const isOutflow = m.type === 'compra' || m.type === 'egreso' || m.type === 'gasto';
+    if (isInflow) row.inflow += amount;
+    else if (isOutflow) row.outflow += amount;
+    // otros tipos quedan neutros
+  }
+  // 2) Ordenar por fecha y calcular net/start/end acumulado
+  const ordered = Array.from(monthly.values()).sort((a, b) => (a.year - b.year) || (a.month - b.month));
+  let running = 0;
+  for (const row of ordered) {
+    row.net = row.inflow - row.outflow;
+    row.start = running;
+    row.end = row.start + row.net;
+    running = row.end;
+  }
+  return ordered;
 };

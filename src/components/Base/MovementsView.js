@@ -269,13 +269,15 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const handleConfirmPaymentAndSubmit = async ({ payments, confirmedAt }) => {
     try {
       // Cargar métodos confirmados y marcar como manual
-      setForm(prev => ({ ...prev, paymentMethods: payments }));
+      const mainMethod = getMainPaymentMethod(payments);
+      setForm(prev => ({ ...prev, paymentMethods: payments, paymentMethod: mainMethod }));
       setIsPaymentManual(true);
       setIsChangingPayment(false);
       // Ejecutar el submit con un pequeño delay para que se aplique el estado
       setTimeout(() => {
         const fakeEvent = { preventDefault: () => {}, isTrusted: true };
-        handleSubmit(fakeEvent);
+        // Pasar los métodos confirmados para evitar condiciones de carrera con el estado
+        handleSubmit(fakeEvent, { overridePaymentMethods: payments, confirmedAt });
       }, 0);
     } catch (e) {
       console.error('Error al confirmar pago y enviar:', e);
@@ -286,7 +288,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   
   // ELIMINAMOS EL useEffect PROBLEMÁTICO TEMPORALMENTE
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, options = {}) => {
     e.preventDefault();
     
     // Prevenir doble envío
@@ -452,8 +454,9 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           Number(total);
           
         // Verificar si se están usando pagos combinados
-        const hasPaymentMethods = form.paymentMethods && Object.values(form.paymentMethods).some(amount => amount > 0);
-        let finalPaymentMethods = form.paymentMethods;
+        const overridePM = options?.overridePaymentMethods;
+        const hasPaymentMethods = (overridePM && Object.values(overridePM).some(v => v > 0)) || (form.paymentMethods && Object.values(form.paymentMethods).some(amount => amount > 0));
+        let finalPaymentMethods = overridePM || form.paymentMethods;
         
         if (!hasPaymentMethods) {
           // Crear paymentMethods desde el método tradicional

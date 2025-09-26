@@ -191,12 +191,33 @@ const CashMovilView = (props) => {
                     } else {
                       productoDetalle = m.detail || m.notes || '-';
                     }
+                    // Etiqueta corta del método de pago, compatible con pagos mixtos
+                    const methodLabel = (() => {
+                      try {
+                        if (m && m.paymentMethods && typeof m.paymentMethods === 'object') {
+                          const active = Object.entries(m.paymentMethods).filter(([, amount]) => (parseFloat(amount) || 0) > 0);
+                          if (active.length > 1) return 'Mixto';
+                          if (active.length === 1) {
+                            const key = active[0][0];
+                            if (key === 'mercadoPago') return 'MP';
+                            if (key === 'efectivo') return 'Efectivo';
+                            return key;
+                          }
+                        }
+                        // Fallback al campo simple
+                        if (m.paymentMethod === 'mercadoPago') return 'MP';
+                        if (m.paymentMethod === 'efectivo') return 'Efectivo';
+                        return m.paymentMethod || '-';
+                      } catch {
+                        return m?.paymentMethod || '-';
+                      }
+                    })();
                     return (
                       <li key={m.id || idx} className="flex flex-row items-center justify-between px-1 py-1 text-xs">
                         <span className="text-gray-700 w-14 text-left">{m.type ? m.type.charAt(0).toUpperCase() + m.type.slice(1) : '-'}</span>
                         <span className="text-gray-600 flex-1 px-2 truncate text-left">{productoDetalle}</span>
                         <span className="font-semibold text-red-700 w-20 text-center">${m.total?.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-                        <span className="text-gray-700 w-14 text-center">{m.paymentMethod === 'efectivo' ? 'Efectivo' : m.paymentMethod === 'mercadoPago' ? 'MP' : '-'}</span>
+                        <span className="text-gray-700 w-14 text-center">{methodLabel}</span>
                         <span className="text-gray-500 max-w-[80px] truncate text-left ml-2">{m.location || '-'}</span>
                       </li>
                     );
