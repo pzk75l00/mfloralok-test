@@ -4,6 +4,7 @@
  * Soporta:
  *  --search="EBENECER" (texto que coincide con detail/notes/plantName/location, case-insensitive)
  *  --id=DOC_ID (opcional, ignora search si se pasa id)
+ *  --ids=id1,id2,id3 (opcional, para actuar sobre varias filas explícitas)
  *  --date=YYYY-MM-DD (mismo día local) o --from=YYYY-MM-DD --to=YYYY-MM-DD
  *  --type=venta|compra|ingreso|egreso|gasto (opcional)
  *  --cash=33000 --mp=15500 (montos para Efectivo y MercadoPago)
@@ -66,6 +67,7 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 (async function main() {
   const opts = parseArgs();
   const id = opts.id || null;
+  const ids = opts.ids ? String(opts.ids).split(',').map(s => s.trim()).filter(Boolean) : null;
   const search = (opts.search || '').toLowerCase();
   const dateStr = opts.date || null;
   const from = opts.from ? new Date(opts.from) : null;
@@ -77,8 +79,8 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
   const dry = !!opts.dry;
   const force = !!opts.force;
 
-  if (!id && !search) {
-    console.error('Debe indicar --id o --search');
+  if (!id && !ids && !search) {
+    console.error('Debe indicar --id, --ids o --search');
     process.exit(1);
   }
   if (!dateStr && !(from && to)) {
@@ -86,7 +88,7 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
     process.exit(1);
   }
 
-  console.log('Buscando movimientos…', { id, search, date: dateStr, from: from?.toISOString(), to: to?.toISOString(), type, cash, mp, split, dry, force });
+  console.log('Buscando movimientos…', { id, ids, search, date: dateStr, from: from?.toISOString(), to: to?.toISOString(), type, cash, mp, split, dry, force });
 
   const snap = await getDocs(collection(db, 'movements'));
   let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -109,6 +111,9 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
   // Filtro por ID o búsqueda
   if (id) {
     items = items.filter(m => m.id === id);
+  } else if (ids && ids.length > 0) {
+    const set = new Set(ids);
+    items = items.filter(m => set.has(m.id));
   } else if (search) {
     items = items.filter(m => pickText(m).includes(search));
   }
