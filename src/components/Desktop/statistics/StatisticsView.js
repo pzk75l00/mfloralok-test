@@ -646,7 +646,7 @@ const StatisticsView = () => {
         <div className="mb-4 pb-2 border-b border-blue-200">
           <h2 className="text-xl font-bold text-blue-800 flex items-center gap-2">
             📆 Movimientos del Mes Actual
-            <span className="text-sm font-normal text-gray-600">(Agosto 2025)</span>
+            <span className="text-sm font-normal text-gray-600"> ( {MONTHS_ES[new Date().getMonth()]} {new Date().getFullYear()} )</span>
           </h2>
           <p className="text-sm text-gray-600 mt-1">Resumen de todas las operaciones realizadas únicamente en el mes actual</p>
         </div>
@@ -1328,10 +1328,10 @@ const StatisticsView = () => {
                       product.adjustedROI < 0 ? 'bg-red-50' : ''
                     }`}>
                       <td className="px-3 py-2">
-                        {idx === 0 ? '† ' : ''}
+                        {idx === 0 ? '' : ''}
                         {product.name}
-                        {product.adjustedROI > 100 && <span className="ml-1 text-green-600">€</span>}
-                        {product.adjustedROI < 0 && <span className="ml-1 text-red-600">âš ï¸</span>}
+                        {product.adjustedROI > 100 && <span className="ml-1 text-green-600">$</span>}
+                        {product.adjustedROI < 0 && <span className="ml-1 text-red-600">$</span>}
                       </td>
                       <td className="px-3 py-2 text-right text-red-600">
                         ${product.totalInvested.toLocaleString('es-AR')}
@@ -1378,7 +1378,7 @@ const StatisticsView = () => {
             {/* Insights de ROI */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 rounded border border-green-200">
-                <h4 className="font-semibold text-green-700 mb-2">† Mejores Performers</h4>
+                <h4 className="font-semibold text-green-700 mb-2">🏆 Mejores Performers</h4>
                 <div className="space-y-2">
                   {productROI.filter(p => p.adjustedROI > 50).slice(0, 3).map(product => (
                     <div key={product.name} className="text-sm">
