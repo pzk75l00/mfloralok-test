@@ -1,0 +1,101 @@
+%% DER del modelo de datos actual y campos planificados (Firestore)
+%% Nota: Firestore es NoSQL; el DER aquí es lógico/conceptual para apoyar refactor a capa de dominio.
+
+erDiagram
+  PRODUCT_TYPE ||--o{ PLANT : "categoriza"
+  PLANT ||--o{ MOVEMENT : "referenciado_por"
+  PLANT ||--o{ SALE : "venta_linea"
+  USER ||--o{ MOVEMENT : "(plan) creado_por"
+  USER ||--o{ SALE : "(plan) creado_por"
+  PAYMENT_METHOD ||--o{ MOVEMENT : "(conceptual) usado_en *"
+  PAYMENT_METHOD ||--o{ SALE : "(actual) metodo_principal"
+  PLANT ||--o{ PURCHASE_HISTORY : "(emb) historial"
+
+  PRODUCT_TYPE {
+    string id
+    string name
+  }
+
+  PLANT {
+    string id
+    string name
+    string type  // id o name de PRODUCT_TYPE
+    number basePrice
+    number purchasePrice // precio de venta sugerido / actual
+    number stock
+    string image
+    date   lastPurchaseDate
+    json[] purchaseHistory // [{price, date, quantity}]* (embebido máx 10)
+    date   createdAt
+    date   updatedAt
+  }
+
+  MOVEMENT {
+    string id
+    enum type // venta|compra|ingreso|egreso|gasto
+    string plantId  // FK lógica a PLANT.id
+    string plantName // denormalizado
+    number quantity
+    number price     // unitario
+    number total
+    string paymentMethod // principal (derivado)
+    map    paymentMethods // {code: amount}
+    json   paymentSummary // [{code,name,amount,percent}]
+    string detail
+    string notes
+    string location
+    datetime date
+    string createdBy  // (plan)
+    datetime createdAt // (plan) trazabilidad
+    string hashPrev   // (plan) auditoría cadena
+    string hashSelf   // (plan)
+  }
+
+  SALE {
+    string id
+    string plantId
+    number quantity
+    number salePrice // unitario
+    number total
+    string paymentMethod
+    string location
+    string notes
+    datetime date
+    string createdBy // (plan)
+  }
+
+  PAYMENT_METHOD {
+    string id
+    string code // clave lógica usada en paymentMethods
+    string name
+    string icon
+    string color
+    boolean isActive
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  USER {
+    string uid
+    string email
+    string nombre
+    string apellido
+    string telefono
+    string rol // admin|usuario|...(plan)
+    string[] modules
+    datetime creado
+  }
+
+  PURCHASE_HISTORY {
+    number price
+    date   date
+    number quantity
+    datetime timestamp
+  }
+
+%% Notas:
+%% * Relación PAYMENT_METHOD-MOVEMENT es n..m conceptual; se materializa como mapa embebido en MOVEMENT.
+%% * Multiproducto: cada producto de una venta genera MOVEMENT separado (line-item). No existe entidad VentaCabecera aun.
+%% * SALE replica subset de MOVEMENT (type=venta) por compatibilidad histórica; se contempla consolidar o eliminar.
+%% * Campos (plan) se añadirán en refactor de capa dominio / auditoría.
+%% * location actualmente es string libre (sucursal futura = entidad separada).

@@ -6,7 +6,9 @@ import {
   calculateBalanceByPaymentMethod, 
   calculatePeriodBalance,
   calculateDetailedTotals,
-  calculateAvailableTotalsFromFiltered
+  calculateAvailableTotalsFromFiltered,
+  calculateBalanceUntilDateNormalized,
+  computeMonthlyRunningByMethod
 } from '../../utils/balanceCalculations';
 import {
   Chart as ChartJS,
@@ -27,6 +29,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 const ReportsMovilView = () => {
   const [movements, setMovements] = useState([]);
   const [plants, setPlants] = useState([]);
+  const [showMpDetail, setShowMpDetail] = useState(false);
   // --- FILTRO POR FECHA SELECCIONADA (solo para ventas móvil) ---
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
@@ -77,6 +80,11 @@ const ReportsMovilView = () => {
   // Calcular usando únicamente movimientos hasta hoy
   const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movimientosHastaHoy);
   console.log('🔥 RESULTADO saldoTotalAcumulado (función original):', saldoTotalAcumulado);
+  // Regla de negocio solicitada: el SALDO TOTAL DISPONIBLE no se muestra negativo
+  const clampedDisponibleEfectivo = Math.max(0, saldoTotalAcumulado.efectivo || 0);
+  const clampedDisponibleMP = Math.max(0, saldoTotalAcumulado.mercadoPago || 0);
+  const clampedDisponibleTotal = clampedDisponibleEfectivo + clampedDisponibleMP;
+  const wasClampedDisponible = clampedDisponibleEfectivo !== (saldoTotalAcumulado.efectivo || 0) || clampedDisponibleMP !== (saldoTotalAcumulado.mercadoPago || 0);
   
   // Saldos del día actual (para mostrar movimientos del día)
   const saldoDelDia = calculatePeriodBalance(movements, 'day', now);
@@ -423,6 +431,17 @@ const ReportsMovilView = () => {
   const cajaEfectivoMes = saldoDelMes.cajaFisica;
   const cajaMPMes = saldoDelMes.cajaMP;
   const totalDisponibleMes = saldoDelMes.totalGeneral;
+  // Desglose mensual MP desde el arranque (auditoría)
+  const mpMonthly = computeMonthlyRunningByMethod(movements, 'mercadoPago');
+
+  // --- AUDITORÍA RÁPIDA DE MERCADO PAGO: inicial del mes, neto del mes y final ---
+  const inicioDeMes = new Date(nowYear, nowMonth, 1, 0, 0, 0, 0);
+  const finMesAnterior = new Date(nowYear, nowMonth, 0, 23, 59, 59, 999); // día 0 = último del mes previo
+  const finDeHoy = new Date(nowYear, nowMonth, now.getDate(), 23, 59, 59, 999);
+  const saldoInicialMes_MP = calculateBalanceUntilDateNormalized(movements, finMesAnterior, 'mercadoPago');
+  const saldoDisponibleHoy_MP = calculateBalanceUntilDateNormalized(movements, finDeHoy, 'mercadoPago');
+  // Neto del mes = saldo disponible hoy - saldo inicial del mes (aprox. hasta hoy)
+  const netoMes_MP = saldoDisponibleHoy_MP - saldoInicialMes_MP;
 
   return (
     <div className="p-3">
@@ -433,14 +452,17 @@ const ReportsMovilView = () => {
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-800">💰 Saldo Total Disponible</span>
-            <span className="text-2xl font-bold text-green-700">${saldoTotalAcumulado.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="text-2xl font-bold text-green-700">${clampedDisponibleTotal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600 bg-white bg-opacity-60 rounded px-2 py-1">
-            <span>💵 Efectivo: <b>${saldoTotalAcumulado.efectivo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
-            <span>💳 Mercado Pago: <b>${saldoTotalAcumulado.mercadoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+            <span>💵 Efectivo: <b>${clampedDisponibleEfectivo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+            <span>💳 Mercado Pago: <b>${clampedDisponibleMP.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
           </div>
           <div className="text-xs text-gray-600 mt-1 font-medium">
-            ✅ Saldo real acumulado desde el inicio hasta hoy, considerando todas las operaciones.
+            ✅ Saldo disponible (no negativo) acumulado desde el inicio hasta hoy.
+            {wasClampedDisponible && (
+              <span className="ml-1 text-red-600">(se evitó mostrar valores negativos)</span>
+            )}
           </div>
         </div>
       </div>
@@ -458,6 +480,47 @@ const ReportsMovilView = () => {
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Movimientos únicamente del mes actual.
+          </div>
+          {/* Auditoría breve para despejar dudas de diferencia entre MP disponible y del mes */}
+          <div className="mt-2 p-2 rounded bg-blue-50 text-[11px] text-blue-900">
+            <div className="font-semibold mb-1">Auditoría MP (rápida)</div>
+            <div className="flex flex-wrap gap-2">
+              <span>Saldo inicial mes MP: <b>${saldoInicialMes_MP.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+              <span>Neto del mes MP: <b>${netoMes_MP.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+              <span>Saldo disponible hoy MP: <b>${saldoDisponibleHoy_MP.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <span>Fórmula: inicial + neto ≈ disponible.</span>
+              <button onClick={() => setShowMpDetail(v => !v)} className="ml-auto text-blue-700 underline">{showMpDetail ? 'ocultar detalle' : 'ver detalle'}</button>
+            </div>
+            {showMpDetail && (
+              <div className="mt-2 overflow-x-auto">
+                <table className="min-w-[420px] w-full text-[11px]">
+                  <thead>
+                    <tr className="bg-blue-100">
+                      <th className="p-1 text-left">Mes</th>
+                      <th className="p-1 text-right">Inicio</th>
+                      <th className="p-1 text-right">Ingresos</th>
+                      <th className="p-1 text-right">Egresos</th>
+                      <th className="p-1 text-right">Neto</th>
+                      <th className="p-1 text-right">Cierre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mpMonthly.map(row => (
+                      <tr key={row.key}>
+                        <td className="p-1">{row.key}</td>
+                        <td className="p-1 text-right">{row.start.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right">{row.inflow.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right">{row.outflow.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right">{row.net.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right font-semibold">{row.end.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

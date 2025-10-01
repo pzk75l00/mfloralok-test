@@ -9,6 +9,7 @@
  *  --type=venta|compra|ingreso|egreso|gasto (opcional)
  *  --cash=33000 --mp=15500 (montos para Efectivo y MercadoPago)
  *  --split=true|false (default true): si hay varias coincidencias, prorratea según total de cada doc
+ *  --round=0.01|1|10 (default 0.01): paso de redondeo; 1 para pesos enteros, 10 para múltiplos de 10
  *  --dry (no escribe)
  *  --force (aplica aunque la suma cash+mp no coincida con el total del doc; útil con split)
  *
@@ -62,7 +63,10 @@ function pickText(m) {
   return [m.detail, m.notes, m.plantName, m.location].filter(Boolean).join(' ').toLowerCase();
 }
 
-function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+function roundToStep(n, step) {
+  const s = Number(step) || 0.01;
+  return Math.round((n) / s) * s;
+}
 
 (async function main() {
   const opts = parseArgs();
@@ -76,6 +80,7 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
   const cash = normalizeNumber(opts.cash);
   const mp = normalizeNumber(opts.mp);
   const split = opts.split !== 'false';
+  const roundStep = opts.round ? Number(opts.round) : 0.01; // 1 => pesos enteros
   const dry = !!opts.dry;
   const force = !!opts.force;
 
@@ -88,7 +93,7 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
     process.exit(1);
   }
 
-  console.log('Buscando movimientos…', { id, ids, search, date: dateStr, from: from?.toISOString(), to: to?.toISOString(), type, cash, mp, split, dry, force });
+  console.log('Buscando movimientos…', { id, ids, search, date: dateStr, from: from?.toISOString(), to: to?.toISOString(), type, cash, mp, split, round: roundStep, dry, force });
 
   const snap = await getDocs(collection(db, 'movements'));
   let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -140,10 +145,10 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
         continue;
       }
       const pm = {
-        efectivo: round2(cash),
-        mercadoPago: round2(mp),
-        transferencia: round2(m.paymentMethods?.transferencia || 0),
-        tarjeta: round2(m.paymentMethods?.tarjeta || 0)
+        efectivo: roundToStep(cash, roundStep),
+        mercadoPago: roundToStep(mp, roundStep),
+        transferencia: roundToStep(m.paymentMethods?.transferencia || 0, roundStep),
+        tarjeta: roundToStep(m.paymentMethods?.tarjeta || 0, roundStep)
       };
       updates.push({ m, pm });
     }
@@ -158,21 +163,21 @@ function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
     for (let i = 0; i < items.length; i++) {
       const m = items[i];
       const weight = normalizeNumber(m.total) / sumTotals;
-      let c = round2(cash * weight);
-      let p = round2(mp * weight);
+      let c = roundToStep(cash * weight, roundStep);
+      let p = roundToStep(mp * weight, roundStep);
       accCash += c; accMp += p;
       // Ajuste al último para cuadrar centavos
       if (i === items.length - 1) {
-        const deltaC = round2(cash - accCash);
-        const deltaP = round2(mp - accMp);
-        c = round2(c + deltaC);
-        p = round2(p + deltaP);
+        const deltaC = roundToStep(cash - accCash, roundStep);
+        const deltaP = roundToStep(mp - accMp, roundStep);
+        c = roundToStep(c + deltaC, roundStep);
+        p = roundToStep(p + deltaP, roundStep);
       }
       const pm = {
         efectivo: c,
         mercadoPago: p,
-        transferencia: round2(m.paymentMethods?.transferencia || 0),
-        tarjeta: round2(m.paymentMethods?.tarjeta || 0)
+        transferencia: roundToStep(m.paymentMethods?.transferencia || 0, roundStep),
+        tarjeta: roundToStep(m.paymentMethods?.tarjeta || 0, roundStep)
       };
       updates.push({ m, pm });
     }

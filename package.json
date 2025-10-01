@@ -31,7 +31,12 @@
     "clean-duplicates": "node clean_mixed_payment_duplicates.js",
     "clean-duplicates-force": "node clean_mixed_payment_duplicates.js --clean",
   "analyze-duplicates": "node clean_mixed_payment_duplicates.js",
-  "export:plan-docx": "node scripts/export_plan_to_docx.js"
+  "export:plan-docx": "node scripts/export_plan_to_docx.js",
+  "audit:mp": "node audit_mp.js",
+  "audit:balances": "node audit_balances.js",
+  "audit:month-future": "node audit_month_future.js",
+  "audit:normalized": "node audit_balances_normalized.js",
+  "audit:mp-inicial": "node audit_mp_initial_breakdown.js"
   },
   "browserslist": {
     "production": [

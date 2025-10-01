@@ -111,9 +111,8 @@ const StatisticsView = () => {
     // Calcular saldo total acumulado ANTES de usarlo en logs y KPIs
     const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
     
-    // USAR SALDO TOTAL ACUMULADO CORRECTO EN KPIs TAMBIÉN
-    console.log('”¥ ACTUALIZANDO KPIs CON SALDO CORRECTO:', { efectivo: saldoTotalAcumulado.efectivo, mp: saldoTotalAcumulado.mercadoPago });
-    setKpis({ ventas, compras, ingresos, egresos, gastos, efectivo: saldoTotalAcumulado.efectivo, mp: saldoTotalAcumulado.mercadoPago });
+  // USAR SALDO TOTAL ACUMULADO CORRECTO EN KPIs TAMBIÉN
+  setKpis({ ventas, compras, ingresos, egresos, gastos, efectivo: saldoTotalAcumulado.efectivo, mp: saldoTotalAcumulado.mercadoPago });
 
     // --- ANÃLISIS DE RENTABILIDAD POR PRODUCTO ---
     const productStats = {};
@@ -177,22 +176,7 @@ const StatisticsView = () => {
     setDailyCashFlow(Object.values(dailyFlow));
 
     // --- ANÁLISIS DE MÉTODOS DE PAGO - SALDO TOTAL ACUMULADO ---
-    console.log(' ESTADÍSTICAS ESCRITORIO - NUEVA VERSIÓN CORREGIDA ');
-    console.log(' DIAGNÓSTICO ESTADÍSTICAS ESCRITORIO - Calculando saldo total acumulado...');
-    console.log(' Total de movimientos para análisis:', movements.length);
-    
-    // USAR LA FUNCIÓN ORIGINAL QUE YA FUNCIONABA CORRECTAMENTE
-    // const saldoTotalAcumulado = calculateBalanceByPaymentMethod(movements);
-    console.log('”¥ RESULTADO ESTADÍSTICAS ESCRITORIO - SALDO TOTAL ACUMULADO:', saldoTotalAcumulado);
-    console.log('”¥”¥”¥ VALOR QUE SE ESTÁ USANDO EN LA INTERFAZ:', saldoTotalAcumulado);
-    
-    // VERIFICAR QUE ESTOS SON LOS VALORES CORRECTOS (deben ser ~64500)
-    if (saldoTotalAcumulado.total > 200000) {
-      console.error('âŒ ERROR: Los valores siguen siendo incorrectos!');
-      console.error('âŒ Se esperaba ~$64,500 pero se obtuvo:', saldoTotalAcumulado.total);
-    } else {
-      console.log('… CORRECTO: Los valores son los esperados (~$64,500)');
-    }
+    // Logs de diagnóstico removidos para producción
     
     // TambiÃ©n calcular las ventas del mes para comparaciÃ³n (mantener para otros gráficos)
     let ventasEfectivoMes = 0, ventasMPMes = 0;
@@ -213,11 +197,7 @@ const StatisticsView = () => {
       }
     });
     
-    console.log('”¥ COMPARACIÃ“N - Ventas del mes:');
-    console.log('”¥ - Movimientos de venta del mes:', movimientosVentasDelMes);
-    console.log('”¥ - Ventas efectivo del mes:', ventasEfectivoMes);
-    console.log('”¥ - Ventas MP del mes:', ventasMPMes);
-    console.log('”¥ AHORA USANDO SALDO TOTAL ACUMULADO EN LA INTERFAZ');
+  // Logs de comparación removidos
     
     // CAMBIO IMPORTANTE: Usar saldo total acumulado en lugar de ventas del mes
     setPaymentMethodStats({ 
@@ -728,7 +708,7 @@ const StatisticsView = () => {
       {/* SEPARADOR VISUAL FUERTE PARA ANÁLISIS HISTÓRICO */}
       <div className="my-10 border-t-4 border-gray-300 relative">
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-4">
-          <span className="text-gray-500 font-medium">“ˆ</span>
+          <span className="text-gray-500 font-medium">•</span>
         </div>
       </div>
       
@@ -863,7 +843,7 @@ const StatisticsView = () => {
               <tbody>
                 {productProfitability.map((product, idx) => (
                   <tr key={product.name} className={idx === 0 ? 'bg-green-100 font-semibold' : idx < 3 ? 'bg-green-50' : ''}>
-                    <td className="px-3 py-2">{idx === 0 ? '† ' : ''}{product.name}</td>
+                    <td className="px-3 py-2">{idx === 0 ? '🏆 ' : ''}{product.name}</td>
                     <td className="px-3 py-2 text-right">{product.quantitySold}</td>
                     <td className="px-3 py-2 text-right text-green-700">${product.revenue.toLocaleString('es-AR')}</td>
                     <td className="px-3 py-2 text-right text-red-600">${product.cost.toLocaleString('es-AR')}</td>
@@ -1082,7 +1062,7 @@ const StatisticsView = () => {
               <tbody>
                 {locationAnalysis.map((location, idx) => (
                   <tr key={location.name} className={idx === 0 ? 'bg-purple-100 font-semibold' : idx < 3 ? 'bg-purple-50' : ''}>
-                    <td className="px-3 py-2">{idx === 0 ? '† ' : ''}{location.name}</td>
+                    <td className="px-3 py-2">{idx === 0 ? '🏆 ' : ''}{location.name}</td>
                     <td className="px-3 py-2 text-right">{location.totalSales}</td>
                     <td className="px-3 py-2 text-right text-green-700">${location.totalRevenue.toLocaleString('es-AR')}</td>
                     <td className="px-3 py-2 text-right">{location.totalQuantity}</td>
@@ -1330,8 +1310,6 @@ const StatisticsView = () => {
                       <td className="px-3 py-2">
                         {idx === 0 ? '' : ''}
                         {product.name}
-                        {product.adjustedROI > 100 && <span className="ml-1 text-green-600">$</span>}
-                        {product.adjustedROI < 0 && <span className="ml-1 text-red-600">$</span>}
                       </td>
                       <td className="px-3 py-2 text-right text-red-600">
                         ${product.totalInvested.toLocaleString('es-AR')}
@@ -1350,13 +1328,26 @@ const StatisticsView = () => {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right font-bold text-lg">
-                        <span className={
-                          product.adjustedROI >= 50 ? 'text-green-700' :
-                          product.adjustedROI >= 20 ? 'text-blue-700' :
-                          product.adjustedROI >= 0 ? 'text-yellow-700' : 'text-red-700'
-                        }>
-                          {product.adjustedROI.toFixed(1)}%
-                        </span>
+                        {(() => {
+                          const roi = product.adjustedROI ?? 0;
+                          const textClass = roi >= 50 ? 'text-green-700' : roi >= 20 ? 'text-blue-700' : roi >= 0 ? 'text-yellow-700' : 'text-red-700';
+                          const label = roi >= 50 ? 'Alto' : roi >= 20 ? 'Medio' : roi >= 0 ? 'Bajo' : 'Negativo';
+                          const badgeClass = roi >= 50
+                            ? 'bg-green-100 text-green-700 border-green-300'
+                            : roi >= 20
+                              ? 'bg-blue-100 text-blue-700 border-blue-300'
+                              : roi >= 0
+                                ? 'bg-yellow-100 text-yellow-700 border-yellow-300'
+                                : 'bg-red-100 text-red-700 border-red-300';
+                          return (
+                            <>
+                              <span className={textClass}>{roi.toFixed(1)}%</span>
+                              <span className={`ml-2 inline-block px-2 py-0.5 text-xs font-semibold rounded border ${badgeClass}`}>
+                                {label}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <span className={
@@ -1473,15 +1464,15 @@ const StatisticsView = () => {
           <h2 className="text-lg font-semibold mb-4">💰 Saldo Total Disponible</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-white bg-opacity-60 rounded">
-              <span className="font-medium">’µ Efectivo</span>
+              <span className="font-medium">Efectivo</span>
               <span className="font-bold text-green-700">${paymentMethodStats.efectivo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-white bg-opacity-60 rounded">
-              <span className="font-medium">“± Mercado Pago</span>
+              <span className="font-medium">Mercado Pago</span>
               <span className="font-bold text-purple-700">${paymentMethodStats.mercadoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-blue-100 rounded border-2 border-blue-300">
-              <span className="font-bold">’° Total Disponible</span>
+              <span className="font-bold">Total Disponible</span>
               <span className="font-bold text-blue-700">${(paymentMethodStats.efectivo + paymentMethodStats.mercadoPago).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="text-xs text-gray-600 mt-2 font-medium bg-white bg-opacity-60 rounded p-2">

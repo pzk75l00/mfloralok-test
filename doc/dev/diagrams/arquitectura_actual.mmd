@@ -1,0 +1,45 @@
+%% Arquitectura Actual (Mermaid)
+%% Abrir en VSCode (Markdown Preview Mermaid) o usar https://mermaid.live
+
+graph TD
+  subgraph UI[UI / Components]
+    MV[MovementsView]
+    RM[ReportsMovilView]
+    SM[SalesMovil]
+    PM[PurchasesMovil]
+    INV[InventoryView]
+  end
+
+  subgraph Utils[Utils (mezcla dominio + helpers)]
+    BAL[balanceCalculations]
+    MIX[mixedPaymentUtils]
+    PROD[productManagement]
+  end
+
+  subgraph Firebase[Firebase Infra]
+    CFG[firebaseConfig]
+    FS[(Firestore)]
+  end
+
+  Scripts[scripts & auditorias]
+  Docs[docs / rules]
+
+  MV --> BAL
+  RM --> BAL
+  SM --> MIX
+  PM --> PROD
+  INV --> PROD
+
+  MV --> FS
+  RM --> FS
+  SM --> FS
+  PM --> FS
+  INV --> FS
+
+  BAL --> FS
+  MIX --> FS
+  PROD --> FS
+
+  Scripts --> FS
+  Docs --> CFG
+  CFG --> FS

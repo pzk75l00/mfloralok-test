@@ -34,10 +34,11 @@ Configurar en el proyecto de Vercel (Environment Variables):
 Notas:
 - Agregar el dominio de Vercel y el dominio propio a “Authorized domains” en Firebase Auth.
 - Cargar variables en “Production”.
+ - Importante: se deprecó el uso de variables legacy REACT_APP_* (sin "FIREBASE"). Sólo funcionan las REACT_APP_FIREBASE_*.
 
 ## 3) Firebase — Setup
 
-1. Crear/usar proyecto y app web; copiar la configuración a REACT_APP_*
+1. Crear/usar proyecto y app web; copiar la configuración a REACT_APP_FIREBASE_*
 2. Authentication: habilitar Email/Password (u otros), agregar dominios autorizados
 3. Firestore: habilitar DB; desplegar reglas e índices usando:
    - firestore.rules
@@ -49,7 +50,7 @@ Notas:
 ## 4) Vercel — Setup
 
 - vercel.json ya preparado (SPA + CI=false en build)
-- Crear proyecto en Vercel y cargar REACT_APP_*
+- Crear proyecto en Vercel y cargar REACT_APP_FIREBASE_*
 - Asignar dominio/alias del cliente (DNS -> Vercel)
 
 Comandos útiles:
@@ -104,7 +105,7 @@ Notas:
 ## 10) Troubleshooting rápido
 
 - No se ven cambios: refresco fuerte; SW ya evita caché persistente
-- Error Auth: dominio no autorizado o variables REACT_APP_* incorrectas
+- Error Auth: dominio no autorizado o variables REACT_APP_FIREBASE_* incorrectas
 - Build falla por ESLint: vercel.json fuerza CI=false; idealmente bajar warnings en código
 - 403 Firestore: reglas no desplegadas o permisos insuficientes
 
@@ -113,7 +114,7 @@ Checklist final:
 - [ ] Firebase creado, Auth y dominios OK
 - [ ] Firestore reglas/índices OK
 - [ ] paymentMethods seed
-- [ ] REACT_APP_* en Vercel
+- [ ] REACT_APP_FIREBASE_* en Vercel
 - [ ] Deploy prod + alias
 - [ ] Smoke test OK
 - [ ] Accesos y guía entregados
