@@ -36,7 +36,9 @@
   "audit:balances": "node audit_balances.js",
   "audit:month-future": "node audit_month_future.js",
   "audit:normalized": "node audit_balances_normalized.js",
-  "audit:mp-inicial": "node audit_mp_initial_breakdown.js"
+  "audit:mp-inicial": "node audit_mp_initial_breakdown.js",
+  "report:consistentes": "node report_monthly_consistent_products.js",
+  "report:nunca-vendidos": "node report_products_never_sold.js"
   },
   "browserslist": {
     "production": [

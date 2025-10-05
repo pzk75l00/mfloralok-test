@@ -47,12 +47,91 @@ const StatisticsView = () => {
   
   // Estado para ROI por producto
   const [productROI, setProductROI] = useState([]);
+  // Reportes especiales
+  const [consistentProducts, setConsistentProducts] = useState([]); // Productos vendidos en TODOS los meses con ventas
+  const [neverSoldProducts, setNeverSoldProducts] = useState([]);   // Productos con stock > 0 y nunca vendidos
+
+  // Utilidades internas para reportes
+  function computeMonthlyConsistentProducts(movs) {
+    const sales = movs.filter(m => m.type === 'venta' && m.plantId && m.date);
+    if (sales.length === 0) return [];
+    const monthToSet = new Map(); // mes => Set(plantId)
+    sales.forEach(s => {
+      const d = new Date(s.date);
+      if (isNaN(d.getTime())) return;
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!monthToSet.has(key)) monthToSet.set(key, new Set());
+      monthToSet.get(key).add(String(s.plantId));
+    });
+    const months = [...monthToSet.keys()].sort();
+    if (months.length === 0) return [];
+    let intersection = new Set(monthToSet.get(months[0]));
+    for (let i = 1; i < months.length; i++) {
+      const current = monthToSet.get(months[i]);
+      intersection = new Set([...intersection].filter(x => current.has(x)));
+      if (intersection.size === 0) break;
+    }
+    // Mapear a nombre de planta
+    return [...intersection].map(id => {
+      const plant = plants.find(p => String(p.id) === String(id));
+      return { id, name: plant ? plant.name : '(sin nombre)' };
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }
+
+  function computeNeverSold(plantsList, movs) {
+    const soldIds = new Set(movs.filter(m => m.type === 'venta' && m.plantId).map(m => String(m.plantId)));
+    return plantsList
+      .filter(p => (Number(p.stock) || 0) > 0 && !soldIds.has(String(p.id)))
+      .map(p => ({ id: p.id, name: p.name, stock: Number(p.stock) || 0 }))
+      .sort((a,b) => a.name.localeCompare(b.name));
+  }
+
+  function exportCSV(rows, headers, filename) {
+    if (!rows || rows.length === 0) return;
+    const headerLine = headers.map(h => '"' + h.label + '"').join(',');
+    const bodyLines = rows.map(r => headers.map(h => '"' + (r[h.key] ?? '') + '"').join(','));
+    const csv = [headerLine, ...bodyLines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const handleExportConsistent = () => {
+    exportCSV(consistentProducts, [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Nombre' }
+    ], 'productos_vendidos_todos_los_meses.csv');
+  };
+
+  const handleExportNeverSold = () => {
+    exportCSV(neverSoldProducts, [
+      { key: 'id', label: 'ID' },
+      { key: 'name', label: 'Nombre' },
+      { key: 'stock', label: 'Stock' }
+    ], 'productos_nunca_vendidos_con_stock.csv');
+  };
+
+  const recomputeSpecialReports = () => {
+    setConsistentProducts(computeMonthlyConsistentProducts(movements));
+    setNeverSoldProducts(computeNeverSold(plants, movements));
+  };
 
   // AÃ±o actual y anterior
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
   const prevYear = currentYear - 1;
+
+  useEffect(() => {
+    // Recalcular reportes especiales cuando cambian datos base
+    if (movements.length || plants.length) {
+      recomputeSpecialReports();
+    }
+  }, [movements, plants]);
 
   useEffect(() => {
     const unsubMovements = onSnapshot(collection(db, 'movements'), (snapshot) => {
@@ -1515,6 +1594,83 @@ const StatisticsView = () => {
               <div className="text-gray-500 text-center py-4">No hay ventas en el mes actual.</div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Reportes Especiales */}
+      <div className="bg-white rounded shadow p-4 mb-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 className="text-lg font-semibold">🧾 Reportes Especiales</h2>
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={recomputeSpecialReports} className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded">🔄 Recalcular</button>
+            <button onClick={handleExportConsistent} disabled={!consistentProducts.length} className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded">⬇️ Export Consistentes</button>
+            <button onClick={handleExportNeverSold} disabled={!neverSoldProducts.length} className="px-3 py-1 text-sm bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded">⬇️ Export Nunca Vendidos</button>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-medium mb-2">✅ Productos vendidos TODOS los meses ({consistentProducts.length})</h3>
+            {consistentProducts.length ? (
+              <div className="max-h-56 overflow-auto border rounded">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left px-2 py-1">ID</th>
+                      <th className="text-left px-2 py-1">Nombre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consistentProducts.slice(0,200).map(p => (
+                      <tr key={p.id} className="border-b last:border-0">
+                        <td className="px-2 py-1 font-mono text-xs">{p.id}</td>
+                        <td className="px-2 py-1">{p.name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {consistentProducts.length > 200 && (
+                  <div className="text-xs text-gray-500 p-2">Mostrando primeros 200 de {consistentProducts.length}</div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No hay productos que cumplan con todos los meses.</p>
+            )}
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2">🟣 Con stock y nunca vendidos ({neverSoldProducts.length})</h3>
+            {neverSoldProducts.length ? (
+              <div className="max-h-56 overflow-auto border rounded">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left px-2 py-1">ID</th>
+                      <th className="text-left px-2 py-1">Nombre</th>
+                      <th className="text-right px-2 py-1">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {neverSoldProducts.slice(0,200).map(p => (
+                      <tr key={p.id} className="border-b last:border-0">
+                        <td className="px-2 py-1 font-mono text-xs">{p.id}</td>
+                        <td className="px-2 py-1">{p.name}</td>
+                        <td className="px-2 py-1 text-right">{p.stock}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {neverSoldProducts.length > 200 && (
+                  <div className="text-xs text-gray-500 p-2">Mostrando primeros 200 de {neverSoldProducts.length}</div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No hay productos con stock que nunca se hayan vendido.</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-gray-500 space-y-1">
+          <p><strong>Consistentes:</strong> aparecen al menos una vez en cada mes con ventas registradas.</p>
+          <p><strong>Nunca vendidos:</strong> stock &gt; 0 y cero movimientos de tipo venta.</p>
         </div>
       </div>
 
