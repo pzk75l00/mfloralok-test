@@ -4,6 +4,7 @@ import { db } from '../../firebase/firebaseConfig';
 // import getNow from '../../utils/mockDate'; // Eliminar mock
 import MovementsView from '../Base/MovementsView';
 import { calculateDetailedTotals, calculateAvailableTotalsFromFiltered } from '../../utils/balanceCalculations';
+import { dlog } from '../../utils/debug';
 import PropTypes from 'prop-types';
 
 // Vista móvil para Caja: muestra totales del día y formulario
@@ -77,9 +78,7 @@ const CashMovilView = (props) => {
 
   // --- Totales del mes o del día ---
   // Usar la función reutilizable de utils
-  console.log('🔥 DIAGNÓSTICO CASH MÓVIL - Calculando totales...');
-  console.log('🔥 Movimientos para el día:', movementsToday.length);
-  console.log('🔥 Movimientos hasta fin del mes:', movementsUpToMonthEnd.length);
+  dlog('CASH_MOVIL diagnostico', { day: movementsToday.length, monthAccum: movementsUpToMonthEnd.length });
   // Totales acumulados hasta el fin de mes seleccionado (base para mostrar SALDO disponible)
   const totalsAccumulated = calculateAvailableTotalsFromFiltered(movementsUpToMonthEnd);
   const cantidadProductosVendidosMes = movementsThisMonth
@@ -103,10 +102,9 @@ const CashMovilView = (props) => {
         pm: m.paymentMethods,
         mpAmount: (m.paymentMethods && m.paymentMethods.mercadoPago) ? m.paymentMethods.mercadoPago : (m.paymentMethod === 'mercadoPago' ? m.total : 0)
       }));
-      console.log('🔎 MovementsToday detalle MP:', debugList);
       const sumDeclared = debugList.reduce((s, x) => s + (parseFloat(x.mpAmount)||0) * (x.type==='compra'||x.type==='egreso'||x.type==='gasto'?-1:1), 0);
-      console.log('🔎 Suma MP declarada (signada):', sumDeclared);
-    } catch(e) { console.log('Diag movementsToday error', e); }
+      dlog('MovementsToday MP detalle', debugList, 'sumSignada', sumDeclared);
+    } catch(e) { dlog('Diag movementsToday error', e); }
   }
 
   if (dailyTotalsRaw) {
@@ -120,7 +118,7 @@ const CashMovilView = (props) => {
   // Si no hay movimientos hoy -> mostrar saldo disponible acumulado del mes hasta hoy.
   const showDayTotals = !!dailyTotalsRaw;
   const totals = showDayTotals ? dailyTotalsRaw : totalsAccumulated;
-  console.log('🧮 MOSTRANDO', showDayTotals ? 'TOTALES DEL DÍA' : 'SALDO ACUMULADO', totals);
+  dlog('Mostrar totals', showDayTotals ? 'DIA' : 'ACUM', totals);
 
   // Forzar recarga de movimientos tras registrar uno nuevo
   const handleMovementAdded = (...args) => {

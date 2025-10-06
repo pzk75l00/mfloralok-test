@@ -1,6 +1,7 @@
 // Utilidades para manejar pagos combinados
 import { db } from '../firebase/firebaseConfig';
 import { collection, doc, updateDoc, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { dlog } from './debug';
 
 // Configuración de métodos de pago por defecto (fallback)
 export const DEFAULT_PAYMENT_METHODS = {
@@ -528,18 +529,10 @@ export const analyzeMixedPaymentDuplicates = (movements) => {
 export const generateDuplicateReport = (movements) => {
   const analysis = analyzeMixedPaymentDuplicates(movements);
   
-  console.log('🔍 ANÁLISIS DE DUPLICADOS DE PAGOS MIXTOS:');
-  console.log(`📊 Total pagos mixtos: ${analysis.totalMixedPayments}`);
-  console.log(`🚨 Grupos duplicados: ${analysis.duplicateGroups.length}`);
-  console.log(`⚠️ Total duplicados: ${analysis.totalDuplicates}`);
+  dlog('ANALISIS DUP MIXTOS', { total: analysis.totalMixedPayments, grupos: analysis.duplicateGroups.length, dups: analysis.totalDuplicates });
   
   analysis.duplicateGroups.forEach((group, index) => {
-    console.log(`\n🔸 Grupo ${index + 1}:`);
-    console.log(`   Tipo: ${group.type}`);
-    console.log(`   Total: $${group.total}`);
-    console.log(`   Repeticiones: ${group.count} veces`);
-    console.log(`   Distribución:`, group.paymentMethods);
-    console.log(`   IDs:`, group.movements.map(m => m.id));
+    dlog('GrupoDuplicado', { idx: index+1, tipo: group.type, total: group.total, rep: group.count, dist: group.paymentMethods, ids: group.movements.map(m=>m.id) });
   });
   
   return analysis;

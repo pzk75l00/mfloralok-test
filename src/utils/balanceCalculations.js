@@ -8,6 +8,7 @@ import {
   generateDuplicateReport,
   calculateDuplicateImpact
 } from './mixedPaymentUtils.js';
+import { dlog } from './debug';
 
 /**
  * Calcula el saldo total acumulado desde el inicio hasta la fecha actual
@@ -18,7 +19,7 @@ import {
 export const calculateTotalBalance = (movements, paymentMethod = null) => {
   if (!movements || movements.length === 0) return 0;
 
-  console.log(`🔍 calculateTotalBalance called with ${movements.length} movements, paymentMethod: ${paymentMethod}`);
+  dlog('calculateTotalBalance', { count: movements.length, paymentMethod });
 
   // CRITICAL FIX: Remove duplicates by ID first
   const uniqueMovements = movements.reduce((acc, movement) => {
@@ -31,9 +32,7 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
     return acc;
   }, []);
 
-  if (uniqueMovements.length !== movements.length) {
-    console.log(`⚠️ REMOVED ${movements.length - uniqueMovements.length} DUPLICATE MOVEMENTS!`);
-  }
+  if (uniqueMovements.length !== movements.length) dlog('removed duplicates', movements.length - uniqueMovements.length);
 
   // Optional: filter likely duplicate mixed-payments created within a short window
   const byDate = [...uniqueMovements].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
@@ -92,9 +91,7 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
       if (prevProductSig !== productSignature) return false;
       return true;
     });
-    if (!isDup) filtered.push(curr); else {
-      console.log('🟡 Heurística duplicado ignorado (solo ventas/ingresos):', { id: curr.id, type: curr.type, total: currTotal });
-    }
+    if (!isDup) filtered.push(curr); else dlog('dup heuristic ignored', { id: curr.id, type: curr.type, total: currTotal });
   }
 
   // Use the new mixed payment calculation function sobre la lista filtrada
@@ -127,18 +124,9 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
   });
 
   // Log summary
-  console.log(`📊 RESUMEN para ${paymentMethod || 'TODOS LOS MÉTODOS'}:`);
-  console.log(`   💰 Ventas: $${totalVentas}`);
-  console.log(`   🛒 Compras: $${totalCompras}`);
-  console.log(`   📤 Egresos: $${totalEgresos}`);
-  console.log(`   💸 Gastos: $${totalGastos}`);
-  console.log(`   📥 Ingresos: $${totalIngresos}`);
-  console.log(`   🔢 Balance: $${balance}`);
+  dlog('RESUMEN balance', { scope: paymentMethod || 'ALL', totalVentas, totalCompras, totalEgresos, totalGastos, totalIngresos, balance });
   
-  if (largeTransactions.length > 0) {
-    console.log(`   🚨 TRANSACCIONES GRANDES (>=50K): ${largeTransactions.length}`);
-    largeTransactions.slice(0, 15).forEach(t => console.log(`     - ${t.type}: $${t.amount}`));
-  }
+  if (largeTransactions.length > 0) dlog('large tx', largeTransactions.slice(0,15));
 
   return balance;
 };
@@ -192,40 +180,29 @@ export const calculateBalanceUntilDateNormalized = (movements, dateLimit, paymen
  * @returns {Object} - { efectivo: number, mercadoPago: number, total: number }
  */
 export const calculateBalanceByPaymentMethod = (movements) => {
-  console.log(`💰 calculateBalanceByPaymentMethod called with ${movements?.length || 0} movements`);
+  dlog('calculateBalanceByPaymentMethod', movements?.length || 0);
   
   // Log some sample data to understand the structure
   if (movements && movements.length > 0) {
-    console.log('🔍 Sample movement:', movements[0]);
-    console.log('🔍 Movement types:', [...new Set(movements.map(m => m.type))]);
+  dlog('Sample movement', movements[0]);
+  dlog('Movement types', [...new Set(movements.map(m => m.type))]);
     
     // Check for mixed payments
     const mixedPayments = movements.filter(m => m.paymentMethods);
     const oldFormatPayments = movements.filter(m => !m.paymentMethods && m.paymentMethod);
-    console.log(`🔍 Formato mixto (paymentMethods): ${mixedPayments.length} movimientos`);
-    console.log(`🔍 Formato antiguo (paymentMethod): ${oldFormatPayments.length} movimientos`);
+  dlog('Formato mixto count', mixedPayments.length, 'formato antiguo', oldFormatPayments.length);
     
     // Sample mixed payment if exists
     if (mixedPayments.length > 0) {
-      console.log('💳 Ejemplo pago mixto:', {
-        type: mixedPayments[0].type,
-        total: mixedPayments[0].total,
-        paymentMethods: mixedPayments[0].paymentMethods
-      });
+      dlog('Ejemplo pago mixto', { type: mixedPayments[0].type, total: mixedPayments[0].total, pm: mixedPayments[0].paymentMethods });
       
       // ANÁLISIS DE DUPLICADOS DE PAGOS MIXTOS
-      console.log('\n🚨 ANALIZANDO DUPLICADOS DE PAGOS MIXTOS...');
+  dlog('Analizando duplicados pagos mixtos');
       const duplicateAnalysis = generateDuplicateReport(movements);
       
       if (duplicateAnalysis.duplicateGroups.length > 0) {
         const impact = calculateDuplicateImpact(movements);
-        console.log('\n💸 IMPACTO FINANCIERO DE DUPLICADOS:');
-        console.log(`   🔴 Impacto en Efectivo: +$${impact.impactEffectivo} (recuperables)`);
-        console.log(`   🔴 Impacto en MercadoPago: +$${impact.impactMercadoPago} (recuperables)`);
-        console.log(`   🔴 Impacto Total: +$${impact.totalImpact} (al eliminar duplicados)`);
-        console.log('\n✅ BALANCE CORREGIDO SERÍA:');
-        console.log(`   Efectivo actual: balance calculado + $${impact.impactEffectivo}`);
-        console.log(`   MercadoPago actual: balance calculado + $${impact.impactMercadoPago}`);
+        dlog('Impacto duplicados', impact);
       }
     }
     
@@ -233,20 +210,20 @@ export const calculateBalanceByPaymentMethod = (movements) => {
     const ids = movements.map(m => m.id).filter(Boolean);
     const uniqueIds = [...new Set(ids)];
     if (ids.length !== uniqueIds.length) {
-      console.log('⚠️ DUPLICATE IDs DETECTED!', 'Total movements:', movements.length, 'Unique IDs:', uniqueIds.length);
+  dlog('Duplicate IDs', { total: movements.length, unique: uniqueIds.length });
     }
     
     // Check date range
     const dates = movements.map(m => m.date).filter(Boolean).sort();
     if (dates.length > 0) {
-      console.log('🔍 Date range:', dates[0], '...', dates[dates.length - 1]);
+  dlog('Date range', dates[0], dates[dates.length - 1]);
     }
   }
   
   const efectivo = calculateTotalBalance(movements, 'efectivo');
   const mercadoPago = calculateTotalBalance(movements, 'mercadoPago');
   
-  console.log(`💰 Resultado - Efectivo: ${efectivo}, MercadoPago: ${mercadoPago}, Total: ${efectivo + mercadoPago}`);
+  dlog('Resultado métodos', { efectivo, mercadoPago, total: efectivo + mercadoPago });
   
   return {
     efectivo,
@@ -303,7 +280,7 @@ export const calculatePeriodBalance = (movements, period, referenceDate = new Da
  * @returns {Object} - Totales detallados incluyendo gastos
  */
 export const calculateDetailedTotals = (movements) => {
-  console.log('🔥 calculateDetailedTotals - Total movimientos:', movements.length);
+  dlog('calculateDetailedTotals count', movements.length);
   const ventasEfectivo = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
   const ventasMP = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
   const comprasEfectivo = movements.filter(m => m.type === 'compra').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
@@ -315,14 +292,14 @@ export const calculateDetailedTotals = (movements) => {
   const gastosEfectivo = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'efectivo'), 0);
   const gastosMP = movements.filter(m => m.type === 'gasto').reduce((sum, m) => sum + getMovementAmountForPaymentMethod(m, 'mercadoPago'), 0);
   
-  console.log('🔥 calculateDetailedTotals EFECTIVO:', {
+  dlog('calculateDetailedTotals EFECTIVO', {
     ventas: ventasEfectivo,
     compras: comprasEfectivo,
     ingresos: ingresosEfectivo,
     egresos: egresosEfectivo,
     gastos: gastosEfectivo
   });
-  console.log('🔥 calculateDetailedTotals MERCADO PAGO:', {
+  dlog('calculateDetailedTotals MP', {
     ventas: ventasMP,
     compras: comprasMP,
     ingresos: ingresosMP,
@@ -335,7 +312,7 @@ export const calculateDetailedTotals = (movements) => {
   const cajaMP = ingresosMP + ventasMP - comprasMP - egresosMP - gastosMP;
   const totalGeneral = cajaFisica + cajaMP;
   
-  console.log('🔥 calculateDetailedTotals RESULTADO FINAL:', {
+  dlog('calculateDetailedTotals resultado', {
     cajaFisica,
     cajaMP,
     totalGeneral
@@ -393,9 +370,9 @@ export const calculateAvailableTotalsFromFiltered = (movements) => {
       mp: (m.paymentMethods && m.paymentMethods.mercadoPago) ? m.paymentMethods.mercadoPago : (m.paymentMethod==='mercadoPago'?m.total:0)
     }));
     const mpSigned = diag.reduce((acc,x)=>acc + ((x.type==='compra'||x.type==='egreso'||x.type==='gasto')?-(parseFloat(x.mp)||0):(parseFloat(x.mp)||0)),0);
-    console.log('🔎 DIAG MP movements (filtered set):', diag);
-    console.log('🔎 MP signed sum (raw):', mpSigned, ' -> balance calc MP:', balanceByMethod.mercadoPago);
-  } catch(e){ console.log('Diag MP error', e); }
+    dlog('DIAG MP filtered', diag);
+    dlog('DIAG MP signed vs calc', mpSigned, balanceByMethod.mercadoPago);
+  } catch(e){ dlog('Diag MP error', e); }
 
   return {
     cajaFisica: balanceByMethod.efectivo || 0,
