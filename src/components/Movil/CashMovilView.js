@@ -80,22 +80,47 @@ const CashMovilView = (props) => {
   console.log('🔥 DIAGNÓSTICO CASH MÓVIL - Calculando totales...');
   console.log('🔥 Movimientos para el día:', movementsToday.length);
   console.log('🔥 Movimientos hasta fin del mes:', movementsUpToMonthEnd.length);
-  const totalsForDay = isCurrentMonth && movementsToday.length > 0 ? calculateAvailableTotalsFromFiltered(movementsToday) : null;
-  if (totalsForDay) {
-    // Para el día, los productos vendidos son del día
-    const cantidadProductosVendidosDia = movementsToday.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
-    totalsForDay.cantidadProductosVendidos = cantidadProductosVendidosDia;
+  // Totales acumulados hasta el fin de mes seleccionado (base para mostrar SALDO disponible)
+  const totalsAccumulated = calculateAvailableTotalsFromFiltered(movementsUpToMonthEnd);
+  const cantidadProductosVendidosMes = movementsThisMonth
+    .filter(m => m.type === 'venta')
+    .reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+  totalsAccumulated.cantidadProductosVendidos = cantidadProductosVendidosMes;
+
+  // Totales netos del día (solo movimientos de hoy) - pueden ser negativos si primer movimiento es una compra
+  const dailyTotalsRaw = isCurrentMonth && movementsToday.length > 0
+    ? calculateAvailableTotalsFromFiltered(movementsToday)
+    : null;
+
+  // 🔎 DIAGNÓSTICO: listar movimientosToday y montos MP individuales
+  if (movementsToday.length > 0) {
+    try {
+      const debugList = movementsToday.map(m => ({
+        id: m.id,
+        type: m.type,
+        total: m.total,
+        paymentMethod: m.paymentMethod,
+        pm: m.paymentMethods,
+        mpAmount: (m.paymentMethods && m.paymentMethods.mercadoPago) ? m.paymentMethods.mercadoPago : (m.paymentMethod === 'mercadoPago' ? m.total : 0)
+      }));
+      console.log('🔎 MovementsToday detalle MP:', debugList);
+      const sumDeclared = debugList.reduce((s, x) => s + (parseFloat(x.mpAmount)||0) * (x.type==='compra'||x.type==='egreso'||x.type==='gasto'?-1:1), 0);
+      console.log('🔎 Suma MP declarada (signada):', sumDeclared);
+    } catch(e) { console.log('Diag movementsToday error', e); }
   }
-  const totalsForMonth = calculateAvailableTotalsFromFiltered(movementsUpToMonthEnd);
-  // Calcular productos vendidos del mes seleccionado
-  const cantidadProductosVendidosMes = movementsThisMonth.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
-  // Ajustar totalsForMonth para usar la cantidad del mes
-  totalsForMonth.cantidadProductosVendidos = cantidadProductosVendidosMes;
-  console.log('🔥 RESULTADO totalsForMonth:', totalsForMonth);
-  
-  // --- Panel superior dinámico ---
-  const showDayTotals = isCurrentMonth && movementsToday.length > 0;
-  const totals = showDayTotals ? totalsForDay : totalsForMonth;
+
+  if (dailyTotalsRaw) {
+    const cantidadProductosVendidosDia = movementsToday
+      .filter(m => m.type === 'venta')
+      .reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+    dailyTotalsRaw.cantidadProductosVendidos = cantidadProductosVendidosDia;
+  }
+
+  // Nueva regla: si hay movimientos hoy -> mostrar totales DEL DÍA.
+  // Si no hay movimientos hoy -> mostrar saldo disponible acumulado del mes hasta hoy.
+  const showDayTotals = !!dailyTotalsRaw;
+  const totals = showDayTotals ? dailyTotalsRaw : totalsAccumulated;
+  console.log('🧮 MOSTRANDO', showDayTotals ? 'TOTALES DEL DÍA' : 'SALDO ACUMULADO', totals);
 
   // Forzar recarga de movimientos tras registrar uno nuevo
   const handleMovementAdded = (...args) => {
@@ -140,18 +165,17 @@ const CashMovilView = (props) => {
         </div>
         {/* Leyenda visual */}
         <div className="text-center text-xs mb-2">
-          {showDayTotals
-            ? <span className="text-green-700 font-semibold">Totales del día actual</span>
-            : <span className="text-blue-700 font-semibold">Saldo disponible actualizado</span>
-          }
+          {showDayTotals ? (
+            <span className="text-green-700 font-semibold">Totales del día actual</span>
+          ) : (
+            <span className="text-blue-700 font-semibold">Saldo disponible acumulado</span>
+          )}
         </div>
         {/* Productos vendidos */}
         <div className="mt-2 w-full max-w-xl mx-auto flex flex-row gap-4 justify-center">
           <div className="flex-1 bg-purple-100 rounded-lg shadow p-4 flex flex-col items-center border border-purple-300">
             <span className="text-gray-500 text-sm">{showDayTotals ? 'Artículos vendidos hoy' : 'Artículos vendidos en el mes'}</span>
-            <span className="text-2xl font-bold text-purple-700">
-              {totals.cantidadProductosVendidos}
-            </span>
+            <span className="text-2xl font-bold text-purple-700">{totals.cantidadProductosVendidos}</span>
           </div>
         </div>
         {/* Formulario y totales, sin historial de movimientos */}

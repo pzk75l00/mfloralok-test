@@ -424,26 +424,56 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       }
     }
 
-    // Fecha: lógica según dispositivo y tipo
-    let dateStr = form.date;
-    let dateArg;
-    if (form.type === 'venta' && isMobileDevice) {
-      // En móvil y venta, la fecha es automática (ahora)
-      const nowStr = new Date().toISOString().slice(0, 16);
-      const zoned = toZonedTime(nowStr, 'America/Argentina/Buenos_Aires');
-      dateArg = new Date(Date.UTC(zoned.getFullYear(), zoned.getMonth(), zoned.getDate(), zoned.getHours(), zoned.getMinutes()));
-    } else if (dateStr && dateStr.length === 10) { // Solo fecha, sin hora
-      const zoned = toZonedTime(dateStr + 'T00:00', 'America/Argentina/Buenos_Aires');
-      dateArg = new Date(Date.UTC(zoned.getFullYear(), zoned.getMonth(), zoned.getDate(), zoned.getHours(), zoned.getMinutes()));
-    } else if (dateStr && dateStr.length === 16) { // datetime-local (YYYY-MM-DDTHH:mm)
-      const zoned = toZonedTime(dateStr, 'America/Argentina/Buenos_Aires');
-      dateArg = new Date(Date.UTC(zoned.getFullYear(), zoned.getMonth(), zoned.getDate(), zoned.getHours(), zoned.getMinutes()));
+    // === LÓGICA FECHA/HORA REFINADA (BUSINESS TZ) ===
+    // Objetivo: evitar que un movimiento de "hoy" (hora local negocio) salte al día siguiente por almacenar en UTC.
+    // Estrategia: almacenamos 'date' en UTC (ISO), pero los campos dateLocal* se calculan en la zona de negocio fija
+    // (ej: America/Argentina/Buenos_Aires) para consistencia de cortes diarios, independientemente del navegador.
+  const businessTimeZone = 'America/Argentina/Buenos_Aires';
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; // zona real del dispositivo
+  const userProvided = form.date; // posible YYYY-MM-DD o YYYY-MM-DDTHH:mm o vacío
+    let baseDate;
+    if (userProvided) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(userProvided)) {
+        const [Y,M,D] = userProvided.split('-').map(Number);
+        baseDate = new Date(Date.UTC(Y, M-1, D, 0, 0, 0, 0)); // interpretamos medianoche business; ajustaremos abajo
+      } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(userProvided)) {
+        const [datePart,timePart] = userProvided.split('T');
+        const [Y,M,D] = datePart.split('-').map(Number);
+        const [h,min] = timePart.split(':').map(Number);
+        baseDate = new Date(Date.UTC(Y, M-1, D, h, min, 0, 0));
+      } else {
+        baseDate = new Date(userProvided);
+      }
     } else {
-      const nowStr = new Date().toISOString().slice(0, 16);
-      const zoned = toZonedTime(nowStr, 'America/Argentina/Buenos_Aires');
-      dateArg = new Date(Date.UTC(zoned.getFullYear(), zoned.getMonth(), zoned.getDate(), zoned.getHours(), zoned.getMinutes()));
+      baseDate = new Date();
     }
-    const isoArgentina = dateArg.toISOString();
+    if (isNaN(baseDate.getTime())) baseDate = new Date();
+
+    // dateUTCISO: simplemente el ISO estándar del objeto base (que ya representa la hora actual del navegador)
+    const dateUTCISO = baseDate.toISOString();
+
+    // Función para extraer partes en la zona de negocio
+    const extractPartsInTZ = (date, timeZone) => {
+      const fmt = new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false });
+      const parts = Object.fromEntries(fmt.formatToParts(date).map(p => [p.type, p.value]));
+      return { Y: parts.year, M: parts.month, D: parts.day, H: parts.hour, m: parts.minute };
+    };
+  const biz = extractPartsInTZ(baseDate, businessTimeZone); // Estos valores son consistentes para cortes diarios del negocio
+  const usr = extractPartsInTZ(baseDate, userTimeZone); // Vista local del usuario (puede coincidir o no)
+  // Campos BUSINESS (compatibles con legado -> dateLocal*)
+  const dateLocalDate = `${biz.Y}-${biz.M}-${biz.D}`;            // LEGACY: día de negocio
+  const dateLocalTime = `${biz.H}:${biz.m}`;                     // LEGACY: hora de negocio
+  const dateLocalComposite = `${dateLocalDate}T${dateLocalTime}`; // LEGACY composite
+  const timeZone = businessTimeZone; // LEGACY alias
+  // Nuevos campos explícitos business
+  const dateBusinessDate = dateLocalDate;
+  const dateBusinessTime = dateLocalTime;
+  const dateBusiness = dateLocalComposite;
+  // Nuevos campos usuario
+  const dateUserDate = `${usr.Y}-${usr.M}-${usr.D}`;
+  const dateUserTime = `${usr.H}:${usr.m}`;
+  const dateUser = `${dateUserDate}T${dateUserTime}`;
+  const userTZ = userTimeZone;
 
     try {
       
@@ -481,9 +511,67 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       
       if (form.type === 'venta' || form.type === 'compra') {
         // Usar currentProducts (puede venir de products o del submit directo)
-  // Calcular total global para prorrateo
-  const totalGlobal = currentProducts.reduce((sum, x) => sum + (x.total || 0), 0);
-  for (const p of currentProducts) {
+        // Calcular total global para prorrateo
+        const totalGlobal = currentProducts.reduce((sum, x) => sum + (x.total || 0), 0);
+
+        // === NORMALIZACIÓN PREVENTIVA DE MÉTODOS DE PAGO ===
+        const normalizePaymentMethods = (total, pm) => {
+          if (!pm || Object.values(pm).every(v => !v || v === 0)) {
+            // fallback: todo a método principal (o efectivo) si no hay distribución
+            const def = { efectivo: 0, mercadoPago: 0, transferencia: 0, tarjeta: 0 };
+            const principal = form.paymentMethod || 'efectivo';
+            def[principal] = parseFloat(total.toFixed(2));
+            return def;
+          }
+          const keys = ['efectivo','mercadoPago','transferencia','tarjeta'];
+            const filtered = {};
+            let sum = 0;
+            keys.forEach(k => {
+              if (pm[k] && pm[k] > 0) {
+                const v = parseFloat(pm[k]) || 0;
+                filtered[k] = v;
+                sum += v;
+              }
+            });
+            if (sum <= 0) {
+              // todo a principal
+              const principal = form.paymentMethod || 'efectivo';
+              return { efectivo: 0, mercadoPago: 0, transferencia: 0, tarjeta: 0, [principal]: parseFloat(total.toFixed(2)) };
+            }
+            // Si difiere más de 0.01 ajustar con factor
+            const delta = total - sum;
+            if (Math.abs(delta) <= 0.01) {
+              // Cerrar centavos ajustando al método mayor
+              if (Math.abs(delta) > 0) {
+                const maxK = Object.entries(filtered).sort((a,b)=>b[1]-a[1])[0][0];
+                filtered[maxK] = +(filtered[maxK] + delta).toFixed(2);
+              }
+              // Asegurar llaves completas
+              keys.forEach(k=>{ if(!(k in filtered)) filtered[k]=0; });
+              return filtered;
+            }
+            const factor = total / sum;
+            let acc = 0;
+            let maxKey = null; let maxVal = -Infinity;
+            Object.entries(filtered).forEach(([k,v]) => {
+              const scaled = +(v * factor).toFixed(2);
+              filtered[k] = scaled;
+              acc += scaled;
+              if (scaled > maxVal) { maxVal = scaled; maxKey = k; }
+            });
+            const finalDelta = +(total - acc).toFixed(2);
+            if (Math.abs(finalDelta) >= 0.01 && maxKey) {
+              filtered[maxKey] = +(filtered[maxKey] + finalDelta).toFixed(2);
+            }
+            // Completar llaves faltantes
+            keys.forEach(k=>{ if(!(k in filtered)) filtered[k]=0; });
+            return filtered;
+        };
+
+        const normalizedPM = normalizePaymentMethods(totalGlobal, form.paymentMethods);
+        form.paymentMethods = normalizedPM;
+
+        for (const p of currentProducts) {
           // Validar stock antes de registrar venta
           if (form.type === 'venta') {
             const plantRef = doc(db, 'plants', String(p.plantId));
@@ -531,8 +619,22 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             paymentMethods: itemPaymentMethods,
             paymentSummary: itemPaymentSummary,
             paymentMethod: getMainPaymentMethod(itemPaymentMethods),
-            detail: form.notes || '', // <-- ahora guarda lo que el usuario escribió en Detalle
-            date: isoArgentina
+            detail: form.notes || '',
+            date: dateUTCISO,                // UTC persistente
+            // LEGACY (mantener para no romper filtros actuales):
+            dateLocal: dateLocalComposite,
+            dateLocalDate,
+            dateLocalTime,
+            timeZone,
+            // Nuevos campos explícitos:
+            dateBusiness: dateBusiness,
+            dateBusinessDate: dateBusinessDate,
+            dateBusinessTime: dateBusinessTime,
+            businessTimeZone: businessTimeZone,
+            dateUser: dateUser,
+            dateUserDate: dateUserDate,
+            dateUserTime: dateUserTime,
+            userTimeZone: userTZ
           };
           // Eliminar campos innecesarios
           delete movementData.products;
@@ -546,9 +648,23 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       } else {
         let movementData = {
           ...form,
-          total: Number(total),
-          date: isoArgentina,
-          detail: form.notes || '', // asegurar que siempre se guarda el detalle
+            total: Number(total),
+            date: dateUTCISO,
+            // LEGACY
+            dateLocal: dateLocalComposite,
+            dateLocalDate,
+            dateLocalTime,
+            timeZone,
+            // Nuevos campos
+            dateBusiness: dateBusiness,
+            dateBusinessDate: dateBusinessDate,
+            dateBusinessTime: dateBusinessTime,
+            businessTimeZone: businessTimeZone,
+            dateUser: dateUser,
+            dateUserDate: dateUserDate,
+            dateUserTime: dateUserTime,
+            userTimeZone: userTZ,
+            detail: form.notes || ''
         };
         // Si es compra de un solo producto, guardar también el nombre
         if (form.type === 'compra' && form.plantId) {

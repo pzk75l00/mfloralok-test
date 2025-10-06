@@ -37,13 +37,12 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
 
   // Optional: filter likely duplicate mixed-payments created within a short window
   const byDate = [...uniqueMovements].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-  const toleranceSec = 60; // movimientos dentro de 60s con misma distribución y total se consideran duplicados
+  const toleranceSec = 45; // reducir tolerancia por seguridad
   const filtered = [];
   for (let i = 0; i < byDate.length; i++) {
     const curr = byDate[i];
     const currDate = new Date(curr.date || 0);
     const currTotal = getTotalMovementAmount(curr);
-    // construir firma de distribución
     const dist = curr.paymentMethods
       ? Object.entries(curr.paymentMethods)
           .filter(([, amount]) => (parseFloat(amount) || 0) > 0)
@@ -52,9 +51,21 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
           .join('|')
       : curr.paymentMethod || 'single';
 
-    // buscar en los últimos agregados si existe uno muy cercano y equivalente
+    // Construir firma de productos / detalle para diferenciar operaciones legítimas con mismo total
+    const productSignature = (() => {
+      try {
+        if (Array.isArray(curr.products) && curr.products.length > 0) {
+          return curr.products.map(p => `${p.plantId || p.id || 'x'}:${p.quantity || 0}`).sort().join(',');
+        }
+        if (curr.plantId) return `single:${curr.plantId}:${curr.quantity || 0}`;
+        return `detail:${(curr.detail || curr.notes || '').substring(0,40)}`;
+      } catch { return 'na'; }
+    })();
+
     const isDup = filtered.some(prev => {
       if (prev.type !== curr.type) return false;
+      // Solo aplicamos heurística de duplicados para ventas e ingresos (evitamos filtrar compras/egresos/gastos legítimos)
+      if (!(curr.type === 'venta' || curr.type === 'ingreso')) return false;
       const prevDate = new Date(prev.date || 0);
       const secs = Math.abs((currDate - prevDate) / 1000);
       if (secs > toleranceSec) return false;
@@ -67,9 +78,23 @@ export const calculateTotalBalance = (movements, paymentMethod = null) => {
             .sort()
             .join('|')
         : prev.paymentMethod || 'single';
-      return prevDist === dist;
+      if (prevDist !== dist) return false;
+      // Diferenciar por firma de productos/detalle
+      const prevProductSig = (() => {
+        try {
+          if (Array.isArray(prev.products) && prev.products.length > 0) {
+            return prev.products.map(p => `${p.plantId || p.id || 'x'}:${p.quantity || 0}`).sort().join(',');
+          }
+          if (prev.plantId) return `single:${prev.plantId}:${prev.quantity || 0}`;
+          return `detail:${(prev.detail || prev.notes || '').substring(0,40)}`;
+        } catch { return 'na'; }
+      })();
+      if (prevProductSig !== productSignature) return false;
+      return true;
     });
-    if (!isDup) filtered.push(curr);
+    if (!isDup) filtered.push(curr); else {
+      console.log('🟡 Heurística duplicado ignorado (solo ventas/ingresos):', { id: curr.id, type: curr.type, total: currTotal });
+    }
   }
 
   // Use the new mixed payment calculation function sobre la lista filtrada
@@ -358,6 +383,19 @@ export const calculateAvailableTotalsFromFiltered = (movements) => {
 
   // Cantidad de productos vendidos (suma de quantity en ventas)
   const cantidadProductosVendidos = movements.filter(m => m.type === 'venta').reduce((sum, m) => sum + (Number(m.quantity) || 0), 0);
+  try {
+    const diag = movements.map(m => ({
+      id: m.id,
+      type: m.type,
+      total: m.total,
+      pm: m.paymentMethods,
+      simple: m.paymentMethod,
+      mp: (m.paymentMethods && m.paymentMethods.mercadoPago) ? m.paymentMethods.mercadoPago : (m.paymentMethod==='mercadoPago'?m.total:0)
+    }));
+    const mpSigned = diag.reduce((acc,x)=>acc + ((x.type==='compra'||x.type==='egreso'||x.type==='gasto')?-(parseFloat(x.mp)||0):(parseFloat(x.mp)||0)),0);
+    console.log('🔎 DIAG MP movements (filtered set):', diag);
+    console.log('🔎 MP signed sum (raw):', mpSigned, ' -> balance calc MP:', balanceByMethod.mercadoPago);
+  } catch(e){ console.log('Diag MP error', e); }
 
   return {
     cajaFisica: balanceByMethod.efectivo || 0,

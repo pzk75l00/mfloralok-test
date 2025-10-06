@@ -390,9 +390,12 @@ export const getMovementAmountForPaymentMethod = (movement, paymentMethod) => {
 
   // Formato nuevo con paymentMethods (pagos mixtos)
   if (movement.paymentMethods && typeof movement.paymentMethods === 'object') {
-  const raw = parseFloat(movement.paymentMethods[paymentMethod]) || 0;
+    const raw = parseFloat(movement.paymentMethods[paymentMethod]) || 0;
     const sumPM = Object.values(movement.paymentMethods).reduce((t, a) => t + (parseFloat(a) || 0), 0);
-  // rowTotal ya calculado arriba
+    // Fallback: si la suma es 0 pero hay paymentMethod simple, usarlo
+    if (sumPM === 0 && movement.paymentMethod === paymentMethod) {
+      return rowTotal;
+    }
     if (sumPM > 0 && rowTotal > 0 && Math.abs(sumPM - rowTotal) > 0.01) {
       // Escalar proporcionalmente al total de la fila (corrige ventas multiproducto antiguas)
       const factor = rowTotal / sumPM;
