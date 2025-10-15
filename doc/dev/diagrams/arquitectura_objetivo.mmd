@@ -1,0 +1,75 @@
+%% Arquitectura Objetivo (Mermaid)
+%% UI -> App -> Domain ; App -> Infra ; UI/App -> Shared ; Facades inyecta
+
+graph LR
+  subgraph UI[UI (Presentación)]
+    Views[Views / Components]
+    Nav[Navigation / Layout]
+  end
+
+  subgraph APP[Capa Aplicación (Hooks)]
+    HSale[useCreateSale]
+    HPurchase[useCreatePurchase]
+    HMonthly[useMonthlyReport]
+  end
+
+  subgraph DOMAIN[Dominio Puro]
+    Ledger[ledger]
+    Mixed[mixedPayment]
+    Currency[currency]
+    Models[(Entities)]
+  end
+
+  subgraph INFRA[Infra / Adapters]
+    MovRepo[movementsRepository]
+    ProdRepo[productsRepository]
+    PayRepo[paymentMethodsRepository]
+    FirebaseCfg[firebaseConfig]
+    Firestore[(Firestore)]
+  end
+
+  subgraph SHARED[Shared]
+    AuthCtx[AuthContext]
+    FacadeCtx[FacadeContext]
+    Flags[FeatureFlags]
+    Logger[Logger]
+  end
+
+  subgraph FACADES[Facades]
+    Default[default manifest]
+    VerticalX[vertical X]
+  end
+
+  subgraph SCRIPTS[Scripts]
+    Audit[audit_financial]
+    Backfill[backfill_monthly]
+  end
+
+  Views --> HSale
+  Views --> HPurchase
+  Views --> HMonthly
+
+  HSale --> MovRepo
+  HSale --> Ledger
+  HPurchase --> ProdRepo
+  HPurchase --> Ledger
+  HMonthly --> Ledger
+  HMonthly --> MovRepo
+
+  MovRepo --> Firestore
+  ProdRepo --> Firestore
+  PayRepo --> Firestore
+
+  AuthCtx --> FirebaseCfg
+  FacadeCtx --> Default
+  FacadeCtx --> VerticalX
+
+  Audit --> Ledger
+  Audit --> MovRepo
+  Backfill --> MovRepo
+
+  Views --> AuthCtx
+  Views --> FacadeCtx
+  HSale --> Flags
+  HPurchase --> Flags
+  HMonthly --> Flags

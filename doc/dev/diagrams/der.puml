@@ -1,0 +1,126 @@
+@startuml DER
+hide circle
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor Snow
+  BorderColor #888
+}
+
+entity PRODUCT_TYPE {
+  *id : string
+  --
+  name : string
+}
+
+entity PLANT {
+  *id : string
+  --
+  name : string
+  type : string <<FK PRODUCT_TYPE.id>>
+  basePrice : number
+  purchasePrice : number
+  stock : number
+  image : string
+  lastPurchaseDate : date
+  purchaseHistory : json[]
+  createdAt : date
+  updatedAt : date
+}
+
+entity MOVEMENT {
+  *id : string
+  type : enum
+  plantId : string <<FK PLANT.id>>
+  plantName : string
+  quantity : number
+  price : number
+  total : number
+  paymentMethod : string
+  paymentMethods : map
+  paymentSummary : json
+  detail : string
+  notes : string
+  location : string
+  date : datetime
+  createdBy : string <<(plan) FK USER.uid>>
+  createdAt : datetime <<(plan)>>
+  hashPrev : string <<(plan)>>
+  hashSelf : string <<(plan)>>
+}
+
+entity SALE {
+  *id : string
+  plantId : string <<FK PLANT.id>>
+  quantity : number
+  salePrice : number
+  total : number
+  paymentMethod : string
+  location : string
+  notes : string
+  date : datetime
+  createdBy : string <<(plan) FK USER.uid>>
+}
+
+entity PAYMENT_METHOD {
+  *id : string
+  code : string
+  name : string
+  icon : string
+  color : string
+  isActive : boolean
+  createdAt : datetime
+  updatedAt : datetime
+}
+
+entity USER {
+  *uid : string
+  email : string
+  nombre : string
+  apellido : string
+  telefono : string
+  rol : string
+  modules : string[]
+  creado : datetime
+}
+
+entity PURCHASE_HISTORY <<embedded>> {
+  price : number
+  date : date
+  quantity : number
+  timestamp : datetime
+}
+
+PRODUCT_TYPE ||--o{ PLANT : categoriza
+PLANT ||--o{ MOVEMENT : movimientos
+PLANT ||--o{ SALE : ventas
+USER ||--o{ MOVEMENT : "crea (plan)"
+USER ||--o{ SALE : "crea (plan)"
+PAYMENT_METHOD ||--o{ MOVEMENT : "usa * (map)"
+PAYMENT_METHOD ||--o{ SALE : "usa (1)"
+PLANT ||--o{ PURCHASE_HISTORY : historial
+
+note top of MOVEMENT
+Multiproducto: cada item de venta
+se guarda como MOVEMENT separado.
+paymentMethods = {code: monto}
+Finanzas normaliza totales.
+end note
+
+note right of PLANT
+purchaseHistory embebido (últimas 10).
+Futuro: separar si crece.
+end note
+
+note bottom of SALE
+Tabla histórica redundante.
+Puede consolidarse en MOVEMENT
+o eliminarse tras migración.
+end note
+
+note left of PAYMENT_METHOD
+Relación n..m con MOVEMENT
+resuelta por mapa embebido,
+no colección intermedia.
+end note
+
+@enduml

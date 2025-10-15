@@ -1,0 +1,42 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam wrapWidth 180
+skinparam maxMessageSize 200
+
+package "UI / Components" {
+  [MovementsView]
+  [ReportsMovilView]
+  [SalesMovil]
+  [PurchasesMovil]
+  [InventoryView]
+}
+package "Utils" {
+  [balanceCalculations]
+  [mixedPaymentUtils]
+  [productManagement]
+}
+package "Firebase" {
+  [firebaseConfig]
+  database "Firestore" as FS
+}
+[Scripts/Auditorias]
+[Docs/Rules]
+
+[MovementsView] --> [balanceCalculations]
+[ReportsMovilView] --> [balanceCalculations]
+[SalesMovil] --> [mixedPaymentUtils]
+[PurchasesMovil] --> [productManagement]
+[InventoryView] --> [productManagement]
+
+[MovementsView] --> FS
+[ReportsMovilView] --> FS
+[SalesMovil] --> FS
+[PurchasesMovil] --> FS
+[InventoryView] --> FS
+[balanceCalculations] --> FS
+[mixedPaymentUtils] --> FS
+[productManagement] --> FS
+[firebaseConfig] --> FS
+[Docs/Rules] --> [firebaseConfig]
+[Scripts/Auditorias] --> FS
+@enduml

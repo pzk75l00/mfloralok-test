@@ -1,0 +1,61 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam wrapWidth 180
+skinparam maxMessageSize 200
+
+package UI {
+  [Views]
+  [Navigation]
+}
+package "App Hooks" {
+  [useCreateSale]
+  [useCreatePurchase]
+  [useMonthlyReport]
+}
+package Domain {
+  [Ledger]
+  [MixedPayment]
+  [Currency]
+  [Models]
+}
+package Infrastructure {
+  [movementsRepository]
+  [productsRepository]
+  [paymentMethodsRepository]
+  [firebaseConfig]
+  database Firestore
+}
+package Shared {
+  [AuthContext]
+  [FacadeContext]
+  [FeatureFlags]
+  [Logger]
+}
+package Facades {
+  [default manifest]
+  [vertical X]
+}
+package Scripts {
+  [audit_financial]
+  [backfill_monthly]
+}
+
+[Views] --> [useCreateSale]
+[Views] --> [useCreatePurchase]
+[Views] --> [useMonthlyReport]
+[useCreateSale] --> [movementsRepository]
+[useCreateSale] --> [Ledger]
+[useCreatePurchase] --> [productsRepository]
+[useCreatePurchase] --> [Ledger]
+[useMonthlyReport] --> [Ledger]
+[useMonthlyReport] --> [movementsRepository]
+[movementsRepository] --> Firestore
+[productsRepository] --> Firestore
+[paymentMethodsRepository] --> Firestore
+[AuthContext] ..> [firebaseConfig]
+[FacadeContext] --> [default manifest]
+[FacadeContext] --> [vertical X]
+[audit_financial] --> [Ledger]
+[audit_financial] --> [movementsRepository]
+[backfill_monthly] --> [movementsRepository]
+@enduml
