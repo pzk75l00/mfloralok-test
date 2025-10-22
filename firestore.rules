@@ -1,17 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir acceso completo a todas las colecciones
-    match /{document=**} {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Admins: documento de control en app_config/admins con estructura
+    // { emails: { "owner@empresa.com": true } }
+    function isOwner() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/app_config/admins).data.emails[request.auth.token.email] == true;
+    }
+
+    // app_config/auth: reglas de allowlist que lee el frontend
+    match /app_config/auth {
+      allow read: if true; // puede ser público para mostrar mensajes claros en login
+      allow write: if isOwner();
+    }
+
+    // app_config/admins: sólo dueños pueden leerse/modificarse
+    match /app_config/admins {
+      allow read, write: if isOwner();
+    }
+
+    // app_config/license: por ahora sin restricción para no romper flujo actual
+    // (migrar a Cloud Function para incrementar seats y luego restringir aquí a isOwner)
+    match /app_config/license {
       allow read, write: if true;
     }
-    
-    // Reglas específicas para cada colección
+
+    // users: el usuario puede leer/escribir su propio doc; dueños pueden todo
+    match /users/{uid} {
+      allow read: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isOwner() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    // Colecciones existentes (mantener abiertas por compatibilidad actual)
     match /plants/{plantId} {
       allow read, write: if true;
     }
-    
     match /movements/{movementId} {
+      allow read, write: if true;
+    }
+
+    // Resto de documentos (compatibilidad):
+    match /{document=**} {
       allow read, write: if true;
     }
   }
