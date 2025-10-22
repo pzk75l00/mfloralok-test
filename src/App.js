@@ -8,6 +8,7 @@ import StatisticsView from './components/Desktop/statistics/StatisticsView';
 import NavigationMovil from './components/Movil/NavigationMovil';
 import DesktopLayout from './components/DesktopLayout';
 import { initializeDefaultPaymentMethods } from './utils/paymentMethodsInit';
+import BiometricSetup from './components/Auth/BiometricSetup';
 
 // Crear y exportar UserContext
 export const UserContext = createContext({ user: null, userData: null });
@@ -63,6 +64,8 @@ const App = () => {
     <AuthProvider enforceDesktopBinding={true}>
       <UserContext.Provider value={{ user, userData }}>
         <AuthGate>
+          {/* Banner para habilitar huella en este dispositivo */}
+          <BiometricSetup />
           <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
             {renderView()}
           </DesktopLayout>

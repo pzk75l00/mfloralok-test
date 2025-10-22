@@ -38,7 +38,9 @@
   "audit:normalized": "node audit_balances_normalized.js",
   "audit:mp-inicial": "node audit_mp_initial_breakdown.js",
   "report:consistentes": "node report_monthly_consistent_products.js",
-  "report:nunca-vendidos": "node report_products_never_sold.js"
+  "report:nunca-vendidos": "node report_products_never_sold.js",
+  "setup:env": "node scripts/setup-env.js",
+  "setup:firebase-auth": "node scripts/setup-firebase-auth.js"
   },
   "browserslist": {
     "production": [
@@ -54,6 +56,7 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0"
+    "@testing-library/react": "^16.3.0",
+    "google-auth-library": "^9.14.1"
   }
 }

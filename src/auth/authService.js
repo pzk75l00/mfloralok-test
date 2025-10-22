@@ -1,4 +1,4 @@
-import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signOut as fbSignOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signOut as fbSignOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { db } from '../firebase/firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, increment } from 'firebase/firestore';
 import { getOrCreateDeviceId, getDeviceInfo, isMobileUA } from '../utils/deviceId';
@@ -23,12 +23,23 @@ export async function signInEmailPassword(email, password) {
 export async function signInWithGoogle({ preferRedirectForMobile = true } = {}) {
   await ensureLocalPersistence();
   const provider = new GoogleAuthProvider();
+  // provider.setCustomParameters({ prompt: 'select_account' }); // opcional
   if (preferRedirectForMobile && isMobileUA()) {
     await signInWithRedirect(auth, provider);
     return null; // redirect flow
   }
-  const cred = await signInWithPopup(auth, provider);
-  return cred.user;
+  try {
+    const cred = await signInWithPopup(auth, provider);
+    return cred.user;
+  } catch (e) {
+    const code = String(e?.code || '');
+    // Fallback a redirect si el popup está bloqueado o hay conflicto de popups
+    if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    throw e;
+  }
 }
 
 export async function signOut() {
@@ -137,4 +148,41 @@ export async function reserveSeatIfNeeded(uid, { email = null, displayName = nul
       });
     }
   });
+}
+
+// Email allowlist/deny rules from Firestore: app_config/auth
+// Structure example:
+// { allowedEmailDomains: ["empresa.com"], allowedEmails: ["dueño@gmail.com"], blockedEmails: [] }
+export async function isEmailAllowed(email) {
+  if (!email) return true; // Si no hay email (caso raro), no bloquear
+  try {
+    const ref = doc(db, 'app_config', 'auth');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return true;
+    const cfg = snap.data() || {};
+    const { allowedEmailDomains = [], allowedEmails = [], blockedEmails = [] } = cfg;
+    const normalized = String(email).toLowerCase();
+    if (blockedEmails.some(e => String(e).toLowerCase() === normalized)) return false;
+    if (allowedEmails.length > 0) {
+      return allowedEmails.some(e => String(e).toLowerCase() === normalized);
+    }
+    if (allowedEmailDomains.length > 0) {
+      const domain = normalized.split('@')[1] || '';
+      return allowedEmailDomains.some(d => String(d).toLowerCase() === domain);
+    }
+    return true;
+  } catch (e) {
+    // En caso de error, permitir para no bloquear acceso por config rota
+    return true;
+  }
+}
+
+// Verificar si hubo resultado/errores del flujo por redirección (móvil)
+export async function checkRedirectResult() {
+  try {
+    await getRedirectResult(auth);
+    return { ok: true };
+  } catch (e) {
+    throw e;
+  }
 }

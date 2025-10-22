@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { subscribeAuth, ensureLocalPersistence, signOut as doSignOut, getUserProfile, upsertUserProfile, registerDeviceIfNeeded, reserveSeatIfNeeded } from './authService';
+import { subscribeAuth, ensureLocalPersistence, signOut as doSignOut, getUserProfile, upsertUserProfile, registerDeviceIfNeeded, reserveSeatIfNeeded, isEmailAllowed } from './authService';
 
 const AuthContext = createContext({ user: null, userData: null, loading: true, signOut: async () => {} });
 
@@ -17,6 +17,16 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
         setLoading(true);
         setUser(u);
         if (u) {
+          // Reglas de acceso por email/dominio (configurable en Firestore app_config/auth)
+          const allowed = await isEmailAllowed(u.email || '');
+          if (!allowed) {
+            await doSignOut();
+            setUser(null);
+            setUserData(null);
+            setLoading(false);
+            alert('Tu cuenta no está autorizada para acceder a este entorno.');
+            return;
+          }
           // Seat reservation (first-time users) and base profile
           try {
             await reserveSeatIfNeeded(u.uid, { email: u.email || null, displayName: u.displayName || null });

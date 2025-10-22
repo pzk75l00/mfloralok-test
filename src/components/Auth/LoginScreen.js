@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { signInWithGoogle } from '../../auth/authService';
+import { signInWithGoogle, checkRedirectResult } from '../../auth/authService';
 import logo from '../../assets/images/logo.png';
 
 export default function LoginScreen() {
@@ -14,6 +14,15 @@ export default function LoginScreen() {
     } catch (_) {
       setSupportsPasskey(false);
     }
+    // Capturar errores del flujo por redirección (móvil)
+    (async () => {
+      try {
+        await checkRedirectResult();
+      } catch (e) {
+        const code = String(e?.code || '');
+        setError(mapAuthError(code));
+      }
+    })();
   }, []);
 
   const handleGoogle = async () => {
@@ -22,7 +31,8 @@ export default function LoginScreen() {
     try {
       await signInWithGoogle({ preferRedirectForMobile: true });
     } catch (e) {
-      setError('No se pudo iniciar sesión con Google.');
+      const code = String(e?.code || '');
+      setError(mapAuthError(code));
     } finally {
       setLoading(false);
     }
@@ -120,6 +130,25 @@ export default function LoginScreen() {
     alignItems: 'center',
     justifyContent: 'center'
   };
+
+  function mapAuthError(code) {
+    switch (code) {
+      case 'auth/operation-not-allowed':
+        return 'Google no está habilitado en Firebase. Activalo en Authentication > Sign-in method.';
+      case 'auth/unauthorized-domain':
+        return 'Dominio no autorizado en Firebase. Agregalo en Authentication > Settings > Authorized domains.';
+      case 'auth/popup-blocked':
+        return 'El navegador bloqueó la ventana de Google. Permití popups para este sitio o probá de nuevo.';
+      case 'auth/popup-closed-by-user':
+        return 'Cerraste la ventana de Google. Probá otra vez.';
+      case 'auth/cancelled-popup-request':
+        return 'Se canceló el popup anterior. Probá nuevamente.';
+      case 'auth/network-request-failed':
+        return 'Fallo de red. Verificá tu conexión e intentá de nuevo.';
+      default:
+        return 'No se pudo iniciar sesión con Google.';
+    }
+  }
 
   return (
     <div style={bgWrap}>
