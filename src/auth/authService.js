@@ -179,10 +179,6 @@ export async function isEmailAllowed(email) {
 
 // Verificar si hubo resultado/errores del flujo por redirección (móvil)
 export async function checkRedirectResult() {
-  try {
-    await getRedirectResult(auth);
-    return { ok: true };
-  } catch (e) {
-    throw e;
-  }
+  const res = await getRedirectResult(auth);
+  return { ok: true, result: res };
 }
