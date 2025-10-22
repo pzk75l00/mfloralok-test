@@ -1,0 +1,1 @@
+// Archivo eliminado. El módulo de ventas ya no se utiliza.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
-import ProductTypesManager from './ProductTypesManager';
+import ProductTypesManager from '../Inventory/ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
