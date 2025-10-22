@@ -48,6 +48,16 @@ Crear/editar documento `app_config/auth` en Firestore con la estructura:
 
 Esto permite que un nuevo dueño controle el acceso sin cambiar código.
 
+Además, para asegurar que no cualquiera modifique estas reglas, crear el documento `app_config/admins` con:
+```
+{
+  "emails": {
+    "owner@empresa.com": true
+  }
+}
+```
+Y desplegar las `firestore.rules` del proyecto (incluyen que solo los emails listados en `app_config/admins` puedan escribir en `app_config/auth`).
+
 ## 5) Dispositivos permitidos (device binding)
 El primer dispositivo de escritorio queda habilitado por usuario. Si ya hay uno, nuevos escritorios quedan bloqueados por defecto (móviles no bloqueados). Los dispositivos quedan en `users/{uid}.allowedDevices`.
 
@@ -60,3 +70,4 @@ Después de iniciar sesión con Google, aparece un banner para habilitar huella 
 ## 7) Notas
 - Si el login con Google redirige en móvil, asegurarse de tener el dominio en “Authorized domains”.
 - El proyecto usa persistencia local: la sesión se mantiene entre reinicios del navegador.
+ - Para automatizar habilitar Google + dominios, usar `npm run setup:firebase-auth` con un Service Account del proyecto. Nadie sin esa credencial podrá ejecutar la autoconfiguración.
