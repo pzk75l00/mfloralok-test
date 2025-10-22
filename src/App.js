@@ -1,4 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { AuthProvider } from './auth/AuthProvider';
+import AuthGate from './auth/AuthGate';
 import InventoryView from './components/Inventory/InventoryView';
 import CashView from './components/Cash/CashView';
 import ReportsView from './components/Reports/ReportsView';
@@ -58,11 +60,15 @@ const App = () => {
   };
 
   return (
-    <UserContext.Provider value={{ user, userData }}>
-      <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
-        {renderView()}
-      </DesktopLayout>
-    </UserContext.Provider>
+    <AuthProvider enforceDesktopBinding={true}>
+      <UserContext.Provider value={{ user, userData }}>
+        <AuthGate>
+          <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
+            {renderView()}
+          </DesktopLayout>
+        </AuthGate>
+      </UserContext.Provider>
+    </AuthProvider>
   );
 };
 
