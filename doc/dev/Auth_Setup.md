@@ -71,3 +71,4 @@ Después de iniciar sesión con Google, aparece un banner para habilitar huella 
 - Si el login con Google redirige en móvil, asegurarse de tener el dominio en “Authorized domains”.
 - El proyecto usa persistencia local: la sesión se mantiene entre reinicios del navegador.
  - Para automatizar habilitar Google + dominios, usar `npm run setup:firebase-auth` con un Service Account del proyecto. Nadie sin esa credencial podrá ejecutar la autoconfiguración.
+ - Biométricos/Passkeys: la UI está controlada por la variable `REACT_APP_ENABLE_BIOMETRICS` (false por defecto). Cuando se active, validar soporte con WebAuthn en el cliente y considerar verificación del servidor antes de otorgar acceso.

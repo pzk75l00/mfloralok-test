@@ -8,8 +8,9 @@ service cloud.firestore {
     // Admins: documento de control en app_config/admins con estructura
     // { emails: { "owner@empresa.com": true } }
     function isOwner() {
+      // Normalizar email del token a minúsculas para la comparación
       return isSignedIn() &&
-        get(/databases/$(database)/documents/app_config/admins).data.emails[request.auth.token.email] == true;
+        get(/databases/$(database)/documents/app_config/admins).data.emails[lower(request.auth.token.email)] == true;
     }
 
     // app_config/auth: reglas de allowlist que lee el frontend
@@ -18,9 +19,12 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
-    // app_config/admins: sólo dueños pueden leerse/modificarse
+    // app_config/admins: sólo dueños pueden leer y escribir.
+    // Nota: el frontend consulta este doc para verificar si un email es dueño;
+    // si no es dueño la lectura fallará y el cliente lo interpreta como falso.
     match /app_config/admins {
-      allow read, write: if isOwner();
+      allow read: if isOwner();
+      allow write: if isOwner();
     }
 
     // app_config/license: por ahora sin restricción para no romper flujo actual

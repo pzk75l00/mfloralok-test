@@ -1,0 +1,19 @@
+{
+  "firebase": {
+    "projectId": "mruh-30b1e",
+    "serviceAccountKeyPath": "C:\\Keys\\mfloralok-service.json",
+    "rulesPath": "firestore.rules"
+  },
+  "owners": [
+    "marianopaciaroni@gmail.com",
+    "ederto66@gmail.com"
+  ],
+  "vercel": {
+    "token": "",          
+    "project": "mfloralok-test", 
+    "teamId": "",          
+    "envFromDotenv": true,  
+    "extraEnv": {           
+    }
+  }
+}

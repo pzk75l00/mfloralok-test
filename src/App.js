@@ -9,6 +9,10 @@ import NavigationMovil from './components/Movil/NavigationMovil';
 import DesktopLayout from './components/DesktopLayout';
 import { initializeDefaultPaymentMethods } from './utils/paymentMethodsInit';
 import BiometricSetup from './components/Auth/BiometricSetup';
+import DebugPanel from './components/Shared/DebugPanel';
+
+// Feature flag: ocultar biometría hasta que esté lista
+const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '').toLowerCase() === 'true';
 
 // Crear y exportar UserContext
 export const UserContext = createContext({ user: null, userData: null });
@@ -42,7 +46,17 @@ const App = () => {
   // Aquí debería ir la lógica real de autenticación y carga de user/userData
   // Por ahora, se deja como null para evitar errores de los consumidores
 
-  if (isMobile) return <NavigationMovil />;
+  // En móvil usamos el mismo flujo de autenticación (Google). No aplicamos binding de escritorio.
+  if (isMobile) {
+    return (
+      <AuthProvider enforceDesktopBinding={false}>
+        <AuthGate>
+          <NavigationMovil />
+          <DebugPanel />
+        </AuthGate>
+      </AuthProvider>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {
@@ -64,11 +78,12 @@ const App = () => {
     <AuthProvider enforceDesktopBinding={true}>
       <UserContext.Provider value={{ user, userData }}>
         <AuthGate>
-          {/* Banner para habilitar huella en este dispositivo */}
-          <BiometricSetup />
+          {/* Banner para habilitar huella en este dispositivo (oculto si la feature no está habilitada) */}
+          {BIOMETRICS_ENABLED && <BiometricSetup />}
           <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
             {renderView()}
           </DesktopLayout>
+          <DebugPanel />
         </AuthGate>
       </UserContext.Provider>
     </AuthProvider>

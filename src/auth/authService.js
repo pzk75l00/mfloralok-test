@@ -1,5 +1,6 @@
 import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, signOut as fbSignOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { db } from '../firebase/firebaseConfig';
+import { dlog } from '../utils/debug';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, increment } from 'firebase/firestore';
 import { getOrCreateDeviceId, getDeviceInfo, isMobileUA } from '../utils/deviceId';
 
@@ -7,7 +8,29 @@ const auth = getAuth();
 
 // Ensure local persistence so session survives app/browser restarts
 export async function ensureLocalPersistence() {
+  dlog('[auth] ensureLocalPersistence: browserLocalPersistence');
   await setPersistence(auth, browserLocalPersistence);
+}
+
+// Persist last auth denial reason across redirects so LoginScreen can show a clear error
+const REASON_KEY = 'mf_last_auth_reason_v1';
+export function setLastAuthReason(reason) {
+  try {
+    if (reason) sessionStorage.setItem(REASON_KEY, JSON.stringify(reason));
+    else sessionStorage.removeItem(REASON_KEY);
+  } catch (_) {
+    // ignore storage errors
+  }
+}
+export function consumeLastAuthReason() {
+  try {
+    const raw = sessionStorage.getItem(REASON_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(REASON_KEY);
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
 }
 
 export function subscribeAuth(callback) {
@@ -25,16 +48,21 @@ export async function signInWithGoogle({ preferRedirectForMobile = true } = {}) 
   const provider = new GoogleAuthProvider();
   // provider.setCustomParameters({ prompt: 'select_account' }); // opcional
   if (preferRedirectForMobile && isMobileUA()) {
+    dlog('[auth] signInWithGoogle: redirect flow (mobile)');
     await signInWithRedirect(auth, provider);
     return null; // redirect flow
   }
   try {
+    dlog('[auth] signInWithGoogle: popup flow');
     const cred = await signInWithPopup(auth, provider);
+    dlog('[auth] signInWithGoogle: popup success', { uid: cred?.user?.uid, email: cred?.user?.email });
     return cred.user;
   } catch (e) {
     const code = String(e?.code || '');
+    dlog('[auth] signInWithGoogle: popup error', code);
     // Fallback a redirect si el popup está bloqueado o hay conflicto de popups
     if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+      dlog('[auth] signInWithGoogle: fallback to redirect due to', code);
       await signInWithRedirect(auth, provider);
       return null;
     }
@@ -177,8 +205,30 @@ export async function isEmailAllowed(email) {
   }
 }
 
+// Owners/admins del sistema: app_config/admins { emails: { "mail@dominio": true } }
+export async function isOwnerEmail(email) {
+  if (!email) return false;
+  try {
+    const ref = doc(db, 'app_config', 'admins');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+    const data = snap.data() || {};
+    const map = data.emails || {};
+    const key = String(email).toLowerCase();
+    return map[key] === true;
+  } catch (_) {
+    return false;
+  }
+}
+
 // Verificar si hubo resultado/errores del flujo por redirección (móvil)
 export async function checkRedirectResult() {
-  const res = await getRedirectResult(auth);
-  return { ok: true, result: res };
+  try {
+    const res = await getRedirectResult(auth);
+    dlog('[auth] checkRedirectResult: ok', { hasResult: !!res });
+    return { ok: true, result: res };
+  } catch (e) {
+    dlog('[auth] checkRedirectResult: error', String(e?.code || e?.message || e));
+    throw e;
+  }
 }

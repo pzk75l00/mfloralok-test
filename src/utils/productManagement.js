@@ -1,5 +1,5 @@
 // Utilitarios para gestión de productos - reutilizable en móvil y escritorio
-import { collection, addDoc, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 /**

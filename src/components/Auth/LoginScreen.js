@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { signInWithGoogle, checkRedirectResult } from '../../auth/authService';
+import { signInWithGoogle, checkRedirectResult, consumeLastAuthReason } from '../../auth/authService';
+import { dlog } from '../../utils/debug';
 import logo from '../../assets/images/logo.png';
+import { isMobileUA } from '../../utils/deviceId';
+import MobileAuthErrorModal from './MobileAuthErrorModal';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supportsPasskey, setSupportsPasskey] = useState(false);
+  const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '').toLowerCase() === 'true';
 
   useEffect(() => {
     try {
@@ -22,6 +26,11 @@ export default function LoginScreen() {
         const code = String(e?.code || '');
         setError(mapAuthError(code));
       }
+      // Mostrar motivo de denegación previa si lo hubo
+      const last = consumeLastAuthReason();
+      if (last && last.message) {
+        setError(last.message);
+      }
     })();
   }, []);
 
@@ -29,9 +38,11 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
+      dlog('[auth] LoginScreen: Google button clicked');
       await signInWithGoogle({ preferRedirectForMobile: true });
     } catch (e) {
       const code = String(e?.code || '');
+      dlog('[auth] LoginScreen: Google error', code);
       setError(mapAuthError(code));
     } finally {
       setLoading(false);
@@ -159,7 +170,8 @@ export default function LoginScreen() {
         <h2 style={title}>Bienvenido</h2>
         <p style={subtitle}>Elegí cómo querés ingresar</p>
 
-        {error && (
+        {/* En móvil mostramos el error como modal, en desktop inline */}
+        {!isMobileUA() && error && (
           <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 10, textAlign: 'center' }}>{error}</div>
         )}
 
@@ -176,33 +188,39 @@ export default function LoginScreen() {
           {loading ? 'Conectando…' : 'Ingresar con Google'}
         </button>
 
-        <div style={{ height: 10 }} />
-
-  <button onClick={handleBiometric} disabled={loading || !supportsPasskey} style={btn('solid')} aria-label="Usar huella">
-          <span style={iconWrap}>
-            {/* Fingerprint icon */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 11a4 4 0 0 0-4 4v1" />
-              <path d="M12 11a4 4 0 0 1 4 4v1" />
-              <path d="M12 2a10 10 0 0 0-7.546 16.588" />
-              <path d="M12 2a10 10 0 0 1 7.546 16.588" />
-              <path d="M12 6a6 6 0 0 0-6 6v1" />
-              <path d="M12 6a6 6 0 0 1 6 6v1" />
-            </svg>
-          </span>
-          {supportsPasskey ? 'Usar huella' : 'Huella no disponible'}
-        </button>
-
-        {supportsPasskey ? (
-          <div style={{ marginTop: 12, textAlign: 'center', color: '#64748b', fontSize: 11 }}>
-            Podés habilitar huella después del primer ingreso con Google.
-          </div>
-        ) : (
-          <div style={{ marginTop: 12, textAlign: 'center', color: '#64748b', fontSize: 11 }}>
-            Tu navegador/dispositivo no soporta huella (WebAuthn).
-          </div>
+        {BIOMETRICS_ENABLED && (
+          <>
+            <div style={{ height: 10 }} />
+            <button onClick={handleBiometric} disabled={loading || !supportsPasskey} style={btn('solid')} aria-label="Usar huella">
+              <span style={iconWrap}>
+                {/* Fingerprint icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 11a4 4 0 0 0-4 4v1" />
+                  <path d="M12 11a4 4 0 0 1 4 4v1" />
+                  <path d="M12 2a10 10 0 0 0-7.546 16.588" />
+                  <path d="M12 2a10 10 0 0 1 7.546 16.588" />
+                  <path d="M12 6a6 6 0 0 0-6 6v1" />
+                  <path d="M12 6a6 6 0 0 1 6 6v1" />
+                </svg>
+              </span>
+              {supportsPasskey ? 'Usar huella' : 'Huella no disponible'}
+            </button>
+            {supportsPasskey ? (
+              <div style={{ marginTop: 12, textAlign: 'center', color: '#64748b', fontSize: 11 }}>
+                Podés habilitar huella después del primer ingreso con Google.
+              </div>
+            ) : (
+              <div style={{ marginTop: 12, textAlign: 'center', color: '#64748b', fontSize: 11 }}>
+                Tu navegador/dispositivo no soporta huella (WebAuthn).
+              </div>
+            )}
+          </>
         )}
       </div>
+      {/* Modal de error para móvil */}
+      {isMobileUA() && !!error && (
+        <MobileAuthErrorModal message={error} onClose={() => setError('')} />
+      )}
     </div>
   );
 }
