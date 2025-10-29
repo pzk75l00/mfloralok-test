@@ -52,16 +52,19 @@ Licenciamiento y asientos (seats):
 Autorización de dispositivos (escritorio):
 - Primer escritorio del Administrador: autorizado automáticamente en su primer login (si el correo coincide con el Administrador designado).
 - Escritorios adicionales: requieren autorización explícita (definir flujo UI/FA en siguiente iteración); bloquear por defecto.
+- En móvil NO se aplica vinculación de dispositivo; la política de dispositivos rige solo para escritorio.
 
 ## Flujo de Login (alto nivel)
 1. `signInWithGoogle()` (popup/redirect) → `User`.
-2. `isOwnerEmail(user.email)` → owners pueden saltar vinculación.
-3. `reserveSeatIfNeeded(user)` → reserva de asiento/licencia si aplica.
-4. `registerDeviceIfNeeded(user, deviceInfo)` → bloquea/es permite escritorio.
-5. UI: si bloqueado, se muestra modal; si ok, render de la app.
+2. Allowlist: validar en `app_config/auth` (`allowedEmails`, `allowedEmailDomains`, `blockedEmails`).
+3. `isOwnerEmail(user.email)` → owners pueden saltar vinculación.
+4. `reserveSeatIfNeeded(user)` → reserva de asiento/licencia si aplica.
+5. `registerDeviceIfNeeded(user, deviceInfo)` → bloquea/es permite escritorio (no aplica en móvil).
+6. UI: si bloqueado, se muestra modal; si ok, render de la app. En móvil, si denegado por allowlist, se muestra `MobileAuthErrorModal`.
 
 ## Registros y seguridad
-- `app_config/admins`: owners (lectura: autenticados; escritura: owners).
+- `app_config/admins`: owners (lectura y escritura: solo owners; correos en minúsculas).
+- `app_config/auth`: allowlist de login (lectura: app; escritura: solo owners).
 - Reglas en `firestore.rules` para mantener invariante de seguridad.
 - Evitar exponer lógica sensible en el cliente; plan de migración a Functions para operaciones críticas (seats, whitelists).
 
@@ -95,3 +98,4 @@ Reglas:
 - Documentación de reglas en `firestore.rules`.
 - Guía rápida: `doc/Guia_Rapida_Login_y_Fachada.md`.
 - Manual de usuario: `doc/Manual_Usuario_MundoFloral.md`.
+ - Panel de debug en UI: `src/components/Shared/DebugPanel.js` (activar con `?debug=1`).

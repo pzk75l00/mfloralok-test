@@ -7,12 +7,13 @@ Este documento describe el uso del sistema en sus dos experiencias: Escritorio (
 - Ingreso con Google: desde la pantalla de inicio, presione "Ingresar con Google" y seleccione su cuenta.
 - Autorización de dispositivo (Escritorio): por seguridad, el primer equipo de escritorio queda registrado automáticamente. Si intenta ingresar desde otro equipo, verá una ventana que indica que el escritorio no está autorizado. Los dueños (owners) pueden ingresar desde cualquier equipo.
 - Dueños/Owners: la lista de correos con permisos de dueño se gestiona de forma interna. Si su correo pertenece a este grupo, tendrá permisos ampliados (por ejemplo, gestionar autorizaciones).
-- Móvil: en teléfonos/tablets el sistema no exige autorización de dispositivo, pero se aplican las mismas reglas de autenticación.
+- Móvil: en teléfonos/tablets el sistema no exige autorización de dispositivo, pero se aplican las mismas reglas de autenticación. Si su correo no está permitido para ingresar, verá un mensaje en pantalla (modal) indicando que no tiene acceso.
 - Biometría: la sección de autenticación biométrica está deshabilitada por ahora. Se habilitará en futuras versiones.
 
 Consejos:
 - Si aparece un mensaje indicando que Google no está habilitado, contacte al administrador: puede haber una configuración de proyecto pendiente.
 - Si ve el mensaje de "Escritorio no autorizado" y necesita acceso, contacte a un dueño del sistema.
+- Si en móvil aparece un modal de "Acceso denegado" o "Usuario no permitido", contacte al administrador para que verifique la lista de correos permitidos.
 
 ## 2. Experiencias: Escritorio vs. Móvil
 
@@ -56,6 +57,9 @@ Mensaje — Escritorio no autorizado (modal):
 
 Login (Móvil):
 ![Login — Móvil](./screenshots/movil/login.png)
+
+Mensaje — Acceso denegado (Móvil):
+![Modal — Acceso denegado](./screenshots/movil/modal_acceso_denegado.png)
 
 Inicio/Principal (Móvil):
 ![Home — Móvil](./screenshots/movil/home.png)
@@ -132,8 +136,11 @@ Buenas prácticas:
 
 - En caso de incidentes o dudas, contacte a su administrador o escriba al correo de soporte interno.
 
+Nota para soporte: la app cuenta con un panel de depuración opcional. Puede habilitarse agregando `?debug=1` a la URL para ver registros técnicos del inicio de sesión.
+
 ---
 
 Changelog del manual:
+- v0.2 (Octubre 2025): se documenta el modal de acceso denegado en móvil y el panel de depuración opcional.
 - v0.1 (borrador inicial): estructura base y comportamientos actuales de login, autorización y experiencias.
   - Sección de capturas para escritorio y móvil con placeholders.

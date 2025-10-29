@@ -7,16 +7,19 @@ Esta guía resume cómo ingresar al sistema (Google) y cómo funciona la autoriz
 - Desde la pantalla de inicio, presione "Ingresar con Google".
 - Seleccione su cuenta. Si es la primera vez, deberá aceptar los permisos.
 - Si su correo pertenece al grupo de dueños (owners), tendrá permisos ampliados.
+- Control de acceso: el login está restringido por una allowlist en `app_config/auth` (campos `allowedEmails`, `allowedEmailDomains` y `blockedEmails`). Si su correo no está permitido, el acceso será denegado.
 
 Problemas comunes:
 - "Google no está habilitado": el proyecto aún no tiene activado Google como proveedor. Contacte al administrador.
 - Error de cliente OAuth: suele resolverse regenerando el cliente Web y asociándolo en Firebase Auth → Google.
+- "Usuario no permitido": verifique que su correo esté en `app_config/auth.allowedEmails` o que su dominio esté en `allowedEmailDomains`.
 
 ## 2) Autorización de equipos (solo Escritorio)
 
 - Política de alta inicial: el primer escritorio del Administrador (designado por los Creadores) queda autorizado automáticamente en su primer login, siempre que el correo coincida con el Administrador registrado.
 - Resto de escritorios: quedarán bloqueados y verán una ventana modal indicando "Escritorio no autorizado" hasta ser autorizados explícitamente según la política definida (por el Administrador o por Creadores).
 - Creadores/Owners: acceso técnico total (bypass) para tareas internas; esta capacidad NO es un entregable del cliente ni configurable por futuros “editores”.
+- Móvil: no se aplica vinculación de dispositivo; el bloqueo por equipo es solo para escritorio.
 
 Dónde se guarda:
 - Se asigna un identificador de dispositivo en el navegador (almacenamiento local) y se registra en Firestore.
@@ -30,7 +33,7 @@ Qué hacer si estoy bloqueado:
 - Creadores/Owners (nosotros): rol "modo Dios" para gobernanza del producto. Definen quién es el Administrador de cada cliente/instancia.
 - Administrador (cliente): es designado por los Creadores. Puede usar/configurar/editar todo lo operativo EXCEPTO gestionar otros Administradores. Es responsable de dar de alta usuarios finales hasta el límite de licencias contratado.
 - Usuarios (operación): creados por el Administrador dentro del cupo de asientos/licencias.
-- Lista técnica de owners: Firestore `app_config/admins` con estructura `{ emails: { "owner@mail.com": true } }`. Lectura: autenticados; escritura: solo owners (ver `firestore.rules`). Esta lista no es editable por clientes.
+- Lista técnica de owners: Firestore `app_config/admins` con estructura `{ emails: { "owner@mail.com": true } }`. Lectura y escritura: solo owners (ver `firestore.rules`). Los correos se comparan en minúsculas (`lowercase`). Esta lista no es editable por clientes.
 
 ## 4) Biometría (estado actual)
 
@@ -50,9 +53,11 @@ Separación propuesta de fachadas de configuración:
 - Fachada de Configuración de Cliente (instancia): parámetros operativos no sensibles (p. ej., preferencias de interfaz), sin acceso a gestión de usuarios de alto nivel.
 
 Componentes relacionados (referencia actual):
-- `src/auth/AuthProvider.js`: orquesta sesión, seats y dispositivo.
-- `src/auth/authService.js`: funciones para login, owners, reservas y dispositivo.
+- `src/auth/AuthProvider.js`: orquesta sesión, seats y dispositivo. En móvil se inicializa con `enforceDesktopBinding={false}`.
+- `src/auth/authService.js`: funciones para login, owners, reservas y dispositivo; persiste y expone el último motivo de denegación.
 - `src/utils/deviceId.js`: gestión de id de dispositivo y datos del equipo.
+- `src/components/Auth/MobileAuthErrorModal.js`: modal de error de acceso en móvil (usuario no permitido, etc.).
+- `src/components/Shared/DebugPanel.js`: panel de depuración en pantalla.
 - `src/firebase/firebaseConfig.js`: inicialización de Firebase/Firestore.
 
 Contratos sugeridos (interface de fachada operativa):
@@ -60,10 +65,12 @@ Contratos sugeridos (interface de fachada operativa):
 - `isOwnerEmail(email): Promise<boolean>`
 - `registerDeviceIfNeeded(user, deviceInfo): Promise<{ allowed: boolean }>`
 - `reserveSeatIfNeeded(user): Promise<void>`
+- `getLastAuthDenyReason()/setLastAuthDenyReason(reason)`: comunicación de denegaciones al UI.
 
 Notas de seguridad:
 - La fachada no debe exponer endpoints que permitan a clientes modificar owners ni configuración crítica.
 - Toda operación "de creador" debe pasar por validación estricta y/o backend (Cloud Functions) y no estar disponible para ediciones de clientes.
+- Las reglas refuerzan: `app_config/admins` solo visible/editable por owners; `app_config/auth` escribible por owners, legible por la app.
 
 Buenas prácticas:
 - Las pantallas llaman solo a la fachada; la fachada habla con Firebase/Firestore.
@@ -72,13 +79,24 @@ Buenas prácticas:
 ## 6) Troubleshooting
 
 - No se puede leer `app_config/admins`:
-  - Ver reglas en `firestore.rules` (lectura para autenticados; escritura solo owners).
+  - Ver reglas en `firestore.rules` (lectura y escritura: solo owners). Asegúrese de probar con un owner.
 - Veo "Escritorio no autorizado" aun siendo dueño:
   - Verifique que su correo esté en `app_config/admins` (lowercase) y que la app pueda leerlo.
 - El login funciona en producción pero no en local:
   - Revise `.env` (REACT_APP_FIREBASE_*), dominios autorizados y el cliente OAuth.
+- Usuario denegado en móvil: el modal muestra el motivo. Revise `app_config/auth` (allowlist) y, si corresponde, agregue el correo o dominio.
 
-## 7) Próximos pasos (documentación)
+Debug en tiempo real:
+- Active `?debug=1` en la URL o habilite desde `window.mfDebug.enable()` en la consola para ver el panel de depuración en pantalla (filtrable por `[auth]`).
+- Útil para seguir el flujo de popup/redirect, allowlist, seats, owners y dispositivo.
+
+## 7) DevOps y despliegue
+
+- Vercel: el frontend se despliega automáticamente al hacer push a `main`.
+- Firebase Rules: los cambios en `firestore.rules` deben publicarse con Firebase CLI (no se despliegan desde Vercel).
+- Seeding: use los scripts `scripts/seed-admins.js` (owners) y `scripts/seed-auth-allowlist.js` (allowlist) con una Service Account local.
+
+## 8) Próximos pasos (documentación)
 
 - Agregar capturas a `doc/screenshots/desktop` y `doc/screenshots/movil`.
 - Ampliar el manual de usuario con el flujo completo de login y autorización.
