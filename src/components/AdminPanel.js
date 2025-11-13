@@ -15,7 +15,7 @@ const AdminPanel = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (!userData || (userData.rol !== 'admin' && userData.rol !== 'dios')) return;
+    if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) return;
     const unsub = onSnapshot(collection(db, 'users'), snap => {
       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -79,7 +79,7 @@ const AdminPanel = () => {
     setLoading(false);
   };
 
-  if (!userData || (userData.rol !== 'admin' && userData.rol !== 'dios')) {
+  if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) {
     return <div className="text-red-600 font-bold p-4">Acceso restringido: solo para administradores.</div>;
   }
 
@@ -88,7 +88,8 @@ const AdminPanel = () => {
       <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-2">Registrar nuevo usuario</h2>
-        <UserRegisterForm isDios={userData.rol === 'dios'} />
+        {/* Solo el Dueño puede elegir el rol (admin/usuario). El admin crea siempre 'usuario'. */}
+        <UserRegisterForm isDios={userData.rol === 'owner'} />
       </div>
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-2">Usuarios registrados</h2>
@@ -144,10 +145,16 @@ const AdminPanel = () => {
             </div>
             <div className="mb-2">
               <label className="block text-xs font-semibold">Rol</label>
-              <select name="rol" value={editForm.rol} onChange={handleEditChange} className="border rounded p-2 w-full text-sm">
+              <select
+                name="rol"
+                value={editForm.rol}
+                onChange={handleEditChange}
+                className="border rounded p-2 w-full text-sm"
+                disabled={userData.rol !== 'owner'}
+                title={userData.rol !== 'owner' ? 'Solo el Dueño puede cambiar el rol' : ''}
+              >
                 <option value="usuario">Usuario</option>
                 <option value="admin">Admin</option>
-                <option value="dios">Dios</option>
               </select>
             </div>
             <div className="mb-2">
@@ -168,7 +175,7 @@ const AdminPanel = () => {
           </form>
         </div>
       )}
-      <div className="text-xs text-gray-500 mt-8">Solo visible para administradores y modo DIOS.</div>
+      <div className="text-xs text-gray-500 mt-8">Solo visible para Dueño y Administradores.</div>
     </div>
   );
 };

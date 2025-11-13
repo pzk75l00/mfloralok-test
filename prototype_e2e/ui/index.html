@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prototipo E2E · Onboarding y Provisioning</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Prototipo E2E · Onboarding y Provisioning per-app</h1>
+    <p class="subtitle">Aislado · No toca la app real · Solo simulación visual</p>
+  </header>
+
+  <main>
+    <nav class="tabs">
+      <button data-tab="factory">Fábrica / Mis Apps</button>
+      <button data-tab="flow" class="active">Flujo</button>
+      <button data-tab="provisioning">Provisioning</button>
+      <button data-tab="seats">Licencias (Seats)</button>
+      <button data-tab="upgrades">Upgrades</button>
+      <button data-tab="config">Parámetros</button>
+    </nav>
+
+    <section id="tab-factory" class="tab">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Mis Apps (lookup por email)</h2>
+          <p>Busca en el registro central (simulado) las apps vinculadas a un email.</p>
+          <div class="grid form">
+            <label>Email
+              <input id="factoryEmail" placeholder="responsable@cliente.com"/>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="btnFactoryLookup">Buscar</button>
+            <button id="btnFactoryClear" class="ghost">Limpiar</button>
+          </div>
+          <div id="factoryMsg" class="result">—</div>
+        </div>
+        <div class="card">
+          <h2>Resultado</h2>
+          <ul id="factoryList" class="list"></ul>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Qué pasa al entrar</h2>
+        <p>Al hacer clic en "Ir a mi app", este prototipo abre la URL en una nueva pestaña (o muestra un link). En producción, se redirige automáticamente a la app del cliente.</p>
+      </div>
+    </section>
+
+    <section id="tab-flow" class="tab active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Login y decisión</h2>
+          <div class="stack">
+            <div class="row"><label><input type="checkbox" id="chkAllowed"> Email está en allowlist</label></div>
+            <div class="row"><label><input type="checkbox" id="chkHasTenant"> Ya existe tenant (suscripto)</label></div>
+            <div class="row"><label><input type="checkbox" id="chkOwner"> Soy dueño (bypass)</label></div>
+            <div class="row">
+              <button id="btnSimulateLogin">Simular login</button>
+            </div>
+            <div class="result" id="loginResult">Resultado: —</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Vista Demo (solo lectura)</h2>
+          <p>Simula la vista demo por rubro, sin usuarios ni escrituras.</p>
+          <label>Rubro demo
+            <select id="demoRubro">
+              <option value="floreria">Florería</option>
+              <option value="vivero">Vivero</option>
+              <option value="jardineria">Jardinería</option>
+            </select>
+          </label>
+          <div class="demo-box" id="demoBox">Dataset: florería · 12 productos, 3 reportes</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Formulario de alta</h2>
+          <div class="grid form">
+            <label>Comercio <input id="fComercio" placeholder="Floral SA"/></label>
+            <label>Email responsable <input id="fEmail" placeholder="responsable@cliente.com"/></label>
+            <label>Teléfono <input id="fTel" placeholder="+54..."/></label>
+            <label>Rubro
+              <select id="fRubro">
+                <option value="floreria">Florería</option>
+                <option value="vivero">Vivero</option>
+                <option value="jardineria">Jardinería</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="btnSubmitSignup">Enviar solicitud</button>
+          </div>
+          <div id="signupResult" class="result">Estado: —</div>
+        </div>
+
+        <div class="card">
+          <h2>Cobro externo (simulado)</h2>
+          <p>Representa la página carrito/pago; al confirmar, habilita ventas en el tenant.</p>
+          <div class="actions">
+            <button id="btnPay">Confirmar pago</button>
+            <button id="btnDecline" class="ghost">No pagar</button>
+          </div>
+          <div id="payResult" class="result">Pago: —</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-provisioning" class="tab">
+      <div class="card">
+        <h2>Paso a paso</h2>
+        <ol id="provSteps" class="steps"></ol>
+        <div class="actions">
+          <button id="btnProvAll">Completar todos</button>
+          <button id="btnProvClear" class="ghost">Limpiar</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-seats" class="tab">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Resumen licencia</h2>
+          <div class="summary" id="licSummary"></div>
+        </div>
+        <div class="card">
+          <h2>Asignar/Revocar asientos</h2>
+          <div class="stack">
+            <label>Email <input id="seatEmail" placeholder="operativo@cliente.com"/></label>
+            <div class="actions">
+              <button id="btnAssign">Asignar asiento</button>
+              <button id="btnRevoke" class="ghost">Revocar</button>
+            </div>
+            <div id="seatMsg" class="result">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Lista de asientos</h2>
+        <ul id="seatList" class="list"></ul>
+      </div>
+    </section>
+
+    <section id="tab-upgrades" class="tab">
+      <div class="card">
+        <h2>Distribución de upgrades</h2>
+        <div class="grid form">
+          <label>Versión nueva <input id="newVersion" placeholder="v1.0.1"/></label>
+          <label>Notas <input id="newNotes" placeholder="Fixes y mejoras"/></label>
+        </div>
+        <div class="actions">
+          <button id="btnPublish">Publicar upgrade</button>
+        </div>
+        <div id="upgradeMsg" class="result">—</div>
+      </div>
+    </section>
+
+    <section id="tab-config" class="tab">
+      <div class="card">
+        <h2>Parámetros del Tenant</h2>
+        <div class="grid form">
+          <label>TenantId <input id="tenantId" placeholder="floral-sa"/></label>
+          <label>Email responsable <input id="ownerEmail" placeholder="responsable@cliente.com"/></label>
+          <label>Rubro
+            <select id="tenantRubro">
+              <option value="floreria">Florería</option>
+              <option value="vivero">Vivero</option>
+              <option value="jardineria">Jardinería</option>
+            </select>
+          </label>
+          <label>Seats comprados <input id="tenantSeats" type="number" min="1" value="5"/></label>
+        </div>
+        <div class="actions">
+          <button id="btnSaveConfig">Guardar</button>
+          <button id="btnResetConfig" class="ghost">Reset</button>
+        </div>
+        <div class="result" id="cfgMsg">—</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Prototipo E2E sin efectos colaterales. Se puede eliminar la carpeta <code>prototype_e2e/</code> cuando quieras.</small>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>

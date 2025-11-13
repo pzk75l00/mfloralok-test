@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navigation from './Navigation';
 import logo from '../assets/images/logo.png';
 import PropTypes from 'prop-types';
-import { UserContext } from '../App';
+import { useAuth } from '../auth/AuthProvider';
+import { isOwnerEmail } from '../auth/authService';
 
 const socialLinks = [
   {
@@ -30,6 +31,35 @@ const socialLinks = [
 
 const DesktopLayout = ({ currentView, setCurrentView, children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, userData, signOut } = useAuth();
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const ok = await isOwnerEmail(user?.email || '');
+        if (mounted) setIsOwner(Boolean(ok));
+      } catch (_) {
+        if (mounted) setIsOwner(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [user?.email]);
+
+  const RoleBadge = ({ label, variant = 'default' }) => {
+    const styles = {
+      owner: 'bg-purple-50 text-purple-700 border-purple-200',
+      admin: 'bg-blue-50 text-blue-700 border-blue-200',
+      usuario: 'bg-gray-100 text-gray-700 border-gray-200',
+      default: 'bg-gray-100 text-gray-700 border-gray-200'
+    };
+    const cls = styles[variant] || styles.default;
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${cls}`}>{label}</span>
+    );
+  };
+  RoleBadge.propTypes = { label: PropTypes.string.isRequired, variant: PropTypes.string };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -55,26 +85,53 @@ const DesktopLayout = ({ currentView, setCurrentView, children }) => {
           <button className="ml-2 text-gray-400 hover:text-blue-500" title="Agregar red social">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           </button>
+          {/* Usuario actual y Cerrar sesión */}
+          {user && (
+            <div className="ml-4 flex items-center gap-2 pl-4 border-l border-gray-200">
+              <div className="text-sm text-gray-700 max-w-[220px] truncate" title={user.email || ''}>
+                {user.email || 'Usuario' }
+              </div>
+              <div className="flex items-center gap-1">
+                {isOwner ? (
+                  // Dueño: solo mostrar el badge "Dueño" sin el rol operativo
+                  <RoleBadge label="Dueño" variant="owner" />
+                ) : (
+                  userData?.rol && (
+                    <RoleBadge
+                      label={(userData.rol || '').replace(/^./, c=>c.toUpperCase())}
+                      variant={userData.rol}
+                    />
+                  )
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  try { await signOut(); }
+                  catch (e) { /* Evitar romper UI si falla logout */ console.debug('signOut error', e); }
+                }}
+                className="text-red-600 text-sm font-semibold px-3 py-1 rounded hover:bg-red-50 border border-red-200"
+                title="Cerrar sesión"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <UserContext.Consumer>
-          {({ userData }) => (
-            <aside className={`transition-all duration-300 bg-white shadow-lg flex flex-col ${sidebarOpen ? 'w-56' : 'w-16'} h-screen sticky top-0 min-h-0 z-20`}>
-              <button
-                className="p-2 m-2 rounded hover:bg-gray-100 text-gray-400 self-end"
-                onClick={() => setSidebarOpen(o => !o)}
-                title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? 'M6 18L18 12L6 6' : 'M6 6l12 6-12 6'} />
-                </svg>
-              </button>
-              <Navigation currentView={currentView} setCurrentView={setCurrentView} sidebarMode={!sidebarOpen ? 'compact' : 'full'} userData={userData} />
-            </aside>
-          )}
-        </UserContext.Consumer>
+        <aside className={`transition-all duration-300 bg-white shadow-lg flex flex-col ${sidebarOpen ? 'w-56' : 'w-16'} h-screen sticky top-0 min-h-0 z-20`}>
+          <button
+            className="p-2 m-2 rounded hover:bg-gray-100 text-gray-400 self-end"
+            onClick={() => setSidebarOpen(o => !o)}
+            title={sidebarOpen ? 'Ocultar menú' : 'Mostrar menú'}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? 'M6 18L18 12L6 6' : 'M6 6l12 6-12 6'} />
+            </svg>
+          </button>
+          <Navigation currentView={currentView} setCurrentView={setCurrentView} sidebarMode={!sidebarOpen ? 'compact' : 'full'} userData={userData} isOwner={isOwner} />
+        </aside>
         {/* Main content */}
         <main
           className={

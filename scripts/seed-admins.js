@@ -84,6 +84,28 @@ async function main() {
   console.log('admins doc written at app_config/admins:');
   console.log(JSON.stringify(snap.data(), null, 2));
 
+  // Opcional: asegurar que cada owner tenga rol 'owner' en users/{uid}
+  try {
+    const auth = admin.auth(app);
+    const ownerEmails = Object.keys(emailsMap);
+    for (const email of ownerEmails) {
+      try {
+        const userRec = await auth.getUserByEmail(email);
+        const uid = userRec.uid;
+        await db.collection('users').doc(uid).set({
+          email: email,
+          rol: 'owner',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        console.log(`users/${uid} marcado como rol=owner`);
+      } catch (e) {
+        console.warn(`No se pudo asegurar rol=owner para ${email}: ${e.message || e}`);
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo ejecutar el refuerzo de rol owner en users/{uid}:', e.message || e);
+  }
+
   await app.delete();
 }
 

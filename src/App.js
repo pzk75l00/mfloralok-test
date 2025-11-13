@@ -10,6 +10,7 @@ import DesktopLayout from './components/DesktopLayout';
 import { initializeDefaultPaymentMethods } from './utils/paymentMethodsInit';
 import BiometricSetup from './components/Auth/BiometricSetup';
 import DebugPanel from './components/Shared/DebugPanel';
+import UserRegisterForm from './components/UserRegisterForm';
 
 // Feature flag: ocultar biometría hasta que esté lista
 const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '').toLowerCase() === 'true';
@@ -69,6 +70,8 @@ const App = () => {
         return <StatisticsView />;
       case 'reportes':
         return <ReportsView />;
+      case 'usuarios':
+        return <UserRegisterForm />;
       default:
         return <div className="text-center text-gray-500">Seleccione un módulo.</div>;
     }

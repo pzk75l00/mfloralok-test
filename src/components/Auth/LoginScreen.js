@@ -4,11 +4,13 @@ import { dlog } from '../../utils/debug';
 import logo from '../../assets/images/logo.png';
 import { isMobileUA } from '../../utils/deviceId';
 import MobileAuthErrorModal from './MobileAuthErrorModal';
+import SignupForm from '../SignupForm';
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supportsPasskey, setSupportsPasskey] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
   const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '').toLowerCase() === 'true';
 
   useEffect(() => {
@@ -216,7 +218,22 @@ export default function LoginScreen() {
             )}
           </>
         )}
+
+        <div style={{ height: 10 }} />
+        <button
+          onClick={() => setShowSignup(s => !s)}
+          disabled={loading}
+          style={btn('light')}
+          aria-label="Formulario de alta"
+        >
+          {showSignup ? 'Ocultar formulario de alta' : '¿No estás habilitado? Solicitar alta'}
+        </button>
       </div>
+      {showSignup && (
+        <div style={{ marginTop: 12, width: '100%', maxWidth: 520 }}>
+          <SignupForm />
+        </div>
+      )}
       {/* Modal de error para móvil */}
       {isMobileUA() && !!error && (
         <MobileAuthErrorModal message={error} onClose={() => setError('')} />

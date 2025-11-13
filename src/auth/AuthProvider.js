@@ -23,39 +23,46 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
         dlog('[auth] onAuthStateChanged', { hasUser: !!u, email: u?.email });
         setUser(u);
         if (u) {
-          // Reglas de acceso por email/dominio (configurable en Firestore app_config/auth)
-          const allowed = await isEmailAllowed(u.email || '');
-          dlog('[auth] email allow check', { email: u.email, allowed });
-          if (!allowed) {
-            console.warn('[Auth] Email no autorizado', u.email);
-            setLastAuthReason({ code: 'email_not_allowed', message: 'Tu cuenta no está autorizada para acceder a este entorno.' });
-            await doSignOut();
-            setUser(null);
-            setUserData(null);
-            setLoading(false);
-            return;
-          }
-          // Seat reservation (first-time users) and base profile
-          try {
-            await reserveSeatIfNeeded(u.uid, { email: u.email || null, displayName: u.displayName || null });
-            dlog('[auth] reserveSeatIfNeeded ok');
-          } catch (e) {
-            if (String(e.message) === 'license_limit_reached') {
-              console.warn('[Auth] Límite de usuarios alcanzado');
-              setLastAuthReason({ code: 'license_limit', message: 'Límite de usuarios alcanzado. Contacte al administrador.' });
+          // Determinar si es dueño primero para decidir bypasses
+          const owner = await isOwnerEmail(u.email || '');
+          dlog('[auth] isOwnerEmail', { owner });
+
+          if (owner) {
+            // Dueño: bypass de allowlist y seats; asegurar perfil con rol 'owner'
+            await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null, rol: 'owner' });
+            dlog('[auth] upsertUserProfile owner ok');
+          } else {
+            // No dueño: aplicar allowlist y seats normalmente
+            const allowed = await isEmailAllowed(u.email || '');
+            dlog('[auth] email allow check', { email: u.email, allowed });
+            if (!allowed) {
+              console.warn('[Auth] Email no autorizado', u.email);
+              setLastAuthReason({ code: 'email_not_allowed', message: 'Tu cuenta no está autorizada para acceder a este entorno.' });
               await doSignOut();
               setUser(null);
               setUserData(null);
               setLoading(false);
               return;
             }
+            try {
+              await reserveSeatIfNeeded(u.uid, { email: u.email || null, displayName: u.displayName || null });
+              dlog('[auth] reserveSeatIfNeeded ok');
+            } catch (e) {
+              if (String(e.message) === 'license_limit_reached') {
+                console.warn('[Auth] Límite de usuarios alcanzado');
+                setLastAuthReason({ code: 'license_limit', message: 'Límite de usuarios alcanzado. Contacte al administrador.' });
+                await doSignOut();
+                setUser(null);
+                setUserData(null);
+                setLoading(false);
+                return;
+              }
+            }
+            await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null });
+            dlog('[auth] upsertUserProfile ok');
           }
-          // Ensure profile exists/updates
-          await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null });
-          dlog('[auth] upsertUserProfile ok');
+
           // Owners pueden omitir el binding de escritorio
-          const owner = await isOwnerEmail(u.email || '');
-          dlog('[auth] isOwnerEmail', { owner });
           const deviceRes = await registerDeviceIfNeeded(u.uid, { enforceDesktopBinding: enforceDesktopBinding && !owner });
           dlog('[auth] registerDeviceIfNeeded', deviceRes);
           if (!deviceRes.ok) {

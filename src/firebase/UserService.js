@@ -5,9 +5,9 @@ import { db } from './firebaseConfig';
 // Servicio para manejo de usuarios
 const auth = getAuth();
 
-// Registrar usuario (modo DIOS puede crear cualquier usuario)
+// Registrar usuario (owner/admin pueden crear usuarios con rol asignado)
 export async function registerUser({ email, password, nombre, apellido, telefono, modules = ["basico"], rol = "usuario", uid = null }) {
-  // Si uid está presente, es un usuario creado por el admin (modo DIOS)
+  // Si uid está presente, es un usuario creado por el owner/admin (flujo de administración)
   let userCredential;
   if (!uid) {
     userCredential = await createUserWithEmailAndPassword(auth, email, password);
