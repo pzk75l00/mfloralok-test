@@ -1,5 +1,5 @@
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
 // Servicio para manejo de usuarios
@@ -7,19 +7,45 @@ const auth = getAuth();
 
 // Registrar usuario "funcional" (solo datos y permisos). No crea cuenta en Auth;
 // el usuario debe acceder con su cuenta de Google (mismo email).
-export async function registerUser({ email, nombre, apellido, telefono, modules = ["basico"], rol = "usuario" }) {
-  const ref = doc(db, 'users_by_email', email.toLowerCase());
+// Además deja preparado el período de prueba y metadatos de rubro/país.
+export async function registerUser({
+  email,
+  nombre = '',
+  apellido = '',
+  telefono = '',
+  modules = ["basico"],
+  rol = "usuario",
+  rubroId = null,
+  paisId = null,
+  tiempoPrueba = 7,
+}) {
+  const normalizedEmail = String(email || '').toLowerCase();
+  const ref = doc(db, 'users_by_email', normalizedEmail);
+
+  const now = new Date();
+  const dias = Number.isFinite(Number(tiempoPrueba)) ? Number(tiempoPrueba) : 7;
+  const fechaFin = new Date(now.getTime() + dias * 24 * 60 * 60 * 1000);
+
   await setDoc(ref, {
-    email: email.toLowerCase(),
-    nombre,
-    apellido,
-    telefono,
+    email: normalizedEmail,
+    nombre: nombre || '',
+    apellido: apellido || '',
+    telefono: telefono || '',
     rol,
     modules,
     estado: 'pendiente',
-    creado: new Date().toISOString()
+    fechaCreacion: now.toISOString(),
+    fechaModif: now.toISOString(),
+    fechaFin: fechaFin.toISOString(),
+    tiempoPrueba: dias,
+    rubroId: rubroId || null,
+    paisId: paisId || null,
+    // Marca de servidor para auditoría complementaria
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   }, { merge: true });
-  return email.toLowerCase();
+
+  return normalizedEmail;
 }
 
 // Login de usuario

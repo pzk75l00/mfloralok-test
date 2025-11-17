@@ -4,7 +4,7 @@ import { subscribeAuth, ensureLocalPersistence, signOut as doSignOut, getUserPro
 import DesktopBlockedModal from '../components/Auth/DesktopBlockedModal';
 import { dlog } from '../utils/debug';
 import { getDeviceInfo, isMobileUA } from '../utils/deviceId';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
 const AuthContext = createContext({ user: null, userData: null, loading: true, signOut: async () => {} });
@@ -49,6 +49,33 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
             }
             const pre = preSnap.data() || {};
             const estado = String(pre.estado || 'pendiente');
+            // Normalizar fechas y período de prueba para registros viejos (sin estos campos)
+            const diasPrueba = Number.isFinite(Number(pre.tiempoPrueba)) ? Number(pre.tiempoPrueba) : 7;
+            const createdLocal = (() => {
+              if (pre.fechaCreacion) return new Date(pre.fechaCreacion);
+              if (pre.creado) return new Date(pre.creado);
+              if (pre.createdAt && typeof pre.createdAt.toDate === 'function') return pre.createdAt.toDate();
+              return new Date();
+            })();
+            const computedFin = new Date(createdLocal.getTime() + diasPrueba * 24 * 60 * 60 * 1000);
+            const finDate = pre.fechaFin ? new Date(pre.fechaFin) : computedFin;
+            // Si faltaba fechaFin o tiempoPrueba, completar en background para dejar consistente
+            if (!pre.fechaFin || pre.tiempoPrueba === undefined) {
+              try {
+                await updateDoc(preRef, {
+                  fechaFin: finDate.toISOString(),
+                  tiempoPrueba: diasPrueba,
+                  fechaModif: new Date().toISOString(),
+                });
+              } catch (_) {
+                // ignorar
+              }
+            }
+            // Verificar expiración de período de prueba
+            let pruebaExpirada = false;
+            if (!isNaN(finDate.getTime()) && Date.now() > finDate.getTime()) {
+              pruebaExpirada = true;
+            }
             if (estado === 'suspendido') {
               setLastAuthReason({ code: 'user_suspended', message: 'Tu usuario está suspendido. Contactá al administrador.' });
               await doSignOut();
@@ -59,6 +86,20 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
             }
             if (estado === 'borrado') {
               setLastAuthReason({ code: 'user_deleted', message: 'Tu usuario fue dado de baja. Solicitá reactivación al administrador.' });
+              await doSignOut();
+              setUser(null);
+              setUserData(null);
+              setLoading(false);
+              return;
+            }
+            if (pruebaExpirada) {
+              // Marcar estado expirado en pre-registro para referencia futura
+              try {
+                await updateDoc(preRef, { estado: 'expirado', fechaModif: new Date().toISOString() });
+              } catch (_) {
+                // ignorar error
+              }
+              setLastAuthReason({ code: 'trial_expired', message: 'Tu período de prueba finalizó. Podés solicitar la compra para continuar.' });
               await doSignOut();
               setUser(null);
               setUserData(null);

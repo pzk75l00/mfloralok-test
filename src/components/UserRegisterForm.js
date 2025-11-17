@@ -105,7 +105,6 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               value={form.nombre}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
               disabled={loading}
             />
           </div>
@@ -116,7 +115,6 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               value={form.apellido}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
               disabled={loading}
             />
           </div>
@@ -130,7 +128,6 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               value={form.telefono}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
               disabled={loading}
             />
           </div>
