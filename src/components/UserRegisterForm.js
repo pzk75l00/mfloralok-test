@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { registerUser } from '../firebase/UserService';
 import PropTypes from 'prop-types';
+import { db } from '../firebase/firebaseConfig';
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const initialForm = {
   email: '', // parte local (antes del @)
@@ -8,7 +10,9 @@ const initialForm = {
   apellido: '',
   telefono: '',
   rol: 'usuario',
-  modules: ['basico']
+  modules: ['basico'],
+  rubroId: '',
+  paisId: ''
 };
 
 // Nota: mantenemos la prop isDios por compatibilidad, pero solo habilita elegir entre 'usuario' y 'admin'.
@@ -16,9 +20,88 @@ const initialForm = {
 const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
   const [form, setForm] = useState(initialForm);
   const [domain, setDomain] = useState('@gmail.com');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // loading submit
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [rubros, setRubros] = useState([]);
+  const [paises, setPaises] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [showRubroModal, setShowRubroModal] = useState(false);
+  const [showPaisModal, setShowPaisModal] = useState(false);
+  const [newCatalogName, setNewCatalogName] = useState('');
+  const [creatingCatalog, setCreatingCatalog] = useState(false);
+
+  // Carga de catálogos rubros y paises
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rubrosQ = query(collection(db, 'rubros'), orderBy('nombre'));
+        const paisesQ = query(collection(db, 'paises'), orderBy('nombre'));
+        const [rubrosSnap, paisesSnap] = await Promise.all([
+          getDocs(rubrosQ).catch(() => null),
+          getDocs(paisesQ).catch(() => null)
+        ]);
+        if (mounted) {
+          const rubrosArr = rubrosSnap ? rubrosSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+          const paisesArr = paisesSnap ? paisesSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+          setRubros(rubrosArr);
+          setPaises(paisesArr);
+          // Autoseleccionar Argentina si existe y aún no hay país elegido
+          if (!form.paisId) {
+            const argentina = paisesArr.find(p => String(p.nombre || '').toLowerCase() === 'argentina');
+            if (argentina) {
+              setForm(f => ({ ...f, paisId: argentina.id }));
+            }
+          }
+        }
+      } catch (_) {
+        if (mounted) {
+          setRubros([]);
+          setPaises([]);
+        }
+      } finally {
+        if (mounted) setCatalogLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Crear entrada en catálogos (rubro/pais)
+  const handleCreateCatalog = async (type) => {
+    if (!newCatalogName.trim()) return;
+    setCreatingCatalog(true);
+    try {
+      const colName = type === 'rubro' ? 'rubros' : 'paises';
+      const docRef = await addDoc(collection(db, colName), {
+        nombre: newCatalogName.trim(),
+        activo: true,
+        createdAt: serverTimestamp()
+      });
+      setNewCatalogName('');
+      if (type === 'rubro') {
+        setShowRubroModal(false);
+        // refrescar rubros
+        const snap = await getDocs(query(collection(db, 'rubros'), orderBy('nombre')));
+        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setRubros(arr);
+        // Asignar el que se creó si campo vacío
+        setForm(f => ({ ...f, rubroId: f.rubroId || docRef.id }));
+      } else {
+        setShowPaisModal(false);
+        const snap = await getDocs(query(collection(db, 'paises'), orderBy('nombre')));
+        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setPaises(arr);
+        // Si Argentina fue creada y no hay país asignado, asignar
+        const argentina = arr.find(p => String(p.nombre || '').toLowerCase() === 'argentina');
+        setForm(f => ({ ...f, paisId: f.paisId || (argentina ? argentina.id : docRef.id) }));
+      }
+    } catch (e) {
+      setError(e.message || 'Error creando catálogo');
+    } finally {
+      setCreatingCatalog(false);
+    }
+  };
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -52,12 +135,20 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
       setLoading(false);
       return;
     }
+    // Validar rubro (requerido), país opcional
+    if (!form.rubroId) {
+      setError('Debés seleccionar un rubro.');
+      setLoading(false);
+      return;
+    }
     try {
       await registerUser({
         ...form,
         email,
         rol: isDios ? form.rol : 'usuario',
-        modules: form.modules.length ? form.modules : ['basico']
+        modules: form.modules.length ? form.modules : ['basico'],
+        rubroId: form.rubroId || null,
+        paisId: form.paisId || null
       });
       setSuccess('Usuario registrado correctamente');
       setForm(initialForm);
@@ -167,6 +258,52 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
           <span className="text-xs text-gray-500">Ctrl+Click para seleccionar varios</span>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Rubro</label>
+            <select
+              name="rubroId"
+              value={form.rubroId}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              disabled={loading || catalogLoading}
+              required
+            >
+              <option value="">{catalogLoading ? 'Cargando...' : 'Seleccioná rubro'}</option>
+              {rubros.map(r => (
+                <option key={r.id} value={r.id}>{r.nombre || r.id}</option>
+              ))}
+            </select>
+            {!catalogLoading && rubros.length === 0 && (
+              <div className="mt-1 flex items-center gap-2">
+                <p className="text-xs text-red-600">No hay rubros cargados.</p>
+                <button type="button" onClick={() => setShowRubroModal(true)} className="text-xs text-blue-600 underline">Crear rubro</button>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">País (opcional)</label>
+            <select
+              name="paisId"
+              value={form.paisId}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              disabled={loading || catalogLoading}
+            >
+              <option value="">{catalogLoading ? 'Cargando...' : 'Sin asignar'}</option>
+              {paises.map(p => (
+                <option key={p.id} value={p.id}>{p.nombre || p.id}</option>
+              ))}
+            </select>
+            {!catalogLoading && paises.length === 0 && (
+              <div className="mt-1 flex items-center gap-2">
+                <p className="text-xs text-gray-600">No hay países cargados.</p>
+                <button type="button" onClick={() => setShowPaisModal(true)} className="text-xs text-blue-600 underline">Crear país</button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">{error}</div>
         )}
@@ -184,6 +321,36 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
           </button>
         </div>
       </div>
+      {/* Modal creación catálogo */}
+      {(showRubroModal || showPaisModal) && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-md shadow-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold mb-4">Crear {showRubroModal ? 'Rubro' : 'País'}</h3>
+            <input
+              type="text"
+              value={newCatalogName}
+              onChange={e => setNewCatalogName(e.target.value)}
+              placeholder={`Nombre de ${showRubroModal ? 'rubro' : 'país'}`}
+              className="w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
+              disabled={creatingCatalog}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowRubroModal(false); setShowPaisModal(false); setNewCatalogName(''); }}
+                className="px-3 py-2 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50"
+                disabled={creatingCatalog}
+              >Cancelar</button>
+              <button
+                type="button"
+                onClick={() => handleCreateCatalog(showRubroModal ? 'rubro' : 'pais')}
+                className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                disabled={creatingCatalog || !newCatalogName.trim()}
+              >{creatingCatalog ? 'Creando...' : 'Crear'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 };
