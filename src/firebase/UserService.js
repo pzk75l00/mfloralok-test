@@ -1,30 +1,25 @@
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
 // Servicio para manejo de usuarios
 const auth = getAuth();
 
-// Registrar usuario (owner/admin pueden crear usuarios con rol asignado)
-export async function registerUser({ email, password, nombre, apellido, telefono, modules = ["basico"], rol = "usuario", uid = null }) {
-  // Si uid está presente, es un usuario creado por el owner/admin (flujo de administración)
-  let userCredential;
-  if (!uid) {
-    userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    uid = userCredential.user.uid;
-  }
-  // Guardar datos en Firestore
-  await setDoc(doc(db, 'users', uid), {
-    uid,
-    email,
+// Registrar usuario "funcional" (solo datos y permisos). No crea cuenta en Auth;
+// el usuario debe acceder con su cuenta de Google (mismo email).
+export async function registerUser({ email, nombre, apellido, telefono, modules = ["basico"], rol = "usuario" }) {
+  const ref = doc(db, 'users_by_email', email.toLowerCase());
+  await setDoc(ref, {
+    email: email.toLowerCase(),
     nombre,
     apellido,
     telefono,
     rol,
     modules,
+    estado: 'pendiente',
     creado: new Date().toISOString()
-  });
-  return uid;
+  }, { merge: true });
+  return email.toLowerCase();
 }
 
 // Login de usuario

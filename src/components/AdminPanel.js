@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../App';
 import UserRegisterForm from './UserRegisterForm';
 import { db } from '../firebase/firebaseConfig';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 // Vista de administración: gestión de usuarios y módulos
 const AdminPanel = () => {
@@ -13,6 +13,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isOwnerByEmail, setIsOwnerByEmail] = useState(false);
 
   useEffect(() => {
     if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) return;
@@ -20,6 +21,31 @@ const AdminPanel = () => {
       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsub();
+  }, [userData]);
+
+  // Además del rol en users, verificamos si su email está en app_config/admins
+  useEffect(() => {
+    const checkOwnerEmail = async () => {
+      try {
+        if (!userData?.email) {
+          setIsOwnerByEmail(false);
+          return;
+        }
+        const ref = doc(db, 'app_config', 'admins');
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          setIsOwnerByEmail(false);
+          return;
+        }
+        const data = snap.data() || {};
+        const map = data.emails || {};
+        const key = String(userData.email).toLowerCase();
+        setIsOwnerByEmail(map[key] === true);
+      } catch (e) {
+        setIsOwnerByEmail(false);
+      }
+    };
+    checkOwnerEmail();
   }, [userData]);
 
   const handleEdit = (user) => {
@@ -84,47 +110,57 @@ const AdminPanel = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
+    <div className="max-w-6xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Registrar nuevo usuario</h2>
-        {/* Solo el Dueño puede elegir el rol (admin/usuario). El admin crea siempre 'usuario'. */}
-        <UserRegisterForm isDios={userData.rol === 'owner'} />
-      </div>
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">Usuarios registrados</h2>
-        {error && <div className="text-red-600 text-xs mb-2">{error}</div>}
-        {success && <div className="text-green-700 text-xs mb-2">{success}</div>}
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border rounded shadow text-sm">
-            <thead>
-              <tr className="bg-green-100">
-                <th className="p-2">Email</th>
-                <th className="p-2">Nombre</th>
-                <th className="p-2">Apellido</th>
-                <th className="p-2">Teléfono</th>
-                <th className="p-2">Rol</th>
-                <th className="p-2">Módulos</th>
-                <th className="p-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(user => (
-                <tr key={user.id} className="border-b">
-                  <td className="p-2">{user.email}</td>
-                  <td className="p-2">{user.nombre}</td>
-                  <td className="p-2">{user.apellido}</td>
-                  <td className="p-2">{user.telefono}</td>
-                  <td className="p-2">{user.rol}</td>
-                  <td className="p-2">{(user.modules || []).join(', ')}</td>
-                  <td className="p-2">
-                    <button className="text-blue-600 underline text-xs mr-2" onClick={() => handleEdit(user)}>Editar</button>
-                    <button className="text-red-600 underline text-xs" onClick={() => handleDelete(user)}>Eliminar</button>
-                  </td>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Registrar nuevo usuario</h2>
+          {/* Solo el Dueño puede elegir el rol (admin/usuario). El admin crea siempre 'usuario'.
+              Consideramos Dueño si tiene rol 'owner' o si su email figura en app_config/admins. */}
+          <UserRegisterForm isDios={userData.rol === 'owner' || isOwnerByEmail} />
+        </div>
+
+        <div className="mt-6 lg:mt-0">
+          <h2 className="text-lg font-semibold mb-2">Usuarios registrados</h2>
+          {error && <div className="text-red-600 text-xs mb-2">{error}</div>}
+          {success && <div className="text-green-700 text-xs mb-2">{success}</div>}
+          <div className="overflow-x-auto bg-white border rounded shadow text-sm">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-green-100">
+                  <th className="p-2 text-left">Email</th>
+                  <th className="p-2 text-left">Nombre</th>
+                  <th className="p-2 text-left">Apellido</th>
+                  <th className="p-2 text-left">Teléfono</th>
+                  <th className="p-2 text-left">Rol</th>
+                  <th className="p-2 text-left">Módulos</th>
+                  <th className="p-2 text-left">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map(user => (
+                  <tr key={user.id} className="border-t">
+                    <td className="p-2 align-top">{user.email}</td>
+                    <td className="p-2 align-top">{user.nombre}</td>
+                    <td className="p-2 align-top">{user.apellido}</td>
+                    <td className="p-2 align-top">{user.telefono}</td>
+                    <td className="p-2 align-top">{user.rol}</td>
+                    <td className="p-2 align-top">{(user.modules || []).join(', ')}</td>
+                    <td className="p-2 align-top whitespace-nowrap">
+                      <button className="text-blue-600 underline text-xs mr-2" onClick={() => handleEdit(user)}>Editar</button>
+                      <button className="text-red-600 underline text-xs" onClick={() => handleDelete(user)}>Eliminar</button>
+                    </td>
+                  </tr>
+                ))}
+                {users.length === 0 && (
+                  <tr>
+                    <td className="p-3 text-xs text-gray-500" colSpan={7}>Todavía no hay usuarios registrados.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       {editUser && (

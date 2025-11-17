@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { AuthProvider } from './auth/AuthProvider';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import PropTypes from 'prop-types';
+import { AuthProvider, useAuth } from './auth/AuthProvider';
 import AuthGate from './auth/AuthGate';
 import InventoryView from './components/Inventory/InventoryView';
 import CashView from './components/Cash/CashView';
@@ -11,6 +12,7 @@ import { initializeDefaultPaymentMethods } from './utils/paymentMethodsInit';
 import BiometricSetup from './components/Auth/BiometricSetup';
 import DebugPanel from './components/Shared/DebugPanel';
 import UserRegisterForm from './components/UserRegisterForm';
+import AdminPanel from './components/AdminPanel';
 
 // Feature flag: ocultar biometría hasta que esté lista
 const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '').toLowerCase() === 'true';
@@ -18,12 +20,12 @@ const BIOMETRICS_ENABLED = String(process.env.REACT_APP_ENABLE_BIOMETRICS || '')
 // Crear y exportar UserContext
 export const UserContext = createContext({ user: null, userData: null });
 
+// Pequeño helper para consumir el contexto en vistas internas
+export const useUserContext = () => useContext(UserContext);
+
 const App = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentView, setCurrentView] = useState('plants');
-  // Estado de usuario global (ajustar según lógica real de autenticación)
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -59,7 +61,7 @@ const App = () => {
     );
   }
 
-  const renderView = () => {
+  const renderView = (userData) => {
     switch (currentView) {
       case 'plants':
         return <InventoryView />;
@@ -71,7 +73,8 @@ const App = () => {
       case 'reportes':
         return <ReportsView />;
       case 'usuarios':
-        return <UserRegisterForm />;
+        // Usamos el panel completo de administración de usuarios
+        return <AdminPanel />;
       default:
         return <div className="text-center text-gray-500">Seleccione un módulo.</div>;
     }
@@ -79,18 +82,33 @@ const App = () => {
 
   return (
     <AuthProvider enforceDesktopBinding={true}>
-      <UserContext.Provider value={{ user, userData }}>
-        <AuthGate>
-          {/* Banner para habilitar huella en este dispositivo (oculto si la feature no está habilitada) */}
-          {BIOMETRICS_ENABLED && <BiometricSetup />}
-          <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
-            {renderView()}
-          </DesktopLayout>
-          <DebugPanel />
-        </AuthGate>
-      </UserContext.Provider>
+      <AuthGate>
+        <AuthInner currentView={currentView} setCurrentView={setCurrentView} renderView={renderView} />
+      </AuthGate>
     </AuthProvider>
   );
+};
+
+// Componente interno que vive dentro de AuthProvider/AuthGate y puede usar useAuth
+const AuthInner = ({ currentView, setCurrentView, renderView }) => {
+  const { user, userData } = useAuth() || {};
+
+  return (
+    <UserContext.Provider value={{ user, userData }}>
+      {/* Banner para habilitar huella en este dispositivo (oculto si la feature no está habilitada) */}
+      {BIOMETRICS_ENABLED && <BiometricSetup />}
+      <DesktopLayout currentView={currentView === 'movements' ? 'caja' : currentView} setCurrentView={setCurrentView}>
+        {renderView(userData)}
+      </DesktopLayout>
+      <DebugPanel />
+    </UserContext.Provider>
+  );
+};
+
+AuthInner.propTypes = {
+  currentView: PropTypes.string,
+  setCurrentView: PropTypes.func,
+  renderView: PropTypes.func,
 };
 
 export default App;

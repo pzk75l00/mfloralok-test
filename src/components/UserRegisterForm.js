@@ -3,8 +3,7 @@ import { registerUser } from '../firebase/UserService';
 import PropTypes from 'prop-types';
 
 const initialForm = {
-  email: '',
-  password: '',
+  email: '', // parte local (antes del @)
   nombre: '',
   apellido: '',
   telefono: '',
@@ -16,6 +15,7 @@ const initialForm = {
 // El rol 'dios' ya no existe en la app; los dueños se gestionan por fuera (rol 'owner').
 const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
   const [form, setForm] = useState(initialForm);
+  const [domain, setDomain] = useState('@gmail.com');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,9 +39,23 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
     setLoading(true);
     setError('');
     setSuccess('');
+    const localPart = (form.email || '').trim().toLowerCase();
+    if (!localPart) {
+      setError('Debés ingresar el nombre de la cuenta (parte antes del @).');
+      setLoading(false);
+      return;
+    }
+    const email = `${localPart}${domain}`.toLowerCase();
+    const allowedDomains = ['@gmail.com', '@gmail.com.ar'];
+    if (!allowedDomains.includes(domain)) {
+      setError('Dominio de correo no permitido.');
+      setLoading(false);
+      return;
+    }
     try {
       await registerUser({
         ...form,
+        email,
         rol: isDios ? form.rol : 'usuario',
         modules: form.modules.length ? form.modules : ['basico']
       });
@@ -57,32 +71,30 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">Registrar Usuario</h2>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+      <div className="space-y-6 max-w-2xl">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Email (solo la parte antes del @)</label>
+          <div className="mt-1 flex gap-2">
             <input
               name="email"
-              type="email"
+              type="text"
               value={form.email}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              className="flex-1 border border-gray-300 rounded-md shadow-sm p-2"
               required
               disabled={loading}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-              required
+            <select
+              value={domain}
+              onChange={e => setDomain(e.target.value)}
+              className="w-40 border border-gray-300 rounded-md shadow-sm p-2 text-sm bg-white"
               disabled={loading}
-            />
+            >
+              <option value="@gmail.com">@gmail.com</option>
+              <option value="@gmail.com.ar">@gmail.com.ar</option>
+            </select>
           </div>
+          <p className="mt-1 text-xs text-gray-500">Ejemplo: si escribís usuario y elegís @gmail.com, se registrará como usuario@gmail.com. Debe ser el mismo correo de Google que usará para ingresar.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -110,33 +122,34 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Teléfono</label>
-          <input
-            name="telefono"
-            value={form.telefono}
-            onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {isDios && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Rol</label>
-            <select
-              name="rol"
-              value={form.rol}
+            <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+            <input
+              name="telefono"
+              value={form.telefono}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              required
               disabled={loading}
-            >
-              <option value="usuario">Usuario</option>
-              <option value="admin">Admin</option>
-            </select>
+            />
           </div>
-        )}
+          {isDios && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Rol</label>
+              <select
+                name="rol"
+                value={form.rol}
+                onChange={handleChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                disabled={loading}
+              >
+                <option value="usuario">Usuario</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          )}
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Módulos habilitados</label>

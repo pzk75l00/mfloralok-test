@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { subscribeAuth, ensureLocalPersistence, signOut as doSignOut, getUserProfile, upsertUserProfile, registerDeviceIfNeeded, reserveSeatIfNeeded, isEmailAllowed, isOwnerEmail, setLastAuthReason } from './authService';
+import { subscribeAuth, ensureLocalPersistence, signOut as doSignOut, getUserProfile, upsertUserProfile, registerDeviceIfNeeded, reserveSeatIfNeeded, isOwnerEmail, setLastAuthReason } from './authService';
 import DesktopBlockedModal from '../components/Auth/DesktopBlockedModal';
 import { dlog } from '../utils/debug';
 import { getDeviceInfo, isMobileUA } from '../utils/deviceId';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 
 const AuthContext = createContext({ user: null, userData: null, loading: true, signOut: async () => {} });
 
@@ -32,12 +34,31 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
             await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null, rol: 'owner' });
             dlog('[auth] upsertUserProfile owner ok');
           } else {
-            // No dueño: aplicar allowlist y seats normalmente
-            const allowed = await isEmailAllowed(u.email || '');
-            dlog('[auth] email allow check', { email: u.email, allowed });
-            if (!allowed) {
-              console.warn('[Auth] Email no autorizado', u.email);
-              setLastAuthReason({ code: 'email_not_allowed', message: 'Tu cuenta no está autorizada para acceder a este entorno.' });
+            // No dueño: activar solo si está pre-registrado y no bloqueado
+            const emailLower = String(u.email || '').toLowerCase();
+            const preRef = doc(db, 'users_by_email', emailLower);
+            const preSnap = await getDoc(preRef);
+            if (!preSnap.exists()) {
+              console.warn('[Auth] Email no pre-registrado', u.email);
+              setLastAuthReason({ code: 'not_pre_registered', message: 'Tu cuenta no está habilitada. Solicitá el alta al administrador.' });
+              await doSignOut();
+              setUser(null);
+              setUserData(null);
+              setLoading(false);
+              return;
+            }
+            const pre = preSnap.data() || {};
+            const estado = String(pre.estado || 'pendiente');
+            if (estado === 'suspendido') {
+              setLastAuthReason({ code: 'user_suspended', message: 'Tu usuario está suspendido. Contactá al administrador.' });
+              await doSignOut();
+              setUser(null);
+              setUserData(null);
+              setLoading(false);
+              return;
+            }
+            if (estado === 'borrado') {
+              setLastAuthReason({ code: 'user_deleted', message: 'Tu usuario fue dado de baja. Solicitá reactivación al administrador.' });
               await doSignOut();
               setUser(null);
               setUserData(null);
@@ -58,8 +79,19 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
                 return;
               }
             }
-            await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null });
-            dlog('[auth] upsertUserProfile ok');
+            // Activar perfil con datos del pre-registro y estado activo
+            await upsertUserProfile(u.uid, {
+              email: u.email || null,
+              displayName: u.displayName || null,
+              nombre: pre.nombre || null,
+              apellido: pre.apellido || null,
+              telefono: pre.telefono || null,
+              rol: pre.rol || 'usuario',
+              modules: Array.isArray(pre.modules) && pre.modules.length ? pre.modules : ['basico'],
+              estado: 'activo',
+              activatedFromEmail: emailLower
+            });
+            dlog('[auth] upsertUserProfile activated from pre-reg ok');
           }
 
           // Owners pueden omitir el binding de escritorio
