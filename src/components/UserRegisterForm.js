@@ -274,12 +274,17 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
                 <option key={r.id} value={r.id}>{r.nombre || r.id}</option>
               ))}
             </select>
-            {!catalogLoading && rubros.length === 0 && (
-              <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex items-center gap-3">
+              {!catalogLoading && rubros.length === 0 && (
                 <p className="text-xs text-red-600">No hay rubros cargados.</p>
-                <button type="button" onClick={() => setShowRubroModal(true)} className="text-xs text-blue-600 underline">Crear rubro</button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => setShowRubroModal(true)}
+                className="text-xs text-blue-600 underline"
+                disabled={catalogLoading || loading}
+              >Crear nuevo</button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">País (opcional)</label>
@@ -295,12 +300,17 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
                 <option key={p.id} value={p.id}>{p.nombre || p.id}</option>
               ))}
             </select>
-            {!catalogLoading && paises.length === 0 && (
-              <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex items-center gap-3">
+              {!catalogLoading && paises.length === 0 && (
                 <p className="text-xs text-gray-600">No hay países cargados.</p>
-                <button type="button" onClick={() => setShowPaisModal(true)} className="text-xs text-blue-600 underline">Crear país</button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPaisModal(true)}
+                className="text-xs text-blue-600 underline"
+                disabled={catalogLoading || loading}
+              >Crear nuevo</button>
+            </div>
           </div>
         </div>
 
