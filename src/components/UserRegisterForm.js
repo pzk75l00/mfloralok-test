@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { registerUser } from '../firebase/UserService';
 import PropTypes from 'prop-types';
 import { db } from '../firebase/firebaseConfig';
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
 const initialForm = {
   email: '', // parte local (antes del @)
@@ -69,12 +69,19 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
 
   // Crear entrada en catálogos (rubro/pais)
   const handleCreateCatalog = async (type) => {
-    if (!newCatalogName.trim()) return;
+    const nombreNuevo = newCatalogName.trim();
+    if (!nombreNuevo) return;
+    // Validar duplicado (case-insensitive)
+    const lista = type === 'rubro' ? rubros : paises;
+    if (lista.some(item => String(item.nombre || '').toLowerCase() === nombreNuevo.toLowerCase())) {
+      setError(`Ya existe un ${type} con ese nombre.`);
+      return;
+    }
     setCreatingCatalog(true);
     try {
       const colName = type === 'rubro' ? 'rubros' : 'paises';
       const docRef = await addDoc(collection(db, colName), {
-        nombre: newCatalogName.trim(),
+        nombre: nombreNuevo,
         activo: true,
         createdAt: serverTimestamp()
       });
@@ -129,6 +136,16 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
       return;
     }
     const email = `${localPart}${domain}`.toLowerCase();
+    // Verificar duplicado de email (pre-registro existente)
+    try {
+      const preRef = doc(db, 'users_by_email', email);
+      const preSnap = await getDoc(preRef);
+      if (preSnap.exists()) {
+        setError('El email ya está pre-registrado.');
+        setLoading(false);
+        return;
+      }
+    } catch (_) { /* ignorar error de consulta */ }
     const allowedDomains = ['@gmail.com', '@gmail.com.ar'];
     if (!allowedDomains.includes(domain)) {
       setError('Dominio de correo no permitido.');
@@ -336,6 +353,12 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-md shadow-lg p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold mb-4">Crear {showRubroModal ? 'Rubro' : 'País'}</h3>
+            <div className="max-h-32 overflow-auto mb-3 border border-gray-200 rounded p-2 bg-gray-50 text-xs">
+              {(showRubroModal ? rubros : paises).map(el => (
+                <div key={el.id}>{el.nombre}</div>
+              ))}
+              {!(showRubroModal ? rubros : paises).length && <div className="italic text-gray-500">Sin elementos aún</div>}
+            </div>
             <input
               type="text"
               value={newCatalogName}

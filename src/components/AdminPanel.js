@@ -24,6 +24,7 @@ const AdminPanel = () => {
   const [showCatalogModal, setShowCatalogModal] = useState(null); // { type: 'rubro'|'pais' }
   const [newCatalogName, setNewCatalogName] = useState('');
   const [creatingCatalog, setCreatingCatalog] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) return;
@@ -109,11 +110,17 @@ const AdminPanel = () => {
 
   const createCatalog = async () => {
     if (!showCatalogModal || !newCatalogName.trim()) return;
+    const nombreNuevo = newCatalogName.trim();
+    const lista = showCatalogModal.type === 'rubro' ? rubros : paises;
+    if (lista.some(item => String(item.nombre || '').toLowerCase() === nombreNuevo.toLowerCase())) {
+      setError(`Ya existe un ${showCatalogModal.type} con ese nombre.`);
+      return;
+    }
     setCreatingCatalog(true);
     try {
       const colName = showCatalogModal.type === 'rubro' ? 'rubros' : 'paises';
       const docRef = await addDoc(collection(db, colName), {
-        nombre: newCatalogName.trim(),
+        nombre: nombreNuevo,
         activo: true,
         createdAt: serverTimestamp()
       });
@@ -254,16 +261,23 @@ const AdminPanel = () => {
         accion: actionType,
         nota: noteText || (actionType === 'suspender' ? 'Suspensión manual' : actionType === 'borrar' ? 'Baja manual' : 'Reactivación manual')
       };
-      await updateDoc(ref, {
+      const ahora = new Date().toISOString();
+      const updates = {
         estado: nuevoEstado,
-        fechaModif: new Date().toISOString(),
+        fechaModif: ahora,
         ultimaNota: notaItem,
         notas: arrayUnion(notaItem)
-      });
+      };
+      if (['suspendido', 'borrado', 'expirado'].includes(nuevoEstado)) {
+        updates.deactivatedAt = ahora;
+      } else if (nuevoEstado === 'pendiente') {
+        updates.deactivatedAt = null;
+      }
+      await updateDoc(ref, updates);
       // Si existe usuario activado, reflejar estado en su doc para feedback inmediato en la app
       const activated = activatedByEmail[emailId.toLowerCase()];
       if (activated && activated.id) {
-        await updateDoc(doc(db, 'users', activated.id), { estado: nuevoEstado === 'pendiente' ? 'activo' : nuevoEstado });
+        await updateDoc(doc(db, 'users', activated.id), { estado: (nuevoEstado === 'pendiente' || nuevoEstado === 'extendido') ? 'activo' : nuevoEstado });
       }
       setSuccess('Estado actualizado');
     } catch (e) {
@@ -297,7 +311,7 @@ const AdminPanel = () => {
       // Priorizar estados restrictivos del pre-registro
       const estado = ['suspendido', 'borrado', 'expirado'].includes(estadoBase)
         ? estadoBase
-        : (activated ? 'activo' : estadoBase);
+        : (estadoBase === 'extendido' ? 'extendido' : (activated ? 'activo' : estadoBase));
       return {
         id: emailLower,
         email: p.email || p.id,
@@ -310,10 +324,12 @@ const AdminPanel = () => {
         fechaCreacion: p.fechaCreacion || p.creado || '',
         fechaModif: p.fechaModif || '',
         fechaFin: p.fechaFin || '',
-        diasRestantes: computeDiasRestantes(p.fechaFin)
+        diasRestantes: computeDiasRestantes(p.fechaFin),
+        trialExtensionUsed: Boolean(p.trialExtensionUsed),
+        ultimaNota: p.ultimaNota || null
       };
-    });
-  }, [preUsers, activatedByEmail]);
+    }).filter(r => showDeleted ? true : r.estado !== 'borrado');
+  }, [preUsers, activatedByEmail, showDeleted]);
 
   if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) {
     return <div className="text-red-600 font-bold p-4">Acceso restringido: solo para administradores.</div>;
@@ -333,6 +349,13 @@ const AdminPanel = () => {
 
         <div className="mt-6 lg:mt-0">
           <h2 className="text-lg font-semibold mb-2">Usuarios registrados</h2>
+          <div className="flex items-center gap-4 mb-2">
+            <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+              <input type="checkbox" checked={showDeleted} onChange={e => setShowDeleted(e.target.checked)} />
+              Mostrar borrados
+            </label>
+            <span className="text-[11px] text-gray-500">Total: {rows.length} {showDeleted ? '(incluye borrados)' : ''}</span>
+          </div>
           {error && <div className="text-red-600 text-xs mb-2">{error}</div>}
           {success && <div className="text-green-700 text-xs mb-2">{success}</div>}
           <div className="overflow-x-auto bg-white border rounded shadow text-sm">
@@ -347,6 +370,8 @@ const AdminPanel = () => {
                   <th className="p-2 text-left">Estado</th>
                   <th className="p-2 text-left">Fin Prueba</th>
                   <th className="p-2 text-left">Días Rest.</th>
+                  <th className="p-2 text-left">Extend.</th>
+                  <th className="p-2 text-left">Últ. nota</th>
                   <th className="p-2 text-left">Módulos</th>
                   <th className="p-2 text-left">Acciones</th>
                 </tr>
@@ -363,6 +388,7 @@ const AdminPanel = () => {
                       <span className={"px-2 py-0.5 rounded text-xs font-semibold " + (
                         r.estado === 'activo' ? 'bg-green-100 text-green-700' :
                         r.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                        r.estado === 'extendido' ? 'bg-blue-100 text-blue-700' :
                         r.estado === 'suspendido' ? 'bg-orange-100 text-orange-700' :
                         r.estado === 'expirado' ? 'bg-red-100 text-red-700' :
                         r.estado === 'borrado' ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-700'
@@ -370,6 +396,17 @@ const AdminPanel = () => {
                     </td>
                     <td className="p-2 align-top text-xs">{r.fechaFin ? new Date(r.fechaFin).toLocaleDateString() : '-'}</td>
                     <td className="p-2 align-top text-center">{r.diasRestantes}</td>
+                    <td className="p-2 align-top">{r.trialExtensionUsed ? 'Sí' : 'No'}</td>
+                    <td className="p-2 align-top max-w-[260px]">
+                      {r.ultimaNota && (
+                        <div className="text-xs text-gray-700 truncate" title={(r.ultimaNota.nota || '')}>
+                          <span className="font-medium">{r.ultimaNota.accion || ''}</span>
+                          {r.ultimaNota.ts ? ` · ${new Date(r.ultimaNota.ts).toLocaleDateString()}` : ''}
+                          {r.ultimaNota.nota ? ` · ${r.ultimaNota.nota}` : ''}
+                        </div>
+                      )}
+                      {!r.ultimaNota && <span className="text-xs text-gray-400">—</span>}
+                    </td>
                     <td className="p-2 align-top">{(r.modules || []).join(', ')}</td>
                     <td className="p-2 align-top whitespace-nowrap space-x-2">
                       {activatedByEmail[r.id] && (
@@ -390,7 +427,7 @@ const AdminPanel = () => {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td className="p-3 text-xs text-gray-500" colSpan={10}>Todavía no hay pre-registros.</td>
+                    <td className="p-3 text-xs text-gray-500" colSpan={12}>Todavía no hay pre-registros.</td>
                   </tr>
                 )}
               </tbody>
@@ -511,6 +548,12 @@ const AdminPanel = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-md shadow-lg p-6 w-full max-w-sm">
             <h3 className="text-lg font-semibold mb-4">Crear {showCatalogModal.type === 'rubro' ? 'Rubro' : 'País'}</h3>
+            <div className="max-h-32 overflow-auto mb-3 border border-gray-200 rounded p-2 bg-gray-50 text-xs">
+              {(showCatalogModal.type === 'rubro' ? rubros : paises).map(el => (
+                <div key={el.id}>{el.nombre}</div>
+              ))}
+              {!(showCatalogModal.type === 'rubro' ? rubros : paises).length && <div className="italic text-gray-500">Sin elementos aún</div>}
+            </div>
             <input
               type="text"
               value={newCatalogName}
