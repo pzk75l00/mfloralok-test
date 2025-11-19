@@ -174,15 +174,60 @@ const AdminPanel = () => {
       if (editUser?.email) {
         const emailLower = String(editUser.email).toLowerCase();
         const preRef = doc(db, 'users_by_email', emailLower);
+        const ahora = new Date();
         const updates = {
           rubroId: editForm.rubroId || null,
           paisId: editForm.paisId || null,
-          fechaModif: new Date().toISOString()
+          rol: editForm.rol,
+          modules: editForm.modules,
+          fechaModif: ahora.toISOString()
         };
+
+        // Si se modifican manualmente los días restantes, recalcular fechaFin y tiempoPrueba
         if (editForm.diasRestantes !== undefined && editForm.diasRestantes !== '' && !isNaN(Number(editForm.diasRestantes))) {
-          const dias = Math.max(0, parseInt(editForm.diasRestantes, 10));
-          updates.fechaFin = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+          const diasRestantes = Math.max(0, parseInt(editForm.diasRestantes, 10));
+          const nuevaFin = new Date(ahora.getTime() + diasRestantes * 24 * 60 * 60 * 1000);
+
+          // Calcular nuevo tiempoPrueba total usando fechaCreacion/creado si existe
+          const pre = preUsers.find(p => String(p.id || '').toLowerCase() === emailLower) || {};
+          let createdRef = pre.fechaCreacion || pre.creado;
+          if (!createdRef && pre.createdAt && typeof pre.createdAt.toDate === 'function') {
+            createdRef = pre.createdAt.toDate();
+          }
+          const createdDate = createdRef ? new Date(createdRef) : null;
+          let nuevoTiempoPrueba = pre.tiempoPrueba;
+          if (createdDate && !isNaN(createdDate.getTime())) {
+            const diffMs = nuevaFin.getTime() - createdDate.getTime();
+            nuevoTiempoPrueba = Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+          } else if (typeof pre.tiempoPrueba === 'number') {
+            // como fallback, ajustar sumando delta de días respecto a los que ya tenía
+            const hoyRestantes = computeDiasRestantes(pre.fechaFin);
+            const delta = isNaN(hoyRestantes) ? 0 : (diasRestantes - hoyRestantes);
+            nuevoTiempoPrueba = Math.max(0, (pre.tiempoPrueba || 0) + delta);
+          }
+
+          updates.fechaFin = nuevaFin.toISOString();
+          if (Number.isFinite(Number(nuevoTiempoPrueba))) {
+            updates.tiempoPrueba = Number(nuevoTiempoPrueba);
+          }
+
+          // Estado: si estaba expirado y ahora le damos días, pasarlo a extendido; caso contrario mantener estado actual
+          const estadoActual = String(pre.estado || '').toLowerCase();
+          if (estadoActual === 'expirado' && diasRestantes > 0) {
+            updates.estado = 'extendido';
+          }
+
+          // Registrar nota de auditoría por cambio manual de días de prueba
+          const notaItem = {
+            ts: ahora.toISOString(),
+            actor: userData?.email || 'sistema',
+            accion: 'ajuste_dias_prueba',
+            nota: `ajuste_dias_prueba: diasRestantes=${diasRestantes}, fechaFin=${nuevaFin.toISOString()}, tiempoPrueba=${Number(nuevoTiempoPrueba) || ''}`
+          };
+          updates.ultimaNota = notaItem;
+          updates.notas = arrayUnion(notaItem);
         }
+
         try { await updateDoc(preRef, updates); } catch (_) { /* ignore */ }
       }
       setSuccess('Usuario actualizado');
@@ -318,8 +363,9 @@ const AdminPanel = () => {
         nombre: p.nombre || activated?.nombre || '',
         apellido: p.apellido || activated?.apellido || '',
         telefono: p.telefono || activated?.telefono || '',
-        rol: activated?.rol || p.rol || 'usuario',
-        modules: activated?.modules || p.modules || ['basico'],
+        // Priorizar siempre lo que esté en el pre-registro; usar users como fallback
+        rol: p.rol || activated?.rol || 'usuario',
+        modules: p.modules || activated?.modules || ['basico'],
         estado,
         fechaCreacion: p.fechaCreacion || p.creado || '',
         fechaModif: p.fechaModif || '',
@@ -328,8 +374,12 @@ const AdminPanel = () => {
         trialExtensionUsed: Boolean(p.trialExtensionUsed),
         ultimaNota: p.ultimaNota || null
       };
-    }).filter(r => showDeleted ? true : r.estado !== 'borrado');
-  }, [preUsers, activatedByEmail, showDeleted]);
+    })
+    // Ocultar borrados si el toggle no está activo
+    .filter(r => showDeleted ? true : r.estado !== 'borrado')
+    // Regla solicitada: los admins no deben ver usuarios con rol 'owner'
+    .filter(r => (userData?.rol === 'admin' ? r.rol !== 'owner' : true));
+  }, [preUsers, activatedByEmail, showDeleted, userData]);
 
   if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) {
     return <div className="text-red-600 font-bold p-4">Acceso restringido: solo para administradores.</div>;
