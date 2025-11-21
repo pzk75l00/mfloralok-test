@@ -3,6 +3,7 @@ import { UserContext } from '../App';
 import UserRegisterForm from './UserRegisterForm';
 import { db } from '../firebase/firebaseConfig';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, getDoc, arrayUnion, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import ConfirmationModal from './Shared/ConfirmationModal';
 
 // Vista de administración: gestión de usuarios y módulos
 const AdminPanel = () => {
@@ -25,6 +26,7 @@ const AdminPanel = () => {
   const [newCatalogName, setNewCatalogName] = useState('');
   const [creatingCatalog, setCreatingCatalog] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [deleteModalUser, setDeleteModalUser] = useState(null);
 
   useEffect(() => {
     if (!userData || (userData.rol !== 'admin' && userData.rol !== 'owner')) return;
@@ -279,8 +281,13 @@ const AdminPanel = () => {
     setActionModal(null);
   };
 
-  const handleDelete = async (user) => {
-    if (!window.confirm(`¿Eliminar usuario ${user.email}?`)) return;
+  const handleDelete = (user) => {
+    setDeleteModalUser(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteModalUser) return;
+    const user = deleteModalUser;
     setLoading(true);
     setError('');
     setSuccess('');
@@ -289,8 +296,10 @@ const AdminPanel = () => {
       setSuccess('Usuario eliminado');
     } catch (err) {
       setError('Error al eliminar usuario');
+    } finally {
+      setLoading(false);
+      setDeleteModalUser(null);
     }
-    setLoading(false);
   };
 
   // Cambios de estado sobre pre-registros (users_by_email)
@@ -389,7 +398,7 @@ const AdminPanel = () => {
     <div className="max-w-6xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Panel de Administración</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <div className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold mb-2">Registrar nuevo usuario</h2>
           {/* Solo el Dueño puede elegir el rol (admin/usuario). El admin crea siempre 'usuario'.
@@ -397,14 +406,14 @@ const AdminPanel = () => {
           <UserRegisterForm isDios={userData.rol === 'owner' || isOwnerByEmail} />
         </div>
 
-        <div className="mt-6 lg:mt-0">
+        <div>
           <h2 className="text-lg font-semibold mb-2">Usuarios registrados</h2>
-          <div className="flex items-center gap-4 mb-2">
+          <div className="flex items-center justify-between mb-2">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={showDeleted} onChange={e => setShowDeleted(e.target.checked)} />
               Mostrar borrados
             </label>
-            <span className="text-[11px] text-gray-500">Total: {rows.length} {showDeleted ? '(incluye borrados)' : ''}</span>
+            <span className="text-[11px] text-gray-500">Total usuarios mostrados: {rows.length} {showDeleted ? '(incluye borrados)' : ''}</span>
           </div>
           {error && <div className="text-red-600 text-xs mb-2">{error}</div>}
           {success && <div className="text-green-700 text-xs mb-2">{success}</div>}
@@ -518,6 +527,19 @@ const AdminPanel = () => {
             </div>
           </div>
         </div>
+      )}
+      {/* Modal confirmación borrado usuario activado */}
+      {deleteModalUser && (
+        <ConfirmationModal
+          isOpen={true}
+          onClose={() => setDeleteModalUser(null)}
+          onConfirm={confirmDeleteUser}
+          type="danger"
+          title="Eliminar usuario"
+          message={`¿Eliminar el usuario activado ${deleteModalUser.email}? Esta acción no afecta al pre-registro pero sí al perfil activo.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+        />
       )}
       {editUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
