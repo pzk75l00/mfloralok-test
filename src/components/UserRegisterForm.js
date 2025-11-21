@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { registerUser } from '../firebase/UserService';
 import PropTypes from 'prop-types';
 import { db } from '../firebase/firebaseConfig';
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import RubrosManager from './Catalogs/RubrosManager';
+import PaisesManager from './Catalogs/PaisesManager';
+import RolesManager from './Catalogs/RolesManager';
 
 const initialForm = {
   email: '', // parte local (antes del @)
@@ -25,28 +28,70 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
   const [success, setSuccess] = useState('');
   const [rubros, setRubros] = useState([]);
   const [paises, setPaises] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [showRubroModal, setShowRubroModal] = useState(false);
   const [showPaisModal, setShowPaisModal] = useState(false);
-  const [newCatalogName, setNewCatalogName] = useState('');
-  const [creatingCatalog, setCreatingCatalog] = useState(false);
+  const [showRolesModal, setShowRolesModal] = useState(false);
+  
+  // Refrescar rubros luego de gestionar en el manager
+  const refreshRubros = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'rubros'), orderBy('nombre')));
+      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setRubros(arr);
+    } catch (_) { /* ignore */ }
+  };
 
-  // Carga de catálogos rubros y paises
+  // Refrescar países luego de gestionar en el manager
+  const refreshPaises = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'paises'), orderBy('nombre')));
+      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPaises(arr);
+      if (!form.paisId) {
+        const argentina = arr.find(p => String(p.nombre || '').toLowerCase() === 'argentina');
+        if (argentina) setForm(f => ({ ...f, paisId: argentina.id }));
+      }
+    } catch (_) { /* ignore */ }
+  };
+
+  // Refrescar roles luego de gestionar en el manager
+  const refreshRoles = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'roles'), orderBy('nombre')));
+      const arrRaw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const arr = arrRaw.filter(r => String(r.nombre || '').toLowerCase() !== 'owner');
+      setRoles(arr);
+      setForm(f => {
+        if (arr.some(r => r.nombre === f.rol)) return f;
+        const usuario = arr.find(r => String(r.nombre || '').toLowerCase() === 'usuario');
+        return { ...f, rol: usuario ? usuario.nombre : f.rol };
+      });
+    } catch (_) { /* ignore */ }
+  };
+
+  // Carga de catálogos rubros, paises y roles
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const rubrosQ = query(collection(db, 'rubros'), orderBy('nombre'));
         const paisesQ = query(collection(db, 'paises'), orderBy('nombre'));
-        const [rubrosSnap, paisesSnap] = await Promise.all([
+        const rolesQ = query(collection(db, 'roles'), orderBy('nombre'));
+        const [rubrosSnap, paisesSnap, rolesSnap] = await Promise.all([
           getDocs(rubrosQ).catch(() => null),
-          getDocs(paisesQ).catch(() => null)
+          getDocs(paisesQ).catch(() => null),
+          getDocs(rolesQ).catch(() => null)
         ]);
         if (mounted) {
           const rubrosArr = rubrosSnap ? rubrosSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
           const paisesArr = paisesSnap ? paisesSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+          const rolesArrRaw = rolesSnap ? rolesSnap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+          const rolesArr = rolesArrRaw.filter(r => String(r.nombre || '').toLowerCase() !== 'owner');
           setRubros(rubrosArr);
           setPaises(paisesArr);
+          setRoles(rolesArr);
           // Autoseleccionar Argentina si existe y aún no hay país elegido
           if (!form.paisId) {
             const argentina = paisesArr.find(p => String(p.nombre || '').toLowerCase() === 'argentina');
@@ -59,6 +104,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
         if (mounted) {
           setRubros([]);
           setPaises([]);
+          setRoles([]);
         }
       } finally {
         if (mounted) setCatalogLoading(false);
@@ -67,48 +113,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
     return () => { mounted = false; };
   }, []);
 
-  // Crear entrada en catálogos (rubro/pais)
-  const handleCreateCatalog = async (type) => {
-    const nombreNuevo = newCatalogName.trim();
-    if (!nombreNuevo) return;
-    // Validar duplicado (case-insensitive)
-    const lista = type === 'rubro' ? rubros : paises;
-    if (lista.some(item => String(item.nombre || '').toLowerCase() === nombreNuevo.toLowerCase())) {
-      setError(`Ya existe un ${type} con ese nombre.`);
-      return;
-    }
-    setCreatingCatalog(true);
-    try {
-      const colName = type === 'rubro' ? 'rubros' : 'paises';
-      const docRef = await addDoc(collection(db, colName), {
-        nombre: nombreNuevo,
-        activo: true,
-        createdAt: serverTimestamp()
-      });
-      setNewCatalogName('');
-      if (type === 'rubro') {
-        setShowRubroModal(false);
-        // refrescar rubros
-        const snap = await getDocs(query(collection(db, 'rubros'), orderBy('nombre')));
-        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setRubros(arr);
-        // Asignar el que se creó si campo vacío
-        setForm(f => ({ ...f, rubroId: f.rubroId || docRef.id }));
-      } else {
-        setShowPaisModal(false);
-        const snap = await getDocs(query(collection(db, 'paises'), orderBy('nombre')));
-        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setPaises(arr);
-        // Si Argentina fue creada y no hay país asignado, asignar
-        const argentina = arr.find(p => String(p.nombre || '').toLowerCase() === 'argentina');
-        setForm(f => ({ ...f, paisId: f.paisId || (argentina ? argentina.id : docRef.id) }));
-      }
-    } catch (e) {
-      setError(e.message || 'Error creando catálogo');
-    } finally {
-      setCreatingCatalog(false);
-    }
-  };
+  // (El alta/edición de catálogos se gestiona ahora con managers específicos)
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -247,22 +252,42 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {isDios && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Rol</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">Rol</label>
+                <button
+                  type="button"
+                  onClick={() => setShowRolesModal(true)}
+                  className="text-[11px] text-blue-700 underline"
+                  disabled={loading}
+                >Gestionar roles</button>
+              </div>
               <select
                 name="rol"
                 value={form.rol}
                 onChange={handleChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
-                disabled={loading}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
+                disabled={loading || catalogLoading}
               >
-                <option value="usuario">Usuario</option>
-                <option value="admin">Admin</option>
+                <option value="">{catalogLoading ? 'Cargando...' : 'Seleccioná rol'}</option>
+                {roles
+                  .filter(r => String(r.nombre || '').toLowerCase() !== 'owner')
+                  .map(r => (
+                    <option key={r.id} value={r.nombre}>{r.nombre}</option>
+                  ))}
               </select>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Rubro</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">Rubro</label>
+              <button
+                type="button"
+                onClick={() => setShowRubroModal(true)}
+                className="text-[11px] text-green-700 underline"
+                disabled={catalogLoading || loading}
+              >Gestionar rubros</button>
+            </div>
             <select
               name="rubroId"
               value={form.rubroId}
@@ -276,21 +301,21 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
                 <option key={r.id} value={r.id}>{r.nombre || r.id}</option>
               ))}
             </select>
-            <div className="mt-1 flex items-center gap-3">
-              {!catalogLoading && rubros.length === 0 && (
-                <p className="text-xs text-red-600">No hay rubros cargados.</p>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowRubroModal(true)}
-                className="text-[11px] text-blue-600 underline"
-                disabled={catalogLoading || loading}
-              >Crear nuevo</button>
-            </div>
+            {!catalogLoading && rubros.length === 0 && (
+              <p className="mt-1 text-xs text-red-600">No hay rubros cargados.</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">País (opcional)</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">País (opcional)</label>
+              <button
+                type="button"
+                onClick={() => setShowPaisModal(true)}
+                className="text-[11px] text-blue-700 underline"
+                disabled={catalogLoading || loading}
+              >Gestionar países</button>
+            </div>
             <select
               name="paisId"
               value={form.paisId}
@@ -303,17 +328,9 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
                 <option key={p.id} value={p.id}>{p.nombre || p.id}</option>
               ))}
             </select>
-            <div className="mt-1 flex items-center gap-3">
-              {!catalogLoading && paises.length === 0 && (
-                <p className="text-xs text-gray-600">No hay países cargados.</p>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowPaisModal(true)}
-                className="text-[11px] text-blue-600 underline"
-                disabled={catalogLoading || loading}
-              >Crear nuevo</button>
-            </div>
+            {!catalogLoading && paises.length === 0 && (
+              <p className="mt-1 text-xs text-gray-600">No hay países cargados.</p>
+            )}
           </div>
         </div>
 
@@ -354,41 +371,27 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
           </button>
         </div>
       </div>
-      {/* Modal creación catálogo */}
-      {(showRubroModal || showPaisModal) && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-md shadow-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4">Crear {showRubroModal ? 'Rubro' : 'País'}</h3>
-            <div className="max-h-32 overflow-auto mb-3 border border-gray-200 rounded p-2 bg-gray-50 text-xs">
-              {(showRubroModal ? rubros : paises).map(el => (
-                <div key={el.id}>{el.nombre}</div>
-              ))}
-              {!(showRubroModal ? rubros : paises).length && <div className="italic text-gray-500">Sin elementos aún</div>}
-            </div>
-            <input
-              type="text"
-              value={newCatalogName}
-              onChange={e => setNewCatalogName(e.target.value)}
-              placeholder={`Nombre de ${showRubroModal ? 'rubro' : 'país'}`}
-              className="w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
-              disabled={creatingCatalog}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowRubroModal(false); setShowPaisModal(false); setNewCatalogName(''); }}
-                className="px-3 py-2 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50"
-                disabled={creatingCatalog}
-              >Cancelar</button>
-              <button
-                type="button"
-                onClick={() => handleCreateCatalog(showRubroModal ? 'rubro' : 'pais')}
-                className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-                disabled={creatingCatalog || !newCatalogName.trim()}
-              >{creatingCatalog ? 'Creando...' : 'Crear'}</button>
-            </div>
-          </div>
-        </div>
+      {/* Modal gestión Rubros */}
+      {showRubroModal && (
+        <RubrosManager
+          onClose={() => setShowRubroModal(false)}
+          onChanged={refreshRubros}
+        />
+      )}
+
+      {/* Modal gestión Países */}
+      {showPaisModal && (
+        <PaisesManager
+          onClose={() => setShowPaisModal(false)}
+          onChanged={refreshPaises}
+        />
+      )}
+      {/* Modal gestión Roles */}
+      {showRolesModal && (
+        <RolesManager
+          onClose={() => setShowRolesModal(false)}
+          onChanged={refreshRoles}
+        />
       )}
     </form>
   );
