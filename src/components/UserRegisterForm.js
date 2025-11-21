@@ -177,9 +177,9 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-5 rounded-lg shadow-md w-full">
-      <h2 className="text-lg font-semibold mb-3">Registrar usuario</h2>
-      <div className="space-y-4 w-full">
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow-md w-full">
+      <h2 className="text-lg font-semibold mb-2">Registrar usuario</h2>
+      <div className="space-y-3 w-full">
         {/* 1) Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Email (solo la parte antes del @)</label>
@@ -189,14 +189,14 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               type="text"
               value={form.email}
               onChange={handleChange}
-              className="flex-1 border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="flex-1 border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               required
               disabled={loading}
             />
             <select
               value={domain}
               onChange={e => setDomain(e.target.value)}
-              className="w-full md:w-40 border border-gray-300 rounded-md shadow-sm p-2 text-xs bg-white"
+              className="w-full md:w-40 border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-xs bg-white"
               disabled={loading}
             >
               <option value="@gmail.com">@gmail.com</option>
@@ -217,7 +217,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               name="nombre"
               value={form.nombre}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               disabled={loading}
             />
           </div>
@@ -227,7 +227,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               name="apellido"
               value={form.apellido}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               disabled={loading}
             />
           </div>
@@ -237,7 +237,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               name="telefono"
               value={form.telefono}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               disabled={loading}
             />
           </div>
@@ -267,7 +267,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               name="rubroId"
               value={form.rubroId}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               disabled={loading || catalogLoading}
               required
             >
@@ -295,7 +295,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
               name="paisId"
               value={form.paisId}
               onChange={handleChange}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-sm"
               disabled={loading || catalogLoading}
             >
               <option value="">{catalogLoading ? 'Cargando...' : 'Sin asignar'}</option>
@@ -325,7 +325,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
             multiple
             value={form.modules}
             onChange={handleModulesChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-xs"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-xs"
             disabled={loading}
           >
             <option value="basico">Básico</option>
