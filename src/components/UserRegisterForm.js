@@ -20,7 +20,7 @@ const initialForm = {
 
 // Nota: mantenemos la prop isDios por compatibilidad, pero solo habilita elegir entre 'usuario' y 'admin'.
 // El rol 'dios' ya no existe en la app; los dueños se gestionan por fuera (rol 'owner').
-const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
+const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) => {
   const [form, setForm] = useState(initialForm);
   const [domain, setDomain] = useState('@gmail.com');
   const [loading, setLoading] = useState(false); // loading submit
@@ -250,7 +250,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
 
         {/* 3) Rol | Rubro | País */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {isDios && (
+          {(isDios || isAdmin) && (
             <div>
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-medium text-gray-700">Rol</label>
@@ -399,7 +399,8 @@ const UserRegisterForm = ({ onUserCreated, isDios = false }) => {
 
 UserRegisterForm.propTypes = {
   onUserCreated: PropTypes.func,
-  isDios: PropTypes.bool
+  isDios: PropTypes.bool,
+  isAdmin: PropTypes.bool
 };
 
 export default UserRegisterForm;

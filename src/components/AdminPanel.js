@@ -403,7 +403,7 @@ const AdminPanel = () => {
           <h2 className="text-lg font-semibold mb-2">Registrar nuevo usuario</h2>
           {/* Solo el Dueño puede elegir el rol (admin/usuario). El admin crea siempre 'usuario'.
               Consideramos Dueño si tiene rol 'owner' o si su email figura en app_config/admins. */}
-          <UserRegisterForm isDios={userData.rol === 'owner' || isOwnerByEmail} />
+          <UserRegisterForm isDios={userData.rol === 'owner' || isOwnerByEmail} isAdmin={userData.rol === 'admin'} />
         </div>
 
         <div>
