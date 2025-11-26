@@ -48,7 +48,9 @@ const PaisesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
+      const newId = items.length > 0 ? Math.max(...items.map(it => Number(it.id) || 0)) + 1 : 1;
       await addDoc(collection(db, 'paises'), {
+        id: newId,
         nombre: name,
         activo: true,
         createdAt: serverTimestamp()
@@ -84,6 +86,7 @@ const PaisesManager = ({ onClose, onChanged }) => {
     setError('');
     try {
       await updateDoc(doc(db, 'paises', id), {
+        id: Number(id),
         nombre: name,
         updatedAt: serverTimestamp()
       });

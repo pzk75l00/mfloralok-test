@@ -138,7 +138,7 @@ const StatisticsView = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMovements(data);
     });
-    const unsubPlants = onSnapshot(collection(db, 'plants'), (snapshot) => {
+    const unsubPlants = onSnapshot(collection(db, 'producto'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPlants(data);
     });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ErrorModal from '../Shared/ErrorModal';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import ProductTypesManager from '../Inventory/ProductTypesManager';
@@ -14,10 +15,11 @@ const InventoryMovilView = () => {
   const [viewMode, setViewMode] = useState('cards'); // 'cards' o 'table'
   const [search, setSearch] = useState("");
   const [showTypesManager, setShowTypesManager] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' });
   const [productTypes, setProductTypes] = useState([]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'plants'), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, 'producto'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPlants(data);
     });
@@ -39,11 +41,11 @@ const InventoryMovilView = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     if (!form.name.trim() || !form.type.trim() || form.stock < 0 || form.basePrice < 0 || form.purchasePrice < 0) {
-      alert('Todos los campos son obligatorios y deben ser válidos.');
+      setErrorModal({ open: true, message: 'Todos los campos son obligatorios y deben ser válidos.' });
       return;
     }
     if (form.basePrice > form.purchasePrice) {
-      alert('El precio de compra no puede ser mayor al precio de venta.');
+      setErrorModal({ open: true, message: 'El precio de compra no puede ser mayor al precio de venta.' });
       return;
     }
     const today = new Date();
@@ -51,8 +53,9 @@ const InventoryMovilView = () => {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const todayStr = `${yyyy}-${mm}-${dd}`;
+    const nextId = editingId ? Number(editingId) : Math.max(0, ...plants.map(p => Number(p.id) || 0)) + 1;
     const plantData = {
-      id: editingId ? editingId : (Math.max(0, ...plants.map(p => Number(p.id) || 0)) + 1).toString(),
+      id: nextId,
       name: form.name,
       type: form.type,
       stock: form.stock,
@@ -62,13 +65,42 @@ const InventoryMovilView = () => {
       supplier: form.supplier || ''
     };
     try {
-      await setDoc(doc(collection(db, 'plants'), plantData.id), plantData);
+      await setDoc(doc(collection(db, 'producto'), String(plantData.id)), plantData);
       setForm(initialForm);
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
-      alert('Error guardando la planta.');
+      let errorMsg = '';
+      if (err) {
+        if (typeof err === 'string') {
+          errorMsg = err;
+        } else if (err.message) {
+          errorMsg = err.message;
+        } else {
+          try {
+            errorMsg = JSON.stringify(err);
+          } catch (e) {
+            errorMsg = String(err);
+          }
+        }
+      } else {
+        errorMsg = 'Error desconocido';
+      }
+      console.error('Error guardando la planta:', errorMsg, err);
+      setErrorModal({ open: true, message: 'Error guardando la planta. ' + errorMsg });
     }
+    // ...
+    // Al final del componente:
+    return (
+      <>
+        {/* ...resto del render... */}
+        <ErrorModal
+          open={errorModal.open}
+          message={errorModal.message}
+          onClose={() => setErrorModal({ open: false, message: '' })}
+        />
+      </>
+    );
   };
 
   const handleEdit = plant => {
@@ -79,7 +111,7 @@ const InventoryMovilView = () => {
 
   const handleDelete = async id => {
     if (!window.confirm('¿Eliminar esta planta?')) return;
-    await deleteDoc(doc(collection(db, 'plants'), id));
+    await deleteDoc(doc(collection(db, 'producto'), id));
   };
 
   // Filtro de plantas según búsqueda

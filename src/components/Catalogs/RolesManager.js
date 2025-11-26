@@ -52,7 +52,9 @@ const RolesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
+      const newId = items.length > 0 ? Math.max(...items.map(it => Number(it.id) || 0)) + 1 : 1;
       await addDoc(collection(db, 'roles'), {
+        id: newId,
         nombre: name,
         esSistema: false,
         createdAt: serverTimestamp()
@@ -67,8 +69,9 @@ const RolesManager = ({ onClose, onChanged }) => {
   };
 
   const startEdit = (item) => {
-    if (item.esSistema) {
-      setError('Este rol de sistema no se puede editar.');
+    const nameLc = String(item.nombre || '').toLowerCase();
+    if (item.esSistema || nameLc === 'admin' || nameLc === 'usuario') {
+      setError('Este rol protegido no se puede editar.');
       return;
     }
     setEditingId(item.id);
@@ -92,6 +95,7 @@ const RolesManager = ({ onClose, onChanged }) => {
     setError('');
     try {
       await updateDoc(doc(db, 'roles', id), {
+        id: Number(id),
         nombre: name,
         updatedAt: serverTimestamp()
       });
@@ -105,8 +109,9 @@ const RolesManager = ({ onClose, onChanged }) => {
   };
 
   const handleDelete = (item) => {
-    if (item.esSistema) {
-      setError('Este rol de sistema no se puede eliminar.');
+    const nameLc = String(item.nombre || '').toLowerCase();
+    if (item.esSistema || nameLc === 'admin' || nameLc === 'usuario') {
+      setError('Este rol protegido no se puede eliminar.');
       return;
     }
     setItemToDelete(item);
@@ -206,32 +211,42 @@ const RolesManager = ({ onClose, onChanged }) => {
                       </button>
                     </div>
                   ) : (
-                    <>
-                      <span className="flex-1 text-sm text-gray-800">
-                        {item.nombre || item.id}
-                        {item.esSistema && (
-                          <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400 border border-gray-200 rounded px-1 py-0.5">
-                            sistema
+                    (() => {
+                      const nameLc = String(item.nombre || '').toLowerCase();
+                      const protectedRole = item.esSistema || nameLc === 'admin' || nameLc === 'usuario';
+                      return (
+                        <>
+                          <span className="flex-1 text-sm text-gray-800">
+                            {item.nombre || item.id}
+                            {protectedRole && (
+                              <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400 border border-gray-200 rounded px-1 py-0.5">
+                                sistema
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item)}
-                          className="text-xs text-red-600 hover:underline"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(item)}
+                              disabled={protectedRole || saving}
+                              title={protectedRole ? 'Rol protegido: no se puede editar' : 'Editar'}
+                              className={`text-xs ${protectedRole ? 'text-gray-400' : 'text-blue-600 hover:underline'}`}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              disabled={protectedRole || saving}
+                              title={protectedRole ? 'Rol protegido: no se puede eliminar' : 'Eliminar'}
+                              className={`text-xs ${protectedRole ? 'text-gray-400' : 'text-red-600 hover:underline'}`}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </>
+                      );
+                    })()
                   )}
                 </li>
               ))}

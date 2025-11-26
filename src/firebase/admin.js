@@ -30,10 +30,10 @@ function initAdmin() {
 
 const adminApp = initAdmin();
 const firestore = adminApp.firestore ? adminApp.firestore() : null;
-const rtdb = adminApp.database ? adminApp.database() : null;
+//const rtdb = adminApp.database ? adminApp.database() : null;
 
 module.exports = {
   admin: adminApp,
-  db: firestore,
-  rtdb
+  db: firestore//,
+ // rtdb
 };

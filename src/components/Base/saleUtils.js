@@ -16,7 +16,7 @@ import { db } from '../../firebase/firebaseConfig';
  */
 export async function registrarVenta({ plantId, quantity, price, paymentMethod, date, location, notes }) {
   // Validar stock
-  const plantRef = doc(db, 'plants', String(plantId));
+  const plantRef = doc(db, 'producto', String(plantId));
   const plantSnap = await getDoc(plantRef);
   if (!plantSnap.exists()) {
     return { ok: false, error: 'Planta no encontrada' };

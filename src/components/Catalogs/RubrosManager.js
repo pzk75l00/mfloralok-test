@@ -24,7 +24,8 @@ const RubrosManager = ({ onClose, onChanged }) => {
     const nombre = newRubro.trim();
     if (!nombre) return;
     if (rubros.some(r => normalizeForCompare(r.nombre) === normalizeForCompare(nombre))) return;
-    await addDoc(collection(db, 'rubros'), { nombre, activo: true });
+    const newId = rubros.length > 0 ? Math.max(...rubros.map(r => Number(r.id) || 0)) + 1 : 1;
+    await addDoc(collection(db, 'rubros'), { id: newId, nombre, activo: true });
     setNewRubro('');
     if (onChanged) onChanged();
   };
@@ -38,7 +39,7 @@ const RubrosManager = ({ onClose, onChanged }) => {
     const nombre = editingValue.trim();
     if (!nombre) return;
     if (rubros.some(r => r.id !== id && normalizeForCompare(r.nombre) === normalizeForCompare(nombre))) return;
-    await updateDoc(doc(db, 'rubros', id), { nombre });
+    await updateDoc(doc(db, 'rubros', id), { id: Number(id), nombre });
     setEditingId(null);
     setEditingValue('');
     if (onChanged) onChanged();

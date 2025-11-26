@@ -28,7 +28,7 @@ const MovementsReportTable = () => {
       setMovements(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
     });
     // Cargar plantas para mostrar nombre en vez de ID
-    const unsubPlants = onSnapshot(collection(db, 'plants'), (snapshot) => {
+    const unsubPlants = onSnapshot(collection(db, 'producto'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPlants(data);
     });

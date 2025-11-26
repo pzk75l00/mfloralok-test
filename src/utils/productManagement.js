@@ -25,7 +25,7 @@ export const createNewProduct = async (productData) => {
       updatedAt: new Date()
     };
 
-    const docRef = await addDoc(collection(db, 'plants'), productDoc);
+    const docRef = await addDoc(collection(db, 'producto'), productDoc);
     console.log('✓ Producto creado:', productDoc.name, 'con ID:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -136,7 +136,7 @@ export const validateProductData = (productData) => {
  */
 export const updateProductPurchasePrice = async (productId, newBasePrice, quantity = 1) => {
   try {
-    const productRef = doc(db, 'plants', String(productId));
+    const productRef = doc(db, 'producto', String(productId));
     const productSnap = await getDoc(productRef);
     
     if (!productSnap.exists()) {
@@ -203,7 +203,7 @@ export const updateProductPurchasePrice = async (productId, newBasePrice, quanti
  */
 export const getProductPurchaseHistory = async (productId) => {
   try {
-    const productRef = doc(db, 'plants', String(productId));
+    const productRef = doc(db, 'producto', String(productId));
     const productSnap = await getDoc(productRef);
     
     if (!productSnap.exists()) {

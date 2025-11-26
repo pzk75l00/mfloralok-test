@@ -40,7 +40,7 @@ const ReportsMovilView = () => {
     const unsubMov = onSnapshot(collection(db, 'movements'), snap => {
       setMovements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    const unsubPlants = onSnapshot(collection(db, 'plants'), snap => {
+    const unsubPlants = onSnapshot(collection(db, 'producto'), snap => {
       setPlants(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => { unsubMov(); unsubPlants(); };

@@ -18,7 +18,10 @@ const ProductTypesManager = ({ onClose }) => {
 
   const handleAdd = async () => {
     if (!newType.trim()) return;
-    await addDoc(collection(db, 'productTypes'), { name: newType.trim() });
+    const allSnap = await getDocs(collection(db, 'productTypes'));
+    const all = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const newId = all.length > 0 ? Math.max(...all.map(t => Number(t.id) || 0)) + 1 : 1;
+    await addDoc(collection(db, 'productTypes'), { id: newId, name: newType.trim() });
     setNewType('');
   };
 
@@ -29,7 +32,7 @@ const ProductTypesManager = ({ onClose }) => {
 
   const handleUpdate = async (id) => {
     if (!editingValue.trim()) return;
-    await updateDoc(doc(db, 'productTypes', id), { name: editingValue.trim() });
+    await updateDoc(doc(db, 'productTypes', id), { id: Number(id), name: editingValue.trim() });
     setEditingId(null);
     setEditingValue('');
   };

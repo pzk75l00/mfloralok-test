@@ -37,7 +37,7 @@ async function loadPlants() {
       };
       
       // Usar el ID del mock como ID del documento
-      const docRef = doc(db, 'plants', plant.id.toString());
+      const docRef = doc(db, 'producto', plant.id.toString());
       await setDoc(docRef, plantDoc);
       
       console.log(`✓ Planta cargada: ${plant.name}`);

@@ -81,10 +81,11 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
     try {
       if (editingMethod) {
         // Actualizar método existente
-        await updateDoc(doc(db, 'paymentMethods', editingMethod.id), {
-          ...newMethod,
-          updatedAt: new Date().toISOString()
-        });
+          await updateDoc(doc(db, 'paymentMethods', editingMethod.id), {
+            id: Number(editingMethod.id),
+            ...newMethod,
+            updatedAt: new Date().toISOString()
+          });
         
         setAlertModal({
           isOpen: true,
@@ -99,6 +100,7 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
           ...newMethod,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
+            id: newId,
         });
         
         setAlertModal({

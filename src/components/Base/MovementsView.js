@@ -121,7 +121,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   useEffect(() => {
     // Sincronizar plantas y movimientos en un solo efecto para evitar race conditions
-    const unsubPlants = onSnapshot(collection(db, 'plants'), (snapshot) => {
+    const unsubPlants = onSnapshot(collection(db, 'producto'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPlants(data);
     });
@@ -574,7 +574,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         for (const p of currentProducts) {
           // Validar stock antes de registrar venta
           if (form.type === 'venta') {
-            const plantRef = doc(db, 'plants', String(p.plantId));
+            const plantRef = doc(db, 'producto', String(p.plantId));
             const plantSnap = await getDoc(plantRef);
             if (!plantSnap.exists()) {
               setErrorMsg('Producto no encontrado en inventario.');
@@ -591,7 +591,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           }
           // Actualizar stock en compra
           if (form.type === 'compra') {
-            const plantRef = doc(db, 'plants', String(p.plantId));
+            const plantRef = doc(db, 'producto', String(p.plantId));
             const plantSnap = await getDoc(plantRef);
             if (!plantSnap.exists()) {
               setErrorMsg('Producto no encontrado en inventario.');
@@ -681,7 +681,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         // 🆕 ACTUALIZAR STOCK Y PRECIO PARA COMPRAS SIMPLES
         if (form.type === 'compra' && form.plantId && form.quantity && form.price) {
           try {
-            const plantRef = doc(db, 'plants', String(form.plantId));
+            const plantRef = doc(db, 'producto', String(form.plantId));
             const plantSnap = await getDoc(plantRef);
             if (plantSnap.exists()) {
               const currentStock = plantSnap.data().stock || 0;
