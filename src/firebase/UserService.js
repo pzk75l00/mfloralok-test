@@ -26,6 +26,15 @@ export async function registerUser({
   const dias = Number.isFinite(Number(tiempoPrueba)) ? Number(tiempoPrueba) : 7;
   const fechaFin = new Date(now.getTime() + dias * 24 * 60 * 60 * 1000);
 
+
+  // Nota de autoregistro para auditoría
+  const notaItem = {
+    ts: now.toISOString(),
+    actor: 'sistema',
+    accion: 'autoregistro',
+    nota: 'autoregistro'
+  };
+
   await setDoc(ref, {
     email: normalizedEmail,
     nombre: nombre || '',
@@ -43,6 +52,8 @@ export async function registerUser({
     // Marca de servidor para auditoría complementaria
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    ultimaNota: notaItem,
+    notas: [notaItem],
   }, { merge: true });
 
   return normalizedEmail;

@@ -1,10 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import UserRegisterForm from './UserRegisterForm';
 import { useNavigate } from 'react-router-dom';
+import RegisterSuccessModal from './RegisterSuccessModal';
 
 export default function RegisterScreen() {
   const navigate = useNavigate();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const handleUserCreated = () => {
+    setShowSuccess(true);
+  };
+  const handleCloseModal = () => {
+    setShowSuccess(false);
+    navigate('/');
+  };
   return (
     <div style={{
       minHeight: '100vh',
@@ -42,7 +51,7 @@ export default function RegisterScreen() {
         }}>
           Completá el formulario para solicitar acceso a la plataforma. Nos contactaremos a la brevedad.
         </p>
-        <UserRegisterForm isDios={false} isAdmin={false} defaultRole="Test" hideModules={true} />
+        <UserRegisterForm isDios={false} isAdmin={false} defaultRole="Test" hideModules={true} onUserCreated={handleUserCreated} />
         <button
           onClick={() => navigate('/')}
           style={{
@@ -61,6 +70,7 @@ export default function RegisterScreen() {
         >
           Volver al login
         </button>
+        <RegisterSuccessModal open={showSuccess} onClose={handleCloseModal} />
       </div>
     </div>
   );

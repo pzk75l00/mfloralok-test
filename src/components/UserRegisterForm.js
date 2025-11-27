@@ -175,7 +175,11 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false, defa
       });
       setSuccess('Usuario registrado correctamente');
       setForm(makeInitialForm(defaultRole || (isDios ? 'usuario' : 'usuario')));
-      if (onUserCreated) onUserCreated();
+      // Si se provee onUserCreated (pantalla de register), mostrar modal y no mensaje
+      if (typeof onUserCreated === 'function') {
+        onUserCreated();
+        setSuccess(''); // Limpiar mensaje para que no se muestre el verde
+      }
     } catch (err) {
       setError(err.message || 'Error al registrar usuario');
     }
@@ -364,7 +368,8 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false, defa
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">{error}</div>
         )}
-        {success && (
+        {/* Solo mostrar mensaje de éxito si NO se provee onUserCreated (escritorio) */}
+        {success && typeof onUserCreated !== 'function' && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm">{success}</div>
         )}
 
