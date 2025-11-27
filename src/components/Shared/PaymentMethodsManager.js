@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { db } from '../../firebase/firebaseConfig';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 import ConfirmationModal from './ConfirmationModal';
 import AlertModal from './AlertModal';
 
@@ -95,12 +95,15 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
           autoClose: true
         });
       } else {
-        // Crear nuevo método
+        // Calcular nuevo ID
+        const allSnap = await getDocs(collection(db, 'paymentMethods'));
+        const all = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const newId = all.length > 0 ? Math.max(...all.map(t => Number(t.id) || 0)) + 1 : 1;
         await addDoc(collection(db, 'paymentMethods'), {
           ...newMethod,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-            id: newId,
+          updatedAt: new Date().toISOString(),
+          id: newId,
         });
         
         setAlertModal({

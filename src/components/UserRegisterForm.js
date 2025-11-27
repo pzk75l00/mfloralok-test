@@ -7,21 +7,22 @@ import RubrosManager from './Catalogs/RubrosManager';
 import PaisesManager from './Catalogs/PaisesManager';
 import RolesManager from './Catalogs/RolesManager';
 
-const initialForm = {
+const makeInitialForm = (defaultRole = 'usuario') => ({
   email: '', // parte local (antes del @)
   nombre: '',
   apellido: '',
   telefono: '',
-  rol: 'usuario',
+  rol: defaultRole,
   modules: ['basico'],
   rubroId: '',
   paisId: ''
-};
+});
 
 // Nota: mantenemos la prop isDios por compatibilidad, pero solo habilita elegir entre 'usuario' y 'admin'.
 // El rol 'dios' ya no existe en la app; los dueños se gestionan por fuera (rol 'owner').
-const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) => {
-  const [form, setForm] = useState(initialForm);
+const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false, defaultRole = undefined, hideModules = false }) => {
+  // Si defaultRole se pasa (ej: 'Test'), usarlo como valor inicial del rol
+  const [form, setForm] = useState(() => makeInitialForm(defaultRole || (isDios ? 'usuario' : 'usuario')));
   const [domain, setDomain] = useState('@gmail.com');
   const [loading, setLoading] = useState(false); // loading submit
   const [error, setError] = useState('');
@@ -167,13 +168,13 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) =>
       await registerUser({
         ...form,
         email,
-        rol: isDios ? form.rol : 'usuario',
+        rol: defaultRole ? defaultRole : (isDios ? form.rol : 'usuario'),
         modules: form.modules.length ? form.modules : ['basico'],
         rubroId: form.rubroId || null,
         paisId: form.paisId || null
       });
       setSuccess('Usuario registrado correctamente');
-      setForm(initialForm);
+      setForm(makeInitialForm(defaultRole || (isDios ? 'usuario' : 'usuario')));
       if (onUserCreated) onUserCreated();
     } catch (err) {
       setError(err.message || 'Error al registrar usuario');
@@ -281,12 +282,14 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) =>
           <div>
             <div className="flex items-center justify-between">
               <label className="block text-sm font-medium text-gray-700">Rubro</label>
-              <button
-                type="button"
-                onClick={() => setShowRubroModal(true)}
-                className="text-[11px] text-green-700 underline"
-                disabled={catalogLoading || loading}
-              >Gestionar rubros</button>
+              {(isDios || isAdmin) && (
+                <button
+                  type="button"
+                  onClick={() => setShowRubroModal(true)}
+                  className="text-[11px] text-green-700 underline"
+                  disabled={catalogLoading || loading}
+                >Gestionar rubros</button>
+              )}
             </div>
             <select
               name="rubroId"
@@ -309,12 +312,14 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) =>
           <div>
             <div className="flex items-center justify-between">
               <label className="block text-sm font-medium text-gray-700">País (opcional)</label>
-              <button
-                type="button"
-                onClick={() => setShowPaisModal(true)}
-                className="text-[11px] text-blue-700 underline"
-                disabled={catalogLoading || loading}
-              >Gestionar países</button>
+              {(isDios || isAdmin) && (
+                <button
+                  type="button"
+                  onClick={() => setShowPaisModal(true)}
+                  className="text-[11px] text-blue-700 underline"
+                  disabled={catalogLoading || loading}
+                >Gestionar países</button>
+              )}
             </div>
             <select
               name="paisId"
@@ -335,24 +340,26 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) =>
         </div>
 
         {/* 4) Módulos (ancho completo) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Módulos habilitados</label>
-          <select
-            name="modules"
-            multiple
-            value={form.modules}
-            onChange={handleModulesChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-xs"
-            disabled={loading}
-          >
-            <option value="basico">Básico</option>
-            <option value="ventas">Ventas</option>
-            <option value="reportes">Reportes</option>
-            <option value="inventario">Inventario</option>
-            <option value="compras">Compras</option>
-          </select>
-          <span className="text-[10px] text-gray-500">Ctrl+Click para seleccionar varios</span>
-        </div>
+        {!hideModules && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Módulos habilitados</label>
+            <select
+              name="modules"
+              multiple
+              value={form.modules}
+              onChange={handleModulesChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-2 py-1.5 text-xs"
+              disabled={loading}
+            >
+              <option value="basico">Básico</option>
+              <option value="ventas">Ventas</option>
+              <option value="reportes">Reportes</option>
+              <option value="inventario">Inventario</option>
+              <option value="compras">Compras</option>
+            </select>
+            <span className="text-[10px] text-gray-500">Ctrl+Click para seleccionar varios</span>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">{error}</div>
@@ -400,7 +407,8 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false }) =>
 UserRegisterForm.propTypes = {
   onUserCreated: PropTypes.func,
   isDios: PropTypes.bool,
-  isAdmin: PropTypes.bool
+  isAdmin: PropTypes.bool,
+  defaultRole: PropTypes.string
 };
 
 export default UserRegisterForm;

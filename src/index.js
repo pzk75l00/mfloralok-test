@@ -1,6 +1,8 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import RegisterScreen from './components/RegisterScreen';
 import './index.css';
 
 // Configurar título según el entorno
@@ -28,6 +30,11 @@ const root = createRoot(container);
 
 root.render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<App />} />
+        <Route path="/register" element={<RegisterScreen />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>
 );

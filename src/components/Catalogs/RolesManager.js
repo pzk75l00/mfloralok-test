@@ -15,7 +15,12 @@ import {
 import { normalizeForCompare } from '../../utils/stringUtils';
 import ConfirmationModal from '../Shared/ConfirmationModal';
 
+import { useContext } from 'react';
+import { UserContext } from '../../App';
+
 const RolesManager = ({ onClose, onChanged }) => {
+  const { userData } = useContext(UserContext) || {};
+  const isOwner = userData?.rol === 'owner';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,8 +75,9 @@ const RolesManager = ({ onClose, onChanged }) => {
 
   const startEdit = (item) => {
     const nameLc = String(item.nombre || '').toLowerCase();
-    if (item.esSistema || nameLc === 'admin' || nameLc === 'usuario') {
-      setError('Este rol protegido no se puede editar.');
+    const protectedRole = item.esSistema || nameLc === 'admin' || nameLc === 'usuario';
+    if (protectedRole && !isOwner) {
+      setError('Solo los usuarios owner pueden editar este rol protegido.');
       return;
     }
     setEditingId(item.id);
@@ -110,8 +116,9 @@ const RolesManager = ({ onClose, onChanged }) => {
 
   const handleDelete = (item) => {
     const nameLc = String(item.nombre || '').toLowerCase();
-    if (item.esSistema || nameLc === 'admin' || nameLc === 'usuario') {
-      setError('Este rol protegido no se puede eliminar.');
+    const protectedRole = item.esSistema || nameLc === 'admin' || nameLc === 'usuario';
+    if (protectedRole && !isOwner) {
+      setError('Solo los usuarios owner pueden eliminar este rol protegido.');
       return;
     }
     setItemToDelete(item);
@@ -214,6 +221,7 @@ const RolesManager = ({ onClose, onChanged }) => {
                     (() => {
                       const nameLc = String(item.nombre || '').toLowerCase();
                       const protectedRole = item.esSistema || nameLc === 'admin' || nameLc === 'usuario';
+                      const canEditDelete = !protectedRole || isOwner;
                       return (
                         <>
                           <span className="flex-1 text-sm text-gray-800">
@@ -228,18 +236,18 @@ const RolesManager = ({ onClose, onChanged }) => {
                             <button
                               type="button"
                               onClick={() => startEdit(item)}
-                              disabled={protectedRole || saving}
-                              title={protectedRole ? 'Rol protegido: no se puede editar' : 'Editar'}
-                              className={`text-xs ${protectedRole ? 'text-gray-400' : 'text-blue-600 hover:underline'}`}
+                              disabled={!canEditDelete || saving}
+                              title={protectedRole && !isOwner ? 'Solo los owner pueden editar este rol protegido' : 'Editar'}
+                              className={`text-xs ${!canEditDelete ? 'text-gray-400' : 'text-blue-600 hover:underline'}`}
                             >
                               Editar
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(item)}
-                              disabled={protectedRole || saving}
-                              title={protectedRole ? 'Rol protegido: no se puede eliminar' : 'Eliminar'}
-                              className={`text-xs ${protectedRole ? 'text-gray-400' : 'text-red-600 hover:underline'}`}
+                              disabled={!canEditDelete || saving}
+                              title={protectedRole && !isOwner ? 'Solo los owner pueden eliminar este rol protegido' : 'Eliminar'}
+                              className={`text-xs ${!canEditDelete ? 'text-gray-400' : 'text-red-600 hover:underline'}`}
                             >
                               Eliminar
                             </button>

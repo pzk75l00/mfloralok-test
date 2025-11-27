@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Casos de Prueba - Gestión de Usuarios</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #888; padding: 8px; text-align: left; }
+    th { background: #f0f0f0; }
+    tr:nth-child(even) { background: #fafafa; }
+    td:last-child { background: #fffbe6; }
+  </style>
+</head>
+<body>
+  <h2>Casos de Prueba - Gestión de Usuarios</h2>
+  <div class="meta">
+    <label>Fecha de inicio de pruebas:</label> <input type="date" value="2025-11-26" />
+    <label>Fecha de finalización:</label> <input type="date" />
+    <label>Probador:</label> <input type="text" placeholder="Nombre y Apellido" />
+    <label>Observaciones generales:</label> <input type="text" style="width: 40em;" placeholder="Observaciones sobre la sesión de pruebas" />
+  </div>
+  <table>
+    <tr>
+      <th>Caso</th>
+      <th>Descripción</th>
+      <th>Datos de Entrada</th>
+      <th>Resultado Esperado</th>
+      <th>Resultado Obtenido</th>
+      <th>Fecha de prueba</th>
+      <th>Probador</th>
+      <th>Estado</th>
+      <th>Observaciones</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Alta de usuario válido</td>
+      <td>Nombre: Juan, Email: juan@mail.com, Rol: admin, Activo: true</td>
+      <td>Usuario creado en Firestore con id numérico, datos correctos y visible en el ABM</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Alta con email ya existente</td>
+      <td>Nombre: Ana, Email: juan@mail.com, Rol: user, Activo: true</td>
+      <td>Error: “El email ya está registrado”</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Alta con campos vacíos</td>
+      <td>Nombre: (vacío), Email: (vacío), Rol: (vacío), Activo: false</td>
+      <td>Error: “Complete todos los campos obligatorios”</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Modificación de usuario</td>
+      <td>Usuario existente: id=5, cambiar nombre a “Carlos”</td>
+      <td>Usuario actualizado en Firestore, nombre = “Carlos”</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Baja de usuario</td>
+      <td>Usuario existente: id=7</td>
+      <td>Usuario eliminado de Firestore, ya no aparece en el ABM</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>Listado de usuarios</td>
+      <td>-</td>
+      <td>Se muestran todos los usuarios activos en la tabla/lista</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>Login con credenciales válidas</td>
+      <td>Email: juan@mail.com, Password: correcta</td>
+      <td>Acceso permitido, redirección al dashboard</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>Login con credenciales inválidas</td>
+      <td>Email: juan@mail.com, Password: incorrecta</td>
+      <td>Error: “Usuario o contraseña incorrectos”</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>Cambio de rol</td>
+      <td>Usuario existente: id=3, cambiar rol a “admin”</td>
+      <td>Usuario actualizado, rol = “admin”</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>Desactivar usuario</td>
+      <td>Usuario existente: id=4, Activo: false</td>
+      <td>Usuario no puede loguearse, no aparece en listados activos</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </table>
+  <p><em>Completa la información de cada caso y los datos generales antes de guardar el archivo.</em></p>
+</body>
+</html>

@@ -50,7 +50,7 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
             const preSnap = await getDoc(preRef);
             if (!preSnap.exists()) {
               console.warn('[Auth] Email no pre-registrado', u.email);
-              setLastAuthReason({ code: 'not_pre_registered', message: 'Tu cuenta no está habilitada. Solicitá el alta al administrador.' });
+              setLastAuthReason({ code: 'not_pre_registered', message: 'Tu cuenta no está habilitada. Hacé click en Solicitar alta o contáctanos.' });
               await doSignOut();
               setUser(null);
               setUserData(null);
