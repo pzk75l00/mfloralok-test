@@ -408,7 +408,8 @@ UserRegisterForm.propTypes = {
   onUserCreated: PropTypes.func,
   isDios: PropTypes.bool,
   isAdmin: PropTypes.bool,
-  defaultRole: PropTypes.string
+  defaultRole: PropTypes.string,
+  hideModules: PropTypes.bool
 };
 
 export default UserRegisterForm;
