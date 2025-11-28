@@ -1,0 +1,9 @@
+@startuml ProductTable
+' Diagrama de secuencia para ProductTable.js
+actor Usuario
+participant "Frontend (ProductTable.js)" as FE
+
+Usuario -> FE: Visualiza tabla de productos
+Usuario -> FE: Interactúa (ordenar, filtrar, seleccionar)
+FE -> FE: Actualiza vista según acción
+@enduml

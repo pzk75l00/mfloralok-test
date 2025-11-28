@@ -1,0 +1,18 @@
+@startuml CashView
+' Diagrama de secuencia para CashView.js
+actor Usuario
+participant "Frontend (CashView.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a la vista de caja
+FE -> BE: Solicita datos de caja y movimientos
+BE -> DB: Lee datos de caja y movimientos
+BE -> FE: Devuelve datos
+FE -> Usuario: Muestra estado de caja y acciones
+Usuario -> FE: Realiza acción (apertura, cierre, movimiento)
+FE -> BE: Envía acción y datos
+BE -> DB: Actualiza caja/movimiento
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra resultado y actualiza vista
+@enduml

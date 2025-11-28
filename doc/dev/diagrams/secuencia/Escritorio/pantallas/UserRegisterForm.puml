@@ -1,0 +1,15 @@
+@startuml UserRegisterForm
+' Diagrama de secuencia para UserRegisterForm.js
+actor Admin
+participant "Frontend (UserRegisterForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Admin -> FE: Accede a formulario de alta de usuario
+FE -> FE: Muestra formulario
+Admin -> FE: Completa y envía datos
+FE -> BE: Solicita alta de usuario
+BE -> DB: Guarda usuario en users_by_email
+BE -> FE: Devuelve confirmación
+FE -> Admin: Muestra mensaje de éxito
+@enduml

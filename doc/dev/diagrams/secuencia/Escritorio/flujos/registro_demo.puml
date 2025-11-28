@@ -1,0 +1,17 @@
+@startuml registro_demo
+actor Usuario
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Registro y Demo ==
+Usuario -> FE: Accede a "Probar demo"
+FE -> FE: Muestra formulario de alta
+Usuario -> FE: Completa y envía formulario
+FE -> BE: Solicitud de registro demo
+BE -> DB: Crea usuario demo (solo lectura)
+BE -> DB: No crea espacio privado
+BE -> DB: Asocia usuario a datos demo filtrados por rubro
+FE <- BE: Confirma acceso demo
+Usuario -> FE: Navega datos demo (solo lectura)
+@enduml

@@ -1,0 +1,10 @@
+@startuml NewProductModal
+' Diagrama de secuencia para NewProductModal.js
+actor Usuario
+participant "Frontend (NewProductModal.js)" as FE
+
+Usuario -> FE: Abre modal para nuevo producto
+FE -> Usuario: Muestra formulario
+Usuario -> FE: Completa y envía datos
+FE -> FE: Ejecuta acción de alta
+@enduml

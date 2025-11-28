@@ -1,0 +1,15 @@
+@startuml PurchasesForm
+' Diagrama de secuencia para PurchasesForm.js
+actor Usuario
+participant "Frontend (PurchasesForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a formulario de compras
+FE -> FE: Muestra formulario
+Usuario -> FE: Completa y envía compra
+FE -> BE: Solicita alta de compra
+BE -> DB: Guarda compra en Firestore
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra mensaje de éxito
+@enduml

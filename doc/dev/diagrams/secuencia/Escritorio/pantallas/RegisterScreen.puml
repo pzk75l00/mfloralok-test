@@ -1,0 +1,15 @@
+@startuml RegisterScreen
+' Diagrama de secuencia para RegisterScreen.js
+actor Usuario
+participant "Frontend (RegisterScreen.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a pantalla de registro
+FE -> FE: Muestra formulario de alta
+Usuario -> FE: Completa y envía formulario
+FE -> BE: Solicitud de registro
+BE -> DB: Crea usuario en users_by_email (estado: pendiente)
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra modal de éxito y redirige a login
+@enduml

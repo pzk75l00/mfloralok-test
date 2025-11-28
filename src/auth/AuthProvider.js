@@ -26,7 +26,6 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
     let unsub = () => {};
     (async () => {
       await ensureLocalPersistence();
-      dlog('[auth] AuthProvider mounted', { enforceDesktopBinding, isMobile: isMobileUA(), device: getDeviceInfo() });
       unsub = subscribeAuth(async (u) => {
         setLoading(true);
         dlog('[auth] onAuthStateChanged', { hasUser: !!u, email: u?.email });
@@ -38,13 +37,13 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
           let preEstado = null;
           let cachedEmailLower = null;
 
+          let emailLower = String(u.email || '').toLowerCase();
           if (owner) {
             // Dueño: bypass de allowlist y seats; asegurar perfil con rol 'owner'
-            await upsertUserProfile(u.uid, { email: u.email || null, displayName: u.displayName || null, rol: 'owner' });
+            await upsertUserProfile(emailLower, { email: emailLower, displayName: u.displayName || null, rol: 'owner' });
             dlog('[auth] upsertUserProfile owner ok');
           } else {
             // No dueño: activar solo si está pre-registrado y no bloqueado
-            const emailLower = String(u.email || '').toLowerCase();
             cachedEmailLower = emailLower;
             const preRef = doc(db, 'users_by_email', emailLower);
             const preSnap = await getDoc(preRef);
@@ -113,7 +112,7 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
               if (TRIAL_BEHAVIOR === 'block') {
                 // Comportamiento legacy: cerrar sesión y volver al login con mensaje
                 await doSignOut();
-                setUser(null);
+              await reserveSeatIfNeeded(emailLower, { email: emailLower, displayName: u.displayName || null });
                 setUserData(null);
                 setLoading(false);
                 return;
@@ -127,23 +126,8 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
                 return;
               }
             }
-            try {
-              await reserveSeatIfNeeded(u.uid, { email: u.email || null, displayName: u.displayName || null });
-              dlog('[auth] reserveSeatIfNeeded ok');
-            } catch (e) {
-              if (String(e.message) === 'license_limit_reached') {
-                console.warn('[Auth] Límite de usuarios alcanzado');
-                setLastAuthReason({ code: 'license_limit', message: 'Límite de usuarios alcanzado. Contacte al administrador.' });
-                await doSignOut();
-                setUser(null);
-                setUserData(null);
-                setLoading(false);
-                return;
-              }
-            }
-            // Activar perfil con datos del pre-registro y estado activo
-            await upsertUserProfile(u.uid, {
-              email: u.email || null,
+            await upsertUserProfile(emailLower, {
+              email: emailLower,
               displayName: u.displayName || null,
               nombre: pre.nombre || null,
               apellido: pre.apellido || null,
@@ -179,19 +163,19 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
           // Usar console.log para garantizar visibilidad de diagnóstico
           // eslint-disable-next-line no-console
           console.log('[auth] device-binding params', { allowDesktopOnce, allowTemporal, relaxDesktopForExtension: latestRelax, enforceDesktopBinding, effectiveEnforce });
-          let deviceRes = await registerDeviceIfNeeded(u.uid, { enforceDesktopBinding: effectiveEnforce });
+          let deviceRes = await registerDeviceIfNeeded(emailLower, { enforceDesktopBinding: effectiveEnforce });
           dlog('[auth] registerDeviceIfNeeded result (first)', deviceRes);
           if (!deviceRes.ok && (allowDesktopOnce || latestRelax || allowTemporal)) {
             // Fallback: forzar registro sin binding en sesión extendida/una-vez
             dlog('[auth] registerDeviceIfNeeded fallback without binding');
-            deviceRes = await registerDeviceIfNeeded(u.uid, { enforceDesktopBinding: false });
+            deviceRes = await registerDeviceIfNeeded(emailLower, { enforceDesktopBinding: false });
             dlog('[auth] registerDeviceIfNeeded result (fallback)', deviceRes);
           }
           if (!deviceRes.ok && (latestRelax || allowTemporal)) {
             // Alta directa del device y reintento
             try {
               const deviceId = getOrCreateDeviceId();
-              await upsertUserProfile(u.uid, {
+              await upsertUserProfile(emailLower, {
                 [`allowedDevices.${deviceId}`]: {
                   isDesktop: !isMobileUA(),
                   name: getDeviceInfo().deviceLabel,
@@ -201,7 +185,7 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
                 }
               });
               dlog('[auth] forced allow current device');
-              deviceRes = await registerDeviceIfNeeded(u.uid, { enforceDesktopBinding: false });
+              deviceRes = await registerDeviceIfNeeded(emailLower, { enforceDesktopBinding: false });
             } catch (e) {
               console.warn('[auth] force allow device failed', e);
             }
@@ -224,9 +208,9 @@ export function AuthProvider({ children, enforceDesktopBinding = true }) {
           if (allowTemporal) {
             try { localStorage.removeItem(ALLOW_DESKTOP_UNTIL_KEY); } catch (_) { /* ignore */ }
           }
-          const fresh = await getUserProfile(u.uid);
+          const fresh = await getUserProfile(emailLower);
           setUserData(fresh);
-          dlog('[auth] user profile loaded', { uid: u.uid });
+          dlog('[auth] user profile loaded', { email: emailLower });
         } else {
           setUserData(null);
         }

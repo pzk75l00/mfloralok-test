@@ -1,0 +1,15 @@
+@startuml PlantForm
+' Diagrama de secuencia para PlantForm.js
+actor Admin
+participant "Frontend (PlantForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Admin -> FE: Accede a formulario de planta
+FE -> FE: Muestra formulario
+Admin -> FE: Completa y envía datos
+FE -> BE: Solicita alta/edición de planta
+BE -> DB: Guarda/actualiza planta
+BE -> FE: Devuelve confirmación
+FE -> Admin: Muestra mensaje de éxito
+@enduml

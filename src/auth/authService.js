@@ -74,16 +74,20 @@ export async function signOut() {
   await fbSignOut(auth);
 }
 
-export async function getUserProfile(uid) {
-  const ref = doc(db, 'users', uid);
+
+// Nuevo criterio: el ID del documento en 'users' debe ser el email (en minúsculas)
+export async function getUserProfile(email) {
+  const emailId = String(email || '').toLowerCase();
+  const ref = doc(db, 'users', emailId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : null;
 }
 
-export async function upsertUserProfile(uid, base = {}) {
-  const ref = doc(db, 'users', uid);
+export async function upsertUserProfile(email, base = {}) {
+  const emailId = String(email || '').toLowerCase();
+  const ref = doc(db, 'users', emailId);
   const snap = await getDoc(ref);
-  const payload = { uid, updatedAt: serverTimestamp(), ...base };
+  const payload = { email: emailId, updatedAt: serverTimestamp(), ...base };
   if (snap.exists()) {
     await updateDoc(ref, payload);
   } else {
@@ -92,8 +96,9 @@ export async function upsertUserProfile(uid, base = {}) {
 }
 
 // Device binding helpers
-export async function registerDeviceIfNeeded(uid, { enforceDesktopBinding = true } = {}) {
-  const ref = doc(db, 'users', uid);
+export async function registerDeviceIfNeeded(email, { enforceDesktopBinding = true } = {}) {
+  const emailId = String(email || '').toLowerCase();
+  const ref = doc(db, 'users', emailId);
   const snap = await getDoc(ref);
   const deviceId = getOrCreateDeviceId();
   const info = getDeviceInfo();
@@ -118,7 +123,7 @@ export async function registerDeviceIfNeeded(uid, { enforceDesktopBinding = true
   }
 
   // Register this device
-  await upsertUserProfile(uid, {
+  await upsertUserProfile(emailId, {
     [`allowedDevices.${deviceId}`]: {
       isDesktop,
       name: info.deviceLabel,
@@ -134,8 +139,9 @@ export async function registerDeviceIfNeeded(uid, { enforceDesktopBinding = true
 // License seat reservation (Fase A: en cliente, con transacción Firestore)
 // - Si el usuario no existe, intenta reservar un asiento según app_config/license
 // - Si no hay license o no tiene maxUsers, no aplica límite
-export async function reserveSeatIfNeeded(uid, { email = null, displayName = null } = {}) {
-  const userRef = doc(db, 'users', uid);
+export async function reserveSeatIfNeeded(email, { displayName = null } = {}) {
+  const emailId = String(email || '').toLowerCase();
+  const userRef = doc(db, 'users', emailId);
   const licRef = doc(db, 'app_config', 'license');
 
   await runTransaction(db, async (tx) => {
@@ -154,8 +160,7 @@ export async function reserveSeatIfNeeded(uid, { email = null, displayName = nul
       }
       // Crear usuario y aumentar contador
       tx.set(userRef, {
-        uid,
-        email,
+        email: emailId,
         displayName,
         rol: 'usuario',
         modules: ['basico'],
@@ -166,8 +171,7 @@ export async function reserveSeatIfNeeded(uid, { email = null, displayName = nul
     } else {
       // Sin license: permitir creación sin límite
       tx.set(userRef, {
-        uid,
-        email,
+        email: emailId,
         displayName,
         rol: 'usuario',
         modules: ['basico'],

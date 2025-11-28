@@ -1,0 +1,19 @@
+@startuml login_usuario
+actor Usuario
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Login de Usuario ==
+Usuario -> FE: Ingresa email y contraseña
+FE -> BE: Solicitud de login
+BE -> DB: Verifica credenciales
+alt Credenciales válidas
+    BE -> DB: Obtiene datos de usuario y tenant
+    BE -> FE: Devuelve sesión y datos
+    FE -> Usuario: Acceso concedido (dashboard)
+else Credenciales inválidas
+    BE -> FE: Devuelve error de autenticación
+    FE -> Usuario: Muestra mensaje de error
+end
+@enduml

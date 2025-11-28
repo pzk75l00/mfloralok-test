@@ -1,0 +1,16 @@
+@startuml conversion_pago
+actor Usuario
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Conversión a Pago ==
+Usuario -> FE: Hace clic en "Contratar/Pagar"
+FE -> BE: Solicitud de activación
+BE -> DB: Crea espacio privado (/tenants/{tenantId}/...)
+BE -> DB: Asigna paquete real, límites, features
+BE -> DB: Cambia rol a admin y estado a activo
+BE -> DB: Solicita completar datos faltantes
+FE <- BE: Muestra formulario de datos faltantes
+Usuario -> FE: Completa datos y comienza a operar
+@enduml

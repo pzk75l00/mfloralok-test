@@ -1,0 +1,32 @@
+@startuml flujo_registro_demo_pago
+actor Usuario
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Registro y Demo ==
+Usuario -> FE: Accede a "Probar demo"
+FE -> FE: Muestra formulario de alta
+Usuario -> FE: Completa y envía formulario
+FE -> BE: Solicitud de registro demo
+BE -> DB: Crea usuario demo (solo lectura)
+BE -> DB: No crea espacio privado
+BE -> DB: Asocia usuario a datos demo filtrados por rubro
+FE <- BE: Confirma acceso demo
+Usuario -> FE: Navega datos demo (solo lectura)
+
+== Conversión a Pago ==
+Usuario -> FE: Hace clic en "Contratar/Pagar"
+FE -> BE: Solicitud de activación
+BE -> DB: Crea espacio privado (/tenants/{tenantId}/...)
+BE -> DB: Asigna paquete real, límites, features
+BE -> DB: Cambia rol a admin y estado a activo
+BE -> DB: Solicita completar datos faltantes
+FE <- BE: Muestra formulario de datos faltantes
+Usuario -> FE: Completa datos y comienza a operar
+
+== Invitación de otros usuarios ==
+Admin -> FE: Invita usuario
+FE -> BE: Alta usuario asociado a mismo tenantId
+BE -> DB: Usuario accede a mismo espacio privado y paquete
+@enduml

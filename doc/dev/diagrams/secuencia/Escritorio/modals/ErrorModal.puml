@@ -1,0 +1,8 @@
+@startuml ErrorModal
+' Diagrama de secuencia para ErrorModal.js
+actor Usuario
+participant "Frontend (ErrorModal.js)" as FE
+
+FE -> Usuario: Muestra modal de error
+Usuario -> FE: Cierra modal
+@enduml

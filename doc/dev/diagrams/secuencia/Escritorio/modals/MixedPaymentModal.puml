@@ -1,0 +1,10 @@
+@startuml MixedPaymentModal
+' Diagrama de secuencia para MixedPaymentModal.js
+actor Usuario
+participant "Frontend (MixedPaymentModal.js)" as FE
+
+Usuario -> FE: Abre modal de pago combinado
+FE -> Usuario: Muestra opciones y totales
+Usuario -> FE: Selecciona métodos y confirma
+FE -> FE: Ejecuta acción de pago
+@enduml

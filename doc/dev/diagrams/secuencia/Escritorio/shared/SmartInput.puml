@@ -1,0 +1,9 @@
+@startuml SmartInput
+' Diagrama de secuencia para SmartInput.js
+actor Usuario
+participant "Frontend (SmartInput.js)" as FE
+
+Usuario -> FE: Escribe o edita valor
+FE -> FE: Valida y actualiza estado local
+FE -> Usuario: Muestra feedback visual (error, ok, sugerencia)
+@enduml

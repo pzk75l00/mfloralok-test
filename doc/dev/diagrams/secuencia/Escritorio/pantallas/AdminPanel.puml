@@ -1,0 +1,18 @@
+@startuml AdminPanel
+' Diagrama de secuencia para AdminPanel.js
+actor Admin
+participant "Frontend (AdminPanel.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Admin -> FE: Accede al panel de administración
+FE -> BE: Solicita datos de usuarios y pre-registros
+BE -> DB: Lee colecciones users y users_by_email
+BE -> FE: Devuelve datos
+FE -> Admin: Muestra usuarios, formularios y acciones
+Admin -> FE: Realiza acción (alta, edición, baja, etc.)
+FE -> BE: Envía acción y datos
+BE -> DB: Actualiza datos según acción
+BE -> FE: Devuelve confirmación
+FE -> Admin: Muestra resultado y actualiza vista
+@enduml

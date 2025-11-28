@@ -1,0 +1,15 @@
+'...existing code...'
+' Diagrama de secuencia para SalesMobileForm.js
+actor Usuario
+participant "Frontend (SalesMobileForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a formulario de venta móvil
+FE -> FE: Muestra formulario
+Usuario -> FE: Completa y envía datos
+FE -> BE: Solicita alta de venta
+BE -> DB: Guarda venta
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra resultado
+@enduml

@@ -1,0 +1,18 @@
+@startuml DesktopLayout
+' Diagrama de secuencia para DesktopLayout.js
+actor Usuario
+participant "Frontend (DesktopLayout.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a la app escritorio
+FE -> BE: Solicita datos iniciales (usuario, menú, permisos)
+BE -> DB: Lee datos de usuario y configuración
+BE -> FE: Devuelve datos
+FE -> Usuario: Renderiza layout, navegación y vistas
+Usuario -> FE: Navega entre secciones
+FE -> BE: Solicita datos según sección
+BE -> DB: Lee datos requeridos
+BE -> FE: Devuelve datos
+FE -> Usuario: Muestra información y acciones
+@enduml

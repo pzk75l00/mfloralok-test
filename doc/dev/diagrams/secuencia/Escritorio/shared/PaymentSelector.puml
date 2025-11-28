@@ -1,0 +1,8 @@
+@startuml PaymentSelector
+' Diagrama de secuencia para PaymentSelector.js
+actor Usuario
+participant "Frontend (PaymentSelector.js)" as FE
+
+Usuario -> FE: Selecciona método de pago
+FE -> FE: Actualiza selección y notifica a componente padre
+@enduml

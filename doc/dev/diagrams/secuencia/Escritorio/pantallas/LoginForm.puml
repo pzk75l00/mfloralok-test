@@ -1,0 +1,19 @@
+@startuml LoginForm
+' Diagrama de secuencia para LoginForm.js
+actor Usuario
+participant "Frontend (LoginForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Ingresa email y contraseña
+FE -> BE: Solicita login
+BE -> DB: Verifica credenciales
+alt Credenciales válidas
+    BE -> DB: Obtiene datos de usuario
+    BE -> FE: Devuelve sesión
+    FE -> Usuario: Acceso concedido
+else Credenciales inválidas
+    BE -> FE: Devuelve error
+    FE -> Usuario: Muestra mensaje de error
+end
+@enduml

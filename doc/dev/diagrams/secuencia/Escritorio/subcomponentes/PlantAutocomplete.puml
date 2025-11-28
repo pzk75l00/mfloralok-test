@@ -1,0 +1,15 @@
+@startuml PlantAutocomplete
+' Diagrama de secuencia para PlantAutocomplete.js
+actor Usuario
+participant "Frontend (PlantAutocomplete.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Escribe en campo de planta
+FE -> BE: Solicita sugerencias de plantas (input parcial)
+BE -> DB: Busca coincidencias en colección plants
+BE -> FE: Devuelve lista de sugerencias
+FE -> Usuario: Muestra lista desplegable
+Usuario -> FE: Selecciona sugerencia
+FE -> Usuario: Completa campo con selección
+@enduml

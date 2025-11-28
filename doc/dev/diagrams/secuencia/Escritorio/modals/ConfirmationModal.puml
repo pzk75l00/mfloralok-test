@@ -1,0 +1,9 @@
+@startuml ConfirmationModal
+' Diagrama de secuencia para ConfirmationModal.js
+actor Usuario
+participant "Frontend (ConfirmationModal.js)" as FE
+
+FE -> Usuario: Muestra modal de confirmación
+Usuario -> FE: Confirma o cancela
+FE -> FE: Ejecuta acción según respuesta
+@enduml

@@ -1,0 +1,8 @@
+@startuml MixedPaymentSelector
+' Diagrama de secuencia para MixedPaymentSelector.js
+actor Usuario
+participant "Frontend (MixedPaymentSelector.js)" as FE
+
+Usuario -> FE: Selecciona múltiples métodos de pago
+FE -> FE: Actualiza selección y calcula totales
+@enduml

@@ -1,0 +1,11 @@
+@startuml invitacion_usuario
+actor Admin
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Invitación de otros usuarios ==
+Admin -> FE: Invita usuario
+FE -> BE: Alta usuario asociado a mismo tenantId
+BE -> DB: Usuario accede a mismo espacio privado y paquete
+@enduml

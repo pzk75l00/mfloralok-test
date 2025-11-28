@@ -1,0 +1,8 @@
+@startuml PaymentMethodsManager
+' Diagrama de secuencia para PaymentMethodsManager.js
+actor Usuario
+participant "Frontend (PaymentMethodsManager.js)" as FE
+
+Usuario -> FE: Agrega, edita o elimina método de pago
+FE -> FE: Actualiza lista y notifica cambios
+@enduml

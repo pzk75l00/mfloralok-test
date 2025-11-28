@@ -1,0 +1,13 @@
+@startuml MovementsView
+' Diagrama de secuencia para MovementsView.js
+actor Usuario
+participant "Frontend (MovementsView.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a movimientos
+FE -> BE: Solicita datos de movimientos
+BE -> DB: Lee movimientos
+BE -> FE: Devuelve datos
+FE -> Usuario: Muestra movimientos y acciones
+@enduml

@@ -1,0 +1,9 @@
+@startuml Navigation
+' Diagrama de secuencia para Navigation.js
+actor Usuario
+participant "Frontend (Navigation.js)" as FE
+
+Usuario -> FE: Interactúa con menú de navegación
+FE -> FE: Cambia sección activa
+FE -> Usuario: Muestra nueva vista o componente
+@enduml

@@ -1,0 +1,13 @@
+@startuml LoadPlantsToFirestore
+' Diagrama de secuencia para LoadPlantsToFirestore.js
+actor Admin
+participant "Frontend (LoadPlantsToFirestore.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Admin -> FE: Inicia carga masiva de plantas
+FE -> BE: Envía archivo/lista de plantas
+BE -> DB: Inserta/actualiza múltiples plantas
+BE -> FE: Devuelve confirmación
+FE -> Admin: Muestra resultado de la carga
+@enduml

@@ -1,0 +1,13 @@
+@startuml ReportesView
+' Diagrama de secuencia para ReportesView.js
+actor Usuario
+participant "Frontend (ReportesView.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a reportes
+FE -> BE: Solicita datos de reportes
+BE -> DB: Lee datos de ventas, movimientos, etc.
+BE -> FE: Devuelve datos
+FE -> Usuario: Muestra reportes y gráficos
+@enduml

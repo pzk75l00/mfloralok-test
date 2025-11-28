@@ -1,0 +1,22 @@
+@startuml registro_usuario_login
+actor Usuario
+participant "Frontend" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+== Registro de Usuario desde Login ==
+Usuario -> FE: Hace clic en "Registrarse"
+FE -> FE: Muestra formulario de registro
+Usuario -> FE: Completa y envía formulario
+FE -> BE: Solicitud de registro
+BE -> DB: Verifica si el email ya existe
+alt Email disponible
+    BE -> DB: Crea usuario en users_by_email (estado: pendiente)
+    BE -> FE: Devuelve confirmación
+    FE -> Usuario: Muestra modal de "Usuario en proceso de registración"
+    FE -> Usuario: Redirige a login
+else Email ya registrado
+    BE -> FE: Devuelve error de duplicado
+    FE -> Usuario: Muestra mensaje de error
+end
+@enduml

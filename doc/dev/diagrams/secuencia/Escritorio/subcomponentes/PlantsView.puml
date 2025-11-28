@@ -1,0 +1,13 @@
+@startuml PlantsView
+' Diagrama de secuencia para PlantsView.js
+actor Usuario
+participant "Frontend (PlantsView.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a listado de plantas
+FE -> BE: Solicita datos de plantas
+BE -> DB: Lee colección plants
+BE -> FE: Devuelve datos
+FE -> Usuario: Muestra listado y acciones
+@enduml

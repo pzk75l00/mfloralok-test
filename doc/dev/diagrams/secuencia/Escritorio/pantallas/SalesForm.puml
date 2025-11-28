@@ -1,0 +1,15 @@
+@startuml SalesForm
+' Diagrama de secuencia para SalesForm.js
+actor Usuario
+participant "Frontend (SalesForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a formulario de ventas
+FE -> FE: Muestra formulario
+Usuario -> FE: Completa y envía venta
+FE -> BE: Solicita alta de venta
+BE -> DB: Guarda venta en Firestore
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra mensaje de éxito
+@enduml

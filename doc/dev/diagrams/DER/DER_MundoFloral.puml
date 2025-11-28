@@ -1,0 +1,87 @@
+@startuml DER_MundoFloral
+' Diagrama Entidad-Relación - MundoFloral
+entity users {
+  *id : string
+  email
+  nombre
+  rolId
+  rubroId
+  paisId
+}
+entity users_by_email {
+  *email : string
+  userId
+  estado
+}
+entity rubros {
+  *id : string
+  nombre
+  activo
+}
+entity paises {
+  *id : string
+  nombre
+}
+entity roles {
+  *id : string
+  nombre
+}
+entity producto {
+  *id : string
+  nombre
+  tipoId
+  stock
+}
+entity productTypes {
+  *id : string
+  name
+}
+entity movements {
+  *id : string
+  productoId
+  tipoMovimiento
+  cantidad
+  fecha
+  usuarioId
+}
+entity sales {
+  *id : string
+  fecha
+  usuarioId
+  paymentMethodId
+}
+entity sales_items {
+  *id : string
+  saleId
+  productoId
+  cantidad
+  precio
+}
+entity signups {
+  *id : string
+  email
+  rubroId
+  paisId
+  estado
+}
+entity paymentMethods {
+  *id : string
+  nombre
+  isActive
+}
+
+' Relaciones
+users::rolId -- roles::id
+users::rubroId -- rubros::id
+users::paisId -- paises::id
+users_by_email::userId -- users::id
+producto::tipoId -- productTypes::id
+movements::productoId -- producto::id
+movements::usuarioId -- users::id
+sales::usuarioId -- users::id
+sales::paymentMethodId -- paymentMethods::id
+sales_items::saleId -- sales::id
+sales_items::productoId -- producto::id
+signups::rubroId -- rubros::id
+signups::paisId -- paises::id
+@enduml

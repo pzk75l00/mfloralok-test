@@ -1,0 +1,9 @@
+@startuml AlertModal
+' Diagrama de secuencia para AlertModal.js
+actor Usuario
+participant "Frontend (AlertModal.js)" as FE
+
+FE -> Usuario: Muestra alerta/modal
+Usuario -> FE: Cierra o responde a la alerta
+FE -> FE: Ejecuta acción asociada (si corresponde)
+@enduml

@@ -1,3 +1,11 @@
+// CRITERIO DE ALTA DE USUARIOS:
+// - El alta de un usuario en la colección 'users' debe realizarse únicamente después de validar el pre-registro en 'users_by_email'.
+// - El identificador (ID) del documento en la colección 'users' debe ser siempre el email del usuario (en minúsculas), no un UID ni un ID autogenerado.
+// - El flujo correcto es:
+//   1. Validar existencia y estado en 'users_by_email'.
+//   2. Si es válido, crear o actualizar el documento en 'users' usando el email como ID.
+//   3. El documento debe contener los datos del usuario y reflejar el estado correspondiente.
+// - Este criterio debe respetarse en todos los puntos de alta, edición y eliminación de usuarios.
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { UserContext } from '../App';
 import UserRegisterForm from './UserRegisterForm';
@@ -165,7 +173,10 @@ const AdminPanel = () => {
     setError('');
     setSuccess('');
     try {
-      await updateDoc(doc(db, 'users', editUser.id), {
+      // Usar siempre el email como ID del documento en users
+      const userEmail = (editUser?.email || editUser?.id || '').toLowerCase();
+      if (!userEmail) throw new Error('Email de usuario no definido');
+      await updateDoc(doc(db, 'users', userEmail), {
         nombre: editForm.nombre,
         apellido: editForm.apellido,
         telefono: editForm.telefono,

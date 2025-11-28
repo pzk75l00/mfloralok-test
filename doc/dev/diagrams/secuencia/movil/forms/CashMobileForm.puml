@@ -1,0 +1,15 @@
+@startuml CashMobileForm
+' Diagrama de secuencia para CashMobileForm.js
+actor Usuario
+participant "Frontend (CashMobileForm.js)" as FE
+participant "Backend" as BE
+participant "Firestore" as DB
+
+Usuario -> FE: Accede a formulario de caja móvil
+FE -> FE: Muestra formulario
+Usuario -> FE: Completa y envía datos
+FE -> BE: Solicita alta/movimiento de caja
+BE -> DB: Guarda movimiento
+BE -> FE: Devuelve confirmación
+FE -> Usuario: Muestra resultado
+@enduml
