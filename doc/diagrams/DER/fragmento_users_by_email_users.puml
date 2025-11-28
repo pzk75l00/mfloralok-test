@@ -1,0 +1,32 @@
+@startuml
+entity "users_by_email" as UsersByEmail {
+  * email : string <<PK>>
+  --
+  nombre
+  apellido
+  telefono
+  rol
+  modules
+  estado
+  fechaCreacion
+  fechaFin
+  ...
+}
+
+entity "users" as Users {
+  * email : string <<PK>>
+  --
+  displayName
+  nombre
+  apellido
+  telefono
+  rol
+  modules
+  estado
+  createdAt
+  updatedAt
+  ...
+}
+
+UsersByEmail ||--|| Users : "email (ID)"
+@enduml

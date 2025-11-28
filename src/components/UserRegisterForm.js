@@ -305,7 +305,7 @@ const UserRegisterForm = ({ onUserCreated, isDios = false, isAdmin = false, defa
             >
               <option value="">{catalogLoading ? 'Cargando...' : 'Seleccioná rubro'}</option>
               {rubros.map(r => (
-                <option key={r.id} value={r.id}>{r.nombre || r.id}</option>
+                <option key={r.id} value={r.id !== undefined && r.id !== null ? r.id : (r.id || '')}>{r.nombre || r.id}</option>
               ))}
             </select>
             {!catalogLoading && rubros.length === 0 && (
