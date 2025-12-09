@@ -1,6 +1,6 @@
 // Script para inicializar métodos de pago por defecto en Firebase
 import { db } from '../firebase/firebaseConfig';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, setDoc, doc, getDocs, query, where } from 'firebase/firestore';
 
 // Métodos de pago por defecto que se crearán en Firebase
 const DEFAULT_PAYMENT_METHODS = [
@@ -48,13 +48,16 @@ export const initializeDefaultPaymentMethods = async () => {
       console.log('📝 Creando métodos de pago por defecto...');
       
       // Crear los métodos por defecto
+      let nextId = 1;
       for (const method of DEFAULT_PAYMENT_METHODS) {
-        await addDoc(collection(db, 'paymentMethods'), {
+        await setDoc(doc(db, 'paymentMethods', String(nextId)), {
           ...method,
+          id: nextId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
         console.log(`✅ Creado método: ${method.name}`);
+        nextId++;
       }
       
       console.log('🎉 Métodos de pago inicializados correctamente');
@@ -85,9 +88,14 @@ export const migrateHardcodedPaymentMethods = async () => {
       const existingDocs = await getDocs(existingQuery);
       
       if (existingDocs.empty) {
+        // Calcular nuevo ID
+        const allSnap = await getDocs(collection(db, 'paymentMethods'));
+        const allMethods = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const newId = allMethods.length > 0 ? Math.max(...allMethods.map(m => Number(m.id) || 0)) + 1 : 1;
         // Crear el método si no existe
-        await addDoc(collection(db, 'paymentMethods'), {
+        await setDoc(doc(db, 'paymentMethods', String(newId)), {
           ...method,
+          id: newId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });

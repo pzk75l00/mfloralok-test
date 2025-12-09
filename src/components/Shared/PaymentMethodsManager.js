@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { db } from '../../firebase/firebaseConfig';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, setDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
 import ConfirmationModal from './ConfirmationModal';
 import AlertModal from './AlertModal';
 
@@ -99,7 +99,7 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
         const allSnap = await getDocs(collection(db, 'paymentMethods'));
         const all = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const newId = all.length > 0 ? Math.max(...all.map(t => Number(t.id) || 0)) + 1 : 1;
-        await addDoc(collection(db, 'paymentMethods'), {
+        await setDoc(doc(db, 'paymentMethods', String(newId)), {
           ...newMethod,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

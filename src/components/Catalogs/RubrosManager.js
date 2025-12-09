@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { normalizeForCompare } from '../../utils/stringUtils';
 import ConfirmationModal from '../Shared/ConfirmationModal';
@@ -25,7 +25,7 @@ const RubrosManager = ({ onClose, onChanged }) => {
     if (!nombre) return;
     if (rubros.some(r => normalizeForCompare(r.nombre) === normalizeForCompare(nombre))) return;
     const newId = rubros.length > 0 ? Math.max(...rubros.map(r => Number(r.id) || 0)) + 1 : 1;
-    await addDoc(collection(db, 'rubros'), { id: newId, nombre, activo: true });
+    await setDoc(doc(db, 'rubros', String(newId)), { id: newId, nombre, activo: true });
     setNewRubro('');
     if (onChanged) onChanged();
   };

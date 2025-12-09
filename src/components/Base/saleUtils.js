@@ -1,5 +1,5 @@
 // Funciones utilitarias para registrar ventas y movimientos de caja de forma consistente
-import { collection, addDoc, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, setDoc, doc, getDocs, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 
 /**
@@ -41,7 +41,11 @@ export async function registrarVenta({ plantId, quantity, price, paymentMethod, 
     notes,
     total: total // Valor exacto calculado
   };
-  await addDoc(collection(db, 'sales'), saleData);
+  // Calcular ID numérico para sale
+  const allSalesSnap = await getDocs(collection(db, 'sales'));
+  const allSales = allSalesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const saleId = allSales.length > 0 ? Math.max(...allSales.map(s => Number(s.id) || 0)) + 1 : 1;
+  await setDoc(doc(db, 'sales', String(saleId)), { ...saleData, id: saleId });
   // Registrar en movements
   const movementData = {
     type: 'venta',
@@ -55,7 +59,11 @@ export async function registrarVenta({ plantId, quantity, price, paymentMethod, 
     location,
     notes
   };
-  await addDoc(collection(db, 'movements'), movementData);
+  // Calcular ID numérico para movement
+  const allSnap = await getDocs(collection(db, 'movements'));
+  const allMovs = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const newId = allMovs.length > 0 ? Math.max(...allMovs.map(m => Number(m.id) || 0)) + 1 : 1;
+  await setDoc(doc(db, 'movements', String(newId)), { ...movementData, id: newId });
   // Actualizar stock en plants
   await updateDoc(plantRef, { stock: Number(plant.stock) - qty });
   return { ok: true };

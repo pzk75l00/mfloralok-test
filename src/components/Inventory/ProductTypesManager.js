@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import PropTypes from 'prop-types';
 
@@ -21,7 +21,7 @@ const ProductTypesManager = ({ onClose }) => {
     const allSnap = await getDocs(collection(db, 'productTypes'));
     const all = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const newId = all.length > 0 ? Math.max(...all.map(t => Number(t.id) || 0)) + 1 : 1;
-    await addDoc(collection(db, 'productTypes'), { id: newId, name: newType.trim() });
+    await setDoc(doc(db, 'productTypes', String(newId)), { id: newId, name: newType.trim() });
     setNewType('');
   };
 

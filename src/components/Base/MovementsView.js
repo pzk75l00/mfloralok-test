@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, setDoc, getDocs, onSnapshot, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import PlantForm from './PlantForm';
 import PlantAutocomplete from './PlantAutocomplete';
@@ -638,7 +638,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
           };
           // Eliminar campos innecesarios
           delete movementData.products;
-          await addDoc(collection(db, 'movements'), movementData);
+          const allSnap = await getDocs(collection(db, 'movements'));
+          const allMovs = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const newId = allMovs.length > 0 ? Math.max(...allMovs.map(m => Number(m.id) || 0)) + 1 : 1;
+          await setDoc(doc(db, 'movements', String(newId)), { ...movementData, id: newId });
         }
         showToast({ type: 'success', text: (form.type === 'venta' ? 'Venta' : 'Compra') + ' registrada correctamente' });
         setProducts([]);
@@ -676,7 +679,10 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         }
         delete movementData.quantity;
         delete movementData.plantId;
-        await addDoc(collection(db, 'movements'), movementData);
+        const allSnap = await getDocs(collection(db, 'movements'));
+        const allMovs = allSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const newId = allMovs.length > 0 ? Math.max(...allMovs.map(m => Number(m.id) || 0)) + 1 : 1;
+        await setDoc(doc(db, 'movements', String(newId)), { ...movementData, id: newId });
         
         // 🆕 ACTUALIZAR STOCK Y PRECIO PARA COMPRAS SIMPLES
         if (form.type === 'compra' && form.plantId && form.quantity && form.price) {

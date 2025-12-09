@@ -6,7 +6,7 @@ import {
   query,
   orderBy,
   onSnapshot,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -58,7 +58,7 @@ const RolesManager = ({ onClose, onChanged }) => {
     setError('');
     try {
       const newId = items.length > 0 ? Math.max(...items.map(it => Number(it.id) || 0)) + 1 : 1;
-      await addDoc(collection(db, 'roles'), {
+      await setDoc(doc(db, 'roles', String(newId)), {
         id: newId,
         nombre: name,
         esSistema: false,

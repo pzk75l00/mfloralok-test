@@ -6,7 +6,7 @@ import {
   query,
   orderBy,
   onSnapshot,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -49,7 +49,7 @@ const PaisesManager = ({ onClose, onChanged }) => {
     setError('');
     try {
       const newId = items.length > 0 ? Math.max(...items.map(it => Number(it.id) || 0)) + 1 : 1;
-      await addDoc(collection(db, 'paises'), {
+      await setDoc(doc(db, 'paises', String(newId)), {
         id: newId,
         nombre: name,
         activo: true,
