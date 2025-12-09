@@ -33,6 +33,17 @@ const PAYMENT_METHODS = [
   { value: 'mercadoPago', label: 'Mercado Pago (MP)' }
 ];
 
+// Función para obtener fecha/hora local inicial
+const getInitialLocalDateTime = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 // Este componente se moverá a la carpeta Base
 const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotals, onMovementAdded, selectedMonth, selectedYear, showOnlySalesOfDay, selectedDate }) => {
   const [plants, setPlants] = useState(propPlants || []);
@@ -51,7 +62,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       transferencia: 0,
       tarjeta: 0
     },
-    date: new Date().toISOString().slice(0, 16),
+    date: getInitialLocalDateTime(),
     location: '',
     notes: ''
   });
@@ -70,6 +81,14 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const [editForm, setEditForm] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
   const [blurTimeout, setBlurTimeout] = useState(null);
+  // Estados para filtros de escritorio
+  const [selectedYearDesktop, setSelectedYearDesktop] = useState(new Date().getFullYear());
+  const [selectedMonthDesktop, setSelectedMonthDesktop] = useState(new Date().getMonth());
+  const [searchTerm, setSearchTerm] = useState('');
+  // Estados para drag-scroll
+  const [isDraggingScroll, setIsDraggingScroll] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
 
   // Helper para mostrar método de pago correcto por fila
   const renderPaymentSummary = (mov) => {
@@ -103,17 +122,34 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
   const currentMonth = typeof selectedMonth === 'number' ? selectedMonth : now.getMonth();
   const currentYear = typeof selectedYear === 'number' ? selectedYear : now.getFullYear();
   
-  // En escritorio: mostrar todos los movimientos, en móvil: solo del mes
-  const movementsThisMonth = isMobile ? movements.filter(mov => {
+  // En escritorio: usar selectores, en móvil: mes/año actuales
+  const filterMonth = isMobile ? currentMonth : selectedMonthDesktop;
+  const filterYear = isMobile ? currentYear : selectedYearDesktop;
+  
+  // Filtrar por mes/año
+  const movementsFilteredByDate = movements.filter(mov => {
     if (!mov.date) return false;
     const d = new Date(mov.date);
     if (isNaN(d.getTime())) return false;
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }) : movements.filter(mov => {
-    if (!mov.date) return false;
-    const d = new Date(mov.date);
-    return !isNaN(d.getTime());
+    return d.getMonth() === filterMonth && d.getFullYear() === filterYear;
   }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Ordenar por fecha más reciente primero
+  
+  // Aplicar búsqueda textual
+  const movementsThisMonth = movementsFilteredByDate.filter(mov => {
+    if (!searchTerm.trim()) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const plantName = plants && mov.plantId 
+      ? (plants.find(p => String(p.id) === String(mov.plantId))?.name || '').toLowerCase()
+      : '';
+    const detail = (mov.detail || '').toLowerCase();
+    const notes = (mov.notes || '').toLowerCase();
+    const location = (mov.location || '').toLowerCase();
+    const typeLabel = (MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || '').toLowerCase();
+    const paymentSummary = (renderPaymentSummary(mov) || '').toLowerCase();
+    return plantName.includes(searchLower) || detail.includes(searchLower) || 
+           notes.includes(searchLower) || location.includes(searchLower) ||
+           typeLabel.includes(searchLower) || paymentSummary.includes(searchLower);
+  });
 
   // --- NUEVO ESTADO PARA VENTA MULTIPRODUCTO ---
   const [products, setProducts] = useState([]);
@@ -137,6 +173,27 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   const handleReload = () => {
     setReloadKey(k => k + 1);
+  };
+
+  // Manejadores para drag-scroll horizontal
+  const handleHistoryMouseDown = (e) => {
+    if (!isMobileDevice && e.button === 0) {
+      const container = e.currentTarget;
+      setIsDraggingScroll(true);
+      setDragStartX(e.clientX);
+      setDragStartScrollLeft(container.scrollLeft);
+    }
+  };
+
+  const handleHistoryMouseMove = (e) => {
+    if (!isDraggingScroll || isMobileDevice) return;
+    const container = e.currentTarget;
+    const deltaX = e.clientX - dragStartX;
+    container.scrollLeft = dragStartScrollLeft - deltaX;
+  };
+
+  const handleHistoryMouseUpOrLeave = () => {
+    setIsDraggingScroll(false);
   };
 
   const handleChange = (e) => {
@@ -1095,20 +1152,63 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
       {/* Mostrar solo el formulario si showOnlyForm está activo (ej: Caja Diaria móvil) */}
       {showOnlyForm ? null : (
         <>
-          {/* Historial de movimientos fuera del sticky */}
-          <div className="mt-6 p-3 bg-white rounded-lg shadow w-full mx-0 overflow-x-auto">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-base font-bold">
-                {isMobile ? "Histórico de Movimientos del Mes" : "Histórico de Todos los Movimientos"}
-              </h2>
-              {!isMobileDevice && (
-                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded border border-blue-200">
-                  💡 Doble clic para editar • Al salir del campo se guarda automáticamente • Escape: cancelar
-                </div>
-              )}
+          <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl shadow-sm w-full mx-0 overflow-x-auto select-none cursor-grab"
+            onMouseDown={handleHistoryMouseDown}
+            onMouseMove={handleHistoryMouseMove}
+            onMouseUp={handleHistoryMouseUpOrLeave}
+            onMouseLeave={handleHistoryMouseUpOrLeave}
+          >
+            <div className="p-3 bg-slate-100/80 rounded-lg mx-3 mt-3 mb-2">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-sm font-semibold text-slate-800">📁 Histórico de Movimientos</h2>
+                {!isMobileDevice && (
+                  <div className="text-[11px] text-slate-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shadow-sm">
+                    Doble clic para editar • Se guarda al salir del campo • Esc cancela
+                  </div>
+                )}
+              </div>
             </div>
+
+            {!isMobileDevice && (
+              <div className="mx-3 mb-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 flex gap-2 items-center flex-wrap">
+                <label className="text-xs font-medium text-slate-700">Carpeta del mes:</label>
+                <select 
+                  value={selectedMonthDesktop} 
+                  onChange={(e) => setSelectedMonthDesktop(Number(e.target.value))}
+                  className="text-xs border border-slate-300 rounded px-2 py-1 bg-white text-slate-900 focus:ring-2 focus:ring-blue-400"
+                >
+                  {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((name, idx) => (
+                    <option key={idx} value={idx}>{name}</option>
+                  ))}
+                </select>
+                <select 
+                  value={selectedYearDesktop} 
+                  onChange={(e) => setSelectedYearDesktop(Number(e.target.value))}
+                  className="text-xs border border-slate-300 rounded px-2 py-1 bg-white text-slate-900 focus:ring-2 focus:ring-blue-400"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <input 
+                  type="text"
+                  placeholder="Ej: bonsai, gasto, efectivo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="text-xs border border-slate-300 rounded-full px-3 py-1 bg-white text-slate-900 flex-1 min-w-[150px] focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            )}
+
+            {!isMobileDevice && (
+              <div className="mx-3 mb-2 text-[11px] text-slate-500">
+                Mostrando {movementsThisMonth.length} movimiento{movementsThisMonth.length !== 1 ? 's' : ''}{searchTerm.trim() ? ' (filtrados)' : ''}
+              </div>
+            )}
+
+            <div className="px-3 pb-3">
             {movementsThisMonth.length > 0 ? (
-              <table className="min-w-full border-collapse border border-gray-200 text-xs whitespace-nowrap">
+              <table className="min-w-[1100px] border-collapse border border-gray-200 text-xs whitespace-nowrap">
                 <thead>
                   <tr>
                     <th className="border border-gray-200 px-2 py-1">Fecha</th>
@@ -1126,13 +1226,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                 <tbody>
                   {movementsThisMonth.map(mov => {
                     let rowClass = '';
-                    if (mov.type === 'ingreso') rowClass = 'bg-green-100 text-green-900';
-                    if (mov.type === 'egreso') rowClass = 'bg-black text-white';
+                    if (mov.type === 'ingreso') rowClass = 'bg-green-50 text-green-900';
+                    if (mov.type === 'egreso') rowClass = 'bg-gray-900 text-white';
                     if (mov.type === 'compra') rowClass = 'bg-red-600 text-white';
                     if (mov.type === 'gasto') rowClass = 'bg-orange-500 text-white';
                     const isEditing = editingMovement === mov.id;
                     return (
-                      <tr key={mov.id} className={`${rowClass} ${isEditing ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}>
+                      <tr key={mov.id} className={`${rowClass} ${isEditing ? 'ring-2 ring-blue-400' : ''}`}>
                         {isEditing ? (
                           <>
                             <td className="border border-gray-200 px-2 py-1">
@@ -1179,13 +1279,13 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                         ) : (
                           <>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('date', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('date', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'date')}
                             >
                               {mov.date ? new Date(mov.date).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('plantId', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('plantId', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'plantId')}
                             >
                               {/* Para ventas/compras: mostrar nombre del producto */}
@@ -1197,7 +1297,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                                     : '-'}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('quantity', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('quantity', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'quantity')}
                             >
                               {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
@@ -1205,7 +1305,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                                 : (mov.type === 'venta' || mov.type === 'compra') ? mov.quantity : ''}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('price', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('price', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'price')}
                             >
                               {(mov.type === 'venta' || mov.type === 'compra') && mov.products && Array.isArray(mov.products)
@@ -1213,32 +1313,31 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
                                 : mov.price ? `$${mov.price}` : ''}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('total', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 text-right ${!isMobileDevice && isFieldEditable('total', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'total')}
                             >
                               {mov.total ? `$${mov.total}` : ''}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('paymentMethod', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('paymentMethod', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'paymentMethod')}
                             >
-                              {/* Mostrar resumen de pagos combinados proporcional al total de la fila */}
                               {renderPaymentSummary(mov)}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('type', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('type', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'type')}
                             >
                               {MOVEMENT_TYPES.find(t => t.value === mov.type)?.label || mov.type}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('location', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 ${!isMobileDevice && isFieldEditable('location', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'location')}
                             >
                               {mov.location}
                             </td>
                             <td 
-                              className={`border border-gray-200 px-2 py-1 hidden sm:table-cell ${!isMobileDevice && isFieldEditable('notes', mov.type) ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                              className={`border border-gray-200 px-2 py-1 hidden sm:table-cell ${!isMobileDevice && isFieldEditable('notes', mov.type) ? 'cursor-pointer hover:outline hover:outline-2 hover:outline-yellow-300 hover:bg-white/10' : ''}`}
                               onDoubleClick={() => handleCellDoubleClick(mov, 'notes')}
                             >
                               {mov.notes}
@@ -1253,6 +1352,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             ) : (
               <p className="text-gray-500 text-xs">No hay movimientos registrados este mes.</p>
             )}
+            </div>
           </div>
         </>
       )}
