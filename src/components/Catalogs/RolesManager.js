@@ -100,7 +100,7 @@ const RolesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
-      await updateDoc(doc(db, 'roles', id), {
+      await updateDoc(doc(db, 'roles', String(id)), {
         id: Number(id),
         nombre: name,
         updatedAt: serverTimestamp()
@@ -129,7 +129,7 @@ const RolesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
-      await deleteDoc(doc(db, 'roles', itemToDelete.id));
+      await deleteDoc(doc(db, 'roles', String(itemToDelete.id)));
       if (onChanged) onChanged();
     } catch (e) {
       setError(e.message || 'Error eliminando rol');

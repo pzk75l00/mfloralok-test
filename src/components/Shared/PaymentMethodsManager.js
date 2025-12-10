@@ -81,7 +81,7 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
     try {
       if (editingMethod) {
         // Actualizar método existente
-          await updateDoc(doc(db, 'paymentMethods', editingMethod.id), {
+          await updateDoc(doc(db, 'paymentMethods', String(editingMethod.id)), {
             id: Number(editingMethod.id),
             ...newMethod,
             updatedAt: new Date().toISOString()
@@ -162,7 +162,7 @@ const PaymentMethodsManager = ({ isOpen, onClose }) => {
   const performDelete = async (methodId, methodName) => {
     setIsLoading(true);
     try {
-      await deleteDoc(doc(db, 'paymentMethods', methodId));
+      await deleteDoc(doc(db, 'paymentMethods', String(methodId)));
       setAlertModal({
         isOpen: true,
         title: 'Método eliminado',

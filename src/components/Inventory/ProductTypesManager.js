@@ -32,14 +32,14 @@ const ProductTypesManager = ({ onClose }) => {
 
   const handleUpdate = async (id) => {
     if (!editingValue.trim()) return;
-    await updateDoc(doc(db, 'productTypes', id), { id: Number(id), name: editingValue.trim() });
+    await updateDoc(doc(db, 'productTypes', String(id)), { id: Number(id), name: editingValue.trim() });
     setEditingId(null);
     setEditingValue('');
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este tipo?')) return;
-    await deleteDoc(doc(db, 'productTypes', id));
+    await deleteDoc(doc(db, 'productTypes', String(id)));
   };
 
   return (

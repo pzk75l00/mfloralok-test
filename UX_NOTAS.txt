@@ -1,7 +1,0 @@
-4. UX
-- Si el usuario intenta registrar una venta sin stock suficiente, se muestra un mensaje de error.
-- Si el usuario intenta registrar una venta sin precio o sin un producto (planta de interior, Planta de exterior, Macetas u Otros), se muestra mensaje de error.
-- Si se ingresa una compra de una planta no existente, sugiere dar de alta la planta.
-- En el formulario de ventas, la fecha se registra automáticamente con la hora local de Argentina y no es editable ni visible para el usuario.
-- En el formulario de caja/movimientos, el usuario puede elegir la fecha manualmente (para cargar movimientos atrasados o corregir registros); si no la modifica, se toma la hora local actual de Argentina al registrar.
-- En ambos casos, la fecha guardada en Firestore es siempre la hora local de Argentina, asegurando coherencia en los reportes y registros.

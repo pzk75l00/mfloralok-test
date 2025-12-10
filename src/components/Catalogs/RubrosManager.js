@@ -39,7 +39,7 @@ const RubrosManager = ({ onClose, onChanged }) => {
     const nombre = editingValue.trim();
     if (!nombre) return;
     if (rubros.some(r => r.id !== id && normalizeForCompare(r.nombre) === normalizeForCompare(nombre))) return;
-    await updateDoc(doc(db, 'rubros', id), { id: Number(id), nombre });
+    await updateDoc(doc(db, 'rubros', String(id)), { id: Number(id), nombre });
     setEditingId(null);
     setEditingValue('');
     if (onChanged) onChanged();
@@ -52,7 +52,7 @@ const RubrosManager = ({ onClose, onChanged }) => {
 
   const confirmDelete = async () => {
     if (!rubroToDelete) return;
-    await deleteDoc(doc(db, 'rubros', rubroToDelete.id));
+    await deleteDoc(doc(db, 'rubros', String(rubroToDelete.id)));
     setRubroToDelete(null);
     if (onChanged) onChanged();
   };

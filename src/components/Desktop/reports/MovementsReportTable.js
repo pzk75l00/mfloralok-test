@@ -122,7 +122,7 @@ const MovementsReportTable = () => {
             added++;
           } else {
             // Actualizar si existe, si no, crear
-            await setDoc(doc(db, 'movements', mov.id), mov, { merge: true });
+            await setDoc(doc(db, 'movements', String(mov.id)), mov, { merge: true });
             updated++;
           }
         } catch (err) {

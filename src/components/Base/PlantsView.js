@@ -83,7 +83,7 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
     const snapshot = await getDocs(collection(db, 'movements'));
     const batchDeletes = [];
     snapshot.forEach((d) => {
-      batchDeletes.push(deleteDoc(doc(db, 'movements', d.id)));
+      batchDeletes.push(deleteDoc(doc(db, 'movements', String(d.id))));
     });
     await Promise.all(batchDeletes);
     alert('Movimientos de caja eliminados.');

@@ -1,7 +1,7 @@
 // Autocompletado de productos para formularios con opción de crear nuevos
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { productExists, findSimilarProducts } from '../../utils/productManagement';
+import { isDuplicateProductName, findSimilarProducts } from '../../utils/productManagement';
 import NewProductModal from './NewProductModal';
 
 const PlantAutocomplete = ({ 
@@ -22,7 +22,7 @@ const PlantAutocomplete = ({
   );
   
   // Detectar si el texto actual no existe en productos
-  const inputExists = productExists(plants, input);
+  const inputExists = isDuplicateProductName(plants, input);
   const showCreateOption = allowCreateNew && input.trim().length >= 2 && !inputExists;
   
   // Sugerencias de productos similares

@@ -7,6 +7,7 @@ import PlantCard from './PlantCard';
 import LoadPlantsToFirestore from '../Base/LoadPlantsToFirestore';
 import ProductTypesManager from './ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
+import { isDuplicateProductName } from '../../utils/productManagement';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
@@ -26,6 +27,11 @@ const InventoryView = () => {
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null, name: '' });
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [optimizedImage, setOptimizedImage] = useState(null);
+  const [imageInfo, setImageInfo] = useState(null);
+  const [processingImage, setProcessingImage] = useState(false);
+  const [imageApproved, setImageApproved] = useState(false);
+  const [editingImage, setEditingImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [reloadFlag, setReloadFlag] = useState(0);
   const [showTypesManager, setShowTypesManager] = useState(false);
@@ -55,6 +61,57 @@ const InventoryView = () => {
     return () => unsub();
   }, []);
 
+  const optimizeImage = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 640;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const width = Math.round(img.width * scale);
+        const height = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const optimizedKb = Math.round((dataUrl.length * 3) / 4 / 1024);
+        const originalKb = Math.round(file.size / 1024);
+        resolve({ dataUrl, width, height, optimizedKb, originalKb });
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const handleFileSelection = async (file) => {
+    setImageFile(file || null);
+    setOptimizedImage(null);
+    setImagePreview(null);
+    setImageInfo(null);
+    setImageApproved(false);
+    if (!file) return;
+    setProcessingImage(true);
+    try {
+      const optimized = await optimizeImage(file);
+      setOptimizedImage(optimized.dataUrl);
+      setImagePreview(optimized.dataUrl);
+      setImageInfo({
+        width: optimized.width,
+        height: optimized.height,
+        originalKb: optimized.originalKb,
+        optimizedKb: optimized.optimizedKb
+      });
+    } catch (err) {
+      setErrorModal({ open: true, message: 'No se pudo procesar la imagen. Intenta con otro archivo.' });
+    } finally {
+      setProcessingImage(false);
+    }
+  };
+
   // Filtro de plantas según búsqueda
   const filteredPlants = plants.filter(plant => {
     const q = search.trim().toLowerCase();
@@ -73,15 +130,7 @@ const InventoryView = () => {
   const handleChange = e => {
     const { name, value, type, files } = e.target;
     if (type === 'file') {
-      const file = files[0];
-      setImageFile(file);
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => setImagePreview(reader.result);
-        reader.readAsDataURL(file);
-      } else {
-        setImagePreview(null);
-      }
+      handleFileSelection(files && files[0]);
       return;
     }
     setForm(f => ({ ...f, [name]: name === 'stock' || name === 'basePrice' || name === 'purchasePrice' ? Number(value) : value }));
@@ -96,6 +145,10 @@ const InventoryView = () => {
     }
     if (form.basePrice > form.purchasePrice) {
       alert('El precio de compra no puede ser mayor al precio de venta.');
+      return;
+    }
+    if (isDuplicateProductName(plants, form.name, editingId)) {
+      setErrorModal({ open: true, message: 'Ya existe un producto con ese nombre.' });
       return;
     }
     // Asegurar que todos los campos estén presentes
@@ -116,22 +169,26 @@ const InventoryView = () => {
       supplier: form.supplier || ''
     };
     try {
-      // Guardar imagen si se seleccionó una nueva
+      let imageToSave = editingImage || null;
       if (imageFile) {
-        // Guardar en public/img/plants/plant_{id}.jpg (solo funciona en desarrollo local)
-        // En producción real, se recomienda usar Firebase Storage
-        const fileName = `plant_${plantData.id}.jpg`;
-        const filePath = `/img/plants/${fileName}`;
-        // No se puede guardar en public desde el navegador, solo mostrar preview y documentar
-        plantData.image = filePath;
-        // Mostrar advertencia si no se puede guardar realmente
-        setErrorModal({ open: true, message: 'La imagen se asociará al producto, pero para que se vea en producción debe copiarse manualmente a public/img/plants/ con el nombre sugerido: ' + fileName });
+        if (!optimizedImage || !imageApproved) {
+          setErrorModal({ open: true, message: 'Confirma la imagen optimizada antes de guardar.' });
+          return;
+        }
+        imageToSave = optimizedImage;
+      }
+      if (imageToSave) {
+        plantData.image = imageToSave;
       }
       await setDoc(doc(collection(db, 'producto'), String(plantData.id)), plantData);
       setForm(initialForm);
       setEditingId(null);
       setImageFile(null);
       setImagePreview(null);
+      setOptimizedImage(null);
+      setImageInfo(null);
+      setImageApproved(false);
+      setEditingImage(null);
     } catch (err) {
       let errorMsg = '';
       if (err) {
@@ -152,24 +209,18 @@ const InventoryView = () => {
       console.error('Error guardando la planta:', errorMsg, err);
       setErrorModal({ open: true, message: 'Error guardando la planta. ' + errorMsg });
     }
-    // ...
-    // Al final del componente:
-    return (
-      <>
-        {/* ...resto del render... */}
-        <ErrorModal
-          open={errorModal.open}
-          message={errorModal.message}
-          onClose={() => setErrorModal({ open: false, message: '' })}
-        />
-      </>
-    );
   };
 
   // Editar planta
   const handleEdit = plant => {
     setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
     setEditingId(plant.id);
+    setEditingImage(plant.image || null);
+    setImagePreview(plant.image || null);
+    setOptimizedImage(null);
+    setImageFile(null);
+    setImageInfo(null);
+    setImageApproved(false);
     setTimeout(() => {
       if (mainContainerRef.current) {
         mainContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -198,7 +249,7 @@ const InventoryView = () => {
 
   // Confirmar eliminación
   const confirmDelete = async () => {
-    await deleteDoc(doc(collection(db, 'producto'), deleteModal.id));
+    await deleteDoc(doc(collection(db, 'producto'), String(deleteModal.id)));
     setDeleteModal({ open: false, id: null, name: '' });
   };
 
@@ -219,7 +270,7 @@ const InventoryView = () => {
   return (
     <div className="w-full max-w-7xl mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Inventario de Plantas</h2>
+        <h2 className="text-2xl font-bold">Inventario</h2>
         {/* Botón "Cargar desde Firebase" oculto por requerimiento */}
         {/*
         <button
@@ -325,11 +376,11 @@ const InventoryView = () => {
                   if (!window.confirm('¿Sobrescribir todas las plantas actuales con las importadas?')) return;
                   // Borra todas las plantas actuales
                   for (const plant of plants) {
-                    await deleteDoc(doc(collection(db, 'producto'), plant.id));
+                    await deleteDoc(doc(collection(db, 'producto'), String(plant.id)));
                   }
                   // Agrega las importadas
                   for (const plant of imported) {
-                    await setDoc(doc(collection(db, 'producto'), plant.id), plant);
+                    await setDoc(doc(collection(db, 'producto'), String(plant.id)), plant);
                   }
                   alert('Importación completada. Recargue la página para ver los cambios.');
                 } catch (err) {
@@ -349,14 +400,10 @@ const InventoryView = () => {
       <section className="bg-white rounded-xl shadow p-6 border border-gray-100">
         <h2 ref={titleRef} className="text-2xl font-bold mb-2 text-green-700 flex items-center gap-2">
           Carga - Actualización de productos
-          <button type="button" className="ml-2 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded border border-green-300 text-green-700" onClick={() => setShowTypesManager(true)}>
-            Gestionar tipos
-          </button>
         </h2>
         {showTypesManager && <ProductTypesManager onClose={() => setShowTypesManager(false)} />}
         {editingId && (
-          <div className="mb-2 px-2 py-1 rounded bg-green-50 border border-green-200 text-green-800 text-xs font-semibold flex items-center gap-2">
-            <span className="material-icons text-base align-middle">edit</span>
+          <div className="mb-2 px-2 py-1 rounded bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold">
             Editando: <b className="ml-1">{form.name}</b>
           </div>
         )}
@@ -367,7 +414,16 @@ const InventoryView = () => {
               <input name="name" value={form.name} onChange={handleChange} className="border rounded p-1 w-full text-xs" required />
             </div>
             <div>
-              <label className="block text-xs font-medium">Tipo</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium">Tipo</label>
+                <button
+                  type="button"
+                  onClick={() => setShowTypesManager(true)}
+                  className="text-[11px] text-green-700 underline"
+                >
+                  Gestionar tipos
+                </button>
+              </div>
               <select name="type" value={form.type} onChange={handleChange} className="border rounded p-1 w-full text-xs" required>
                 <option value="">Seleccionar...</option>
                 {productTypes.map(t => (
@@ -421,46 +477,99 @@ const InventoryView = () => {
             </div>
             <div>
               <label className="block text-xs font-medium">Imagen</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer md:w-auto md:text-xs md:px-2 md:py-1 shadow flex items-center gap-2"
-                  style={{ maxWidth: '160px', width: '100%' }}
-                  onClick={() => document.getElementById('input-img-producto').click()}
-                >
-                  <span role="img" aria-label="imagen" className="text-base">🖼️</span>
-                  Buscar imagen
-                </button>
-                <input
-                  id="input-img-producto"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={e => {
-                    const file = e.target.files[0];
-                    setImageFile(file || null);
-                    if (file) {
-                      setImagePreview(null); // No previsualizar
-                    } else {
-                      setImagePreview(null);
-                    }
-                  }}
-                />
-                {imageFile && (
-                  <span className="block text-green-700 text-[11px] mt-1 font-semibold">Imagen cargada</span>
-                )}
-              </div>
+              <button
+                type="button"
+                className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer shadow flex items-center gap-2"
+                style={{ maxWidth: '160px', width: '100%' }}
+                onClick={() => document.getElementById('input-img-producto').click()}
+              >
+                <span role="img" aria-label="imagen" className="text-base">🖼️</span>
+                Buscar imagen
+              </button>
+              <input
+                id="input-img-producto"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => handleFileSelection(e.target.files && e.target.files[0])}
+              />
             </div>
           </div>
-          <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2 mt-2 mb-2">
-            <b>Nota:</b> Para asociar una imagen personalizada al producto, debes copiar manualmente el archivo a <code>/public/img/plants/plant_{editingId || '[id]'}.jpg</code>.<br />
-            El nombre del archivo debe coincidir exactamente con el ID del producto. Puedes exportar el CSV para ver todos los IDs actuales.<br />
-            Si no se sube una imagen, se mostrará una imagen genérica.
+
+          {/* Sección de imagen centrada */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="flex flex-col items-center gap-3">
+              {processingImage && <span className="block text-gray-600 text-[11px]">Optimizando...</span>}
+              {optimizedImage && (
+                <div className="w-full max-w-md p-3 border border-green-200 rounded bg-green-50">
+                  <div className="text-[11px] text-green-800 font-semibold mb-2 text-center">Vista previa optimizada</div>
+                  <div className="flex flex-col items-center gap-3">
+                    <img src={imagePreview} alt="preview producto" className="w-40 h-40 object-cover rounded border" />
+                    <div className="flex flex-col gap-1 text-[11px] text-gray-700 text-center w-full">
+                      {imageInfo && (
+                        <>
+                          <span><b>Dimensiones:</b> {imageInfo.width}x{imageInfo.height}px</span>
+                          <span><b>Peso:</b> {imageInfo.originalKb} KB → {imageInfo.optimizedKb} KB</span>
+                        </>
+                      )}
+                      <div className="flex gap-2 mt-2 justify-center flex-wrap">
+                        {!imageApproved && (
+                          <button type="button" className="px-3 py-1 rounded bg-green-600 text-white text-[11px]" onClick={() => setImageApproved(true)}>
+                            Usar esta imagen
+                          </button>
+                        )}
+                        <button type="button" className="px-3 py-1 rounded bg-gray-200 text-gray-800 text-[11px] border" onClick={() => document.getElementById('input-img-producto').click()}>
+                          Buscar otra
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1 rounded bg-red-50 text-red-700 text-[11px] border border-red-200"
+                          onClick={() => {
+                            setImageFile(null);
+                            setOptimizedImage(null);
+                            setImagePreview(null);
+                            setImageInfo(null);
+                            setImageApproved(false);
+                          }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                      {imageApproved && <span className="text-[11px] text-green-700 font-semibold mt-1">✓ Imagen aprobada</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!optimizedImage && imagePreview && !imageFile && (
+                <div className="w-full max-w-md p-3 border border-gray-200 rounded bg-gray-50 flex flex-col items-center gap-2">
+                  <div className="text-[11px] text-gray-700 font-semibold">Imagen actual</div>
+                  <img src={imagePreview} alt="imagen actual" className="w-32 h-32 object-cover rounded border" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded p-2 mt-2 mb-2">
+            <b>Nota:</b> La imagen se optimiza automáticamente (máx. 640px) y se guarda la versión optimizada que apruebes. Si no cargas imagen, se usará la genérica.
           </div>
           <div className="flex gap-2 mt-3 justify-start border-t border-gray-100 pt-3">
             <button type="submit" className="bg-green-600 text-white px-3 py-1 rounded font-semibold text-xs">{editingId ? 'Actualizar' : 'Agregar'}</button>
             {editingId && (
-              <button type="button" className="bg-gray-200 text-gray-700 px-3 py-1 rounded font-semibold border border-gray-400 hover:bg-gray-300 transition text-xs" onClick={()=>{setForm(initialForm);setEditingId(null);setImageFile(null);setImagePreview(null);}}>Cancelar</button>
+              <button
+                type="button"
+                className="bg-gray-200 text-gray-700 px-3 py-1 rounded font-semibold border border-gray-400 hover:bg-gray-300 transition text-xs"
+                onClick={()=>{
+                  setForm(initialForm);
+                  setEditingId(null);
+                  setImageFile(null);
+                  setImagePreview(null);
+                  setOptimizedImage(null);
+                  setImageInfo(null);
+                  setImageApproved(false);
+                  setEditingImage(null);
+                }}
+              >
+                Cancelar
+              </button>
             )}
           </div>
         </form>
@@ -546,6 +655,12 @@ const InventoryView = () => {
       >
         +
       </button>
+      {/* ErrorModal para mensajes de error */}
+      <ErrorModal
+        open={errorModal.open}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ open: false, message: '' })}
+      />
     </div>
   );
 };

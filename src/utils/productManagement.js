@@ -34,19 +34,15 @@ export const createNewProduct = async (productData) => {
   }
 };
 
-/**
- * Valida si un producto ya existe por nombre
- * @param {Array} plants - Lista de productos existentes
- * @param {string} productName - Nombre a validar
- * @returns {boolean} - true si existe, false si no
- */
-export const productExists = (plants, productName) => {
+// Verifica duplicados permitiendo excluir un ID en edición
+export const isDuplicateProductName = (plants, productName, currentId = null) => {
   if (!productName || !productName.trim()) return false;
-  
   const normalizedName = productName.trim().toLowerCase();
-  return plants.some(plant => 
-    plant.name.toLowerCase() === normalizedName
-  );
+  return plants.some(plant => {
+    const sameName = (plant.name || '').trim().toLowerCase() === normalizedName;
+    const sameId = String(plant.id) === String(currentId ?? '');
+    return sameName && !sameId;
+  });
 };
 
 /**

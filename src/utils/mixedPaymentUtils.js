@@ -319,7 +319,7 @@ export const migrateMovementToMixedPayment = async (movementId, movement) => {
   try {
     const newMovement = convertToMixedPaymentFormat(movement);
     
-    const movementRef = doc(db, 'movements', movementId);
+    const movementRef = doc(db, 'movements', String(movementId));
     await updateDoc(movementRef, {
       paymentMethods: newMovement.paymentMethods,
       paymentSummary: newMovement.paymentSummary

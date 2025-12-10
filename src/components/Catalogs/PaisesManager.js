@@ -85,7 +85,7 @@ const PaisesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
-      await updateDoc(doc(db, 'paises', id), {
+      await updateDoc(doc(db, 'paises', String(id)), {
         id: Number(id),
         nombre: name,
         updatedAt: serverTimestamp()
@@ -108,7 +108,7 @@ const PaisesManager = ({ onClose, onChanged }) => {
     setSaving(true);
     setError('');
     try {
-      await deleteDoc(doc(db, 'paises', itemToDelete.id));
+      await deleteDoc(doc(db, 'paises', String(itemToDelete.id)));
       if (onChanged) onChanged();
     } catch (e) {
       setError(e.message || 'Error eliminando país');

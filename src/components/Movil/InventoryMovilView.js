@@ -4,6 +4,7 @@ import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firesto
 import { db } from '../../firebase/firebaseConfig';
 import ProductTypesManager from '../Inventory/ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
+import { isDuplicateProductName } from '../../utils/productManagement';
 
 const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
@@ -46,6 +47,10 @@ const InventoryMovilView = () => {
     }
     if (form.basePrice > form.purchasePrice) {
       setErrorModal({ open: true, message: 'El precio de compra no puede ser mayor al precio de venta.' });
+      return;
+    }
+    if (isDuplicateProductName(plants, form.name, editingId)) {
+      setErrorModal({ open: true, message: 'Ya existe un producto con ese nombre.' });
       return;
     }
     const today = new Date();
@@ -111,7 +116,7 @@ const InventoryMovilView = () => {
 
   const handleDelete = async id => {
     if (!window.confirm('¿Eliminar esta planta?')) return;
-    await deleteDoc(doc(collection(db, 'producto'), id));
+    await deleteDoc(doc(collection(db, 'producto'), String(id)));
   };
 
   // Filtro de plantas según búsqueda

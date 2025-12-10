@@ -999,7 +999,7 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
         data.plantId = editForm.plantId;
       }
       data.total = editForm.total ? Number(editForm.total) : 0;
-      const movRef = doc(db, 'movements', editingMovement);
+      const movRef = doc(db, 'movements', String(editingMovement));
       await updateDoc(movRef, data);
       showToast({ type: 'success', text: 'Movimiento actualizado.' });
       setEditingMovement(null);

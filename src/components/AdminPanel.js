@@ -303,7 +303,7 @@ const AdminPanel = () => {
     setError('');
     setSuccess('');
     try {
-      await deleteDoc(doc(db, 'users', user.id));
+      await deleteDoc(doc(db, 'users', String(user.id)));
       setSuccess('Usuario eliminado');
     } catch (err) {
       setError('Error al eliminar usuario');
@@ -342,7 +342,7 @@ const AdminPanel = () => {
       // Si existe usuario activado, reflejar estado en su doc para feedback inmediato en la app
       const activated = activatedByEmail[emailId.toLowerCase()];
       if (activated && activated.id) {
-        await updateDoc(doc(db, 'users', activated.id), { estado: (nuevoEstado === 'pendiente' || nuevoEstado === 'extendido') ? 'activo' : nuevoEstado });
+        await updateDoc(doc(db, 'users', String(activated.id)), { estado: (nuevoEstado === 'pendiente' || nuevoEstado === 'extendido') ? 'activo' : nuevoEstado });
       }
       setSuccess('Estado actualizado');
     } catch (e) {
