@@ -8,7 +8,7 @@ const TYPE_OPTIONS = [
   'Otros'
 ];
 
-const PlantCard = ({ plant, onEdit, onDelete }) => {
+const PlantCard = ({ plant, onEdit, onDelete, onImageDoubleClick }) => {
   const [editType, setEditType] = useState(false);
   const [editStock, setEditStock] = useState(false);
   const [editPrice, setEditPrice] = useState(false);
@@ -39,8 +39,10 @@ const PlantCard = ({ plant, onEdit, onDelete }) => {
         <img
           src={imgSrc}
           alt={plant.name}
-          className="h-32 w-32 object-cover rounded-lg border border-gray-200 bg-gray-50 mb-2"
+          className="h-32 w-32 object-cover rounded-lg border border-gray-200 bg-gray-50 mb-2 cursor-zoom-in"
           loading="lazy"
+          onDoubleClick={() => onImageDoubleClick && onImageDoubleClick(imgSrc)}
+          title="Doble click para ampliar"
         />
         <h3 className="text-xl font-semibold text-gray-800 truncate w-full text-center mb-1">{plant.name}</h3>
         {/* Tipo editable debajo del nombre */}
@@ -161,7 +163,8 @@ PlantCard.propTypes = {
     image: PropTypes.string,
   }).isRequired,
   onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired
+  onDelete: PropTypes.func.isRequired,
+  onImageDoubleClick: PropTypes.func
 };
 
 export default PlantCard;

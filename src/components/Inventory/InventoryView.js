@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ErrorModal from '../Shared/ErrorModal';
+import ImageZoomModal from '../Shared/ImageZoomModal';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import InventoryMovilView from '../Movil/InventoryMovilView';
@@ -15,6 +16,7 @@ const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice:
 // Aquí irá la lógica y UI para listar, agregar, editar y eliminar plantas
 
 const InventoryView = () => {
+  const [zoomImage, setZoomImage] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [plants, setPlants] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -504,7 +506,13 @@ const InventoryView = () => {
                 <div className="w-full max-w-md p-3 border border-green-200 rounded bg-green-50">
                   <div className="text-[11px] text-green-800 font-semibold mb-2 text-center">Vista previa optimizada</div>
                   <div className="flex flex-col items-center gap-3">
-                    <img src={imagePreview} alt="preview producto" className="w-40 h-40 object-cover rounded border" />
+                    <img
+                      src={imagePreview}
+                      alt="preview producto"
+                      className="w-40 h-40 object-cover rounded border cursor-zoom-in"
+                      onDoubleClick={() => setZoomImage(imagePreview)}
+                      title="Doble click para ampliar"
+                    />
                     <div className="flex flex-col gap-1 text-[11px] text-gray-700 text-center w-full">
                       {imageInfo && (
                         <>
@@ -543,9 +551,17 @@ const InventoryView = () => {
               {!optimizedImage && imagePreview && !imageFile && (
                 <div className="w-full max-w-md p-3 border border-gray-200 rounded bg-gray-50 flex flex-col items-center gap-2">
                   <div className="text-[11px] text-gray-700 font-semibold">Imagen actual</div>
-                  <img src={imagePreview} alt="imagen actual" className="w-32 h-32 object-cover rounded border" />
+                  <img
+                    src={imagePreview}
+                    alt="imagen actual"
+                    className="w-32 h-32 object-cover rounded border cursor-zoom-in"
+                    onDoubleClick={() => setZoomImage(imagePreview)}
+                    title="Doble click para ampliar"
+                  />
                 </div>
               )}
+              {/* Modal de zoom de imagen */}
+              <ImageZoomModal open={!!zoomImage} image={zoomImage} onClose={() => setZoomImage(null)} />
             </div>
           </div>
           <div className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded p-2 mt-2 mb-2">
@@ -624,7 +640,7 @@ const InventoryView = () => {
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(plant => (
-                <PlantCard key={plant.id} plant={plant} onEdit={handleEdit} onDelete={() => handleDelete(plant.id, plant.name)} />
+                <PlantCard key={plant.id} plant={plant} onEdit={handleEdit} onDelete={() => handleDelete(plant.id, plant.name)} onImageDoubleClick={img => setZoomImage(img)} />
               ))}
           </div>
         )}

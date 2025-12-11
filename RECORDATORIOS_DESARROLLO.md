@@ -4,6 +4,72 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 
 ---
 
+## ✅/❌ Checklist de estado (rev. 10-dic-2025)
+- **Productos (pendiente):**
+    - Unificar formulario de alta de producto: el modal que aparece al crear producto nuevo desde compras debe ser exactamente el mismo formulario que se usa en inventario/productos (misma UI, validaciones y campos). Pendiente de revisión y refactor.
+  - Campo unificado "Productos/Detalles" en gastos/ingresos/egresos
+  - Resaltar diferencia precio venta vs costo en UI
+  - Migrar nomenclatura `plant` → `producto` en UI/servicios
+  - Checklist propuesto (sin ejecutar todavía):
+    1) UI: labels y textos a "Producto" (reemplazar "Planta")
+    2) Campos: `plantId` → `productId` (frontend) con compatibilidad hacia atrás
+    3) Firestore: mantener campos legacy (`plantId`) mientras se migra; agregar `productId` nuevo
+    4) Autocomplete/Formularios: actualizar componentes compartidos (PlantAutocomplete, formularios de movimientos)
+    5) Reportes/exports: usar `productId`/nombre de producto
+    6) Mock/datos iniciales: renombrar claves a producto
+- Pagos combinados: ejecutar y monitorear migración masiva; ajustar vistas de reportes/cortes para mostrar distribución de `paymentMethods`.
+- Reportes/UX: gráficos de ventas mejorados; filtros avanzados; dashboard de totales del día; productos favoritos/frecuentes; exportar a Excel/PDF; fotos de productos; atajos de teclado; sistema de combos/compose.
+- Roadmap técnico: multi-tenant/licenciamiento (provisioning, seats, registro de tenants, upgrades); entornos de prueba por cliente (portal, expiración, modo solo lectura); testing automatizado (Jest/Integración/Cypress + CI/CD); migración a TypeScript; design system (Tailwind/Chakra); custom hooks Firebase (`useFirestore`, `useAuth`, `useForm`).
+
+**Listo / usable:**
+- Auto-creación en compras ✅ (ya implementado: permite crear producto nuevo desde el flujo de compra y lo agrega automáticamente al movimiento)
+- Pagos mixtos funcionando en `PaymentSelector` + `MixedPaymentModal` con validación en `MovementsView`/`mixedPaymentUtils`; helpers de migración listos.
+- Costo promedio ponderado en compras (`updateProductPurchasePrice`), stock automático en ventas/compras, UI muestra "Costo Promedio".
+- Buscador de movimientos activo en `MovementsView` (filtra por producto, detalle, notas, ubicación, tipo y resumen de pago).
+
+---
+
+## ✅ COMPLETADO (Versión 1.0.3 actual)
+**Funcionalidades implementadas:**
+- Sistema de gestión de movimientos (ventas, compras, ingresos, egresos, gastos)
+- Formularios móviles y escritorio con diseño responsivo
+- CRUD completo de productos/inventario
+- Edición inline con auto-guardado (150ms delay)
+- Validación de nombres duplicados de productos
+- Optimización de imágenes client-side (640px, JPEG 82%)
+- Preview y aprobación de imágenes antes de guardar
+- Campo "Lugar" en formularios
+- Filtros por fecha (mes y año)
+- Reportes básicos y estadísticas
+- Sistema de autenticación con Google
+- Allowlist y owners (admins)
+- Vinculación de dispositivos (solo escritorio)
+- Deploy automático en Vercel
+- Real-time sync con Firebase Firestore
+- Conversión String(ID) en todas las operaciones Firestore (auditado 10-Dic-2025)
+
+**Patrones establecidos:**
+- Estructura de componentes React estándar
+- Naming conventions consistentes
+- Mobile-first design
+- Reutilización de código (/utils/ y /Shared/)
+- Manejo de errores con try/catch y ErrorModal
+- Validaciones de stock y formularios
+
+---
+
+## 📊 RESUMEN DEL ESTADO ACTUAL
+**Categoría | Completado | Pendiente | En Análisis**
+- Core Features: 15+ ✅ | 0 | 2
+- Mejoras UX: 8 ✅ | 6 | 0
+- Arquitectura: v1.0.3 ✅ | v2.0 ⏳ | Multi-tenant 🗂️
+- Testing: Manual ✅ | Automatizado ⏳ | -
+- Documentación: Completa ✅ | - | -
+
+**Estado general:** Sistema funcional y productivo en v1.0.3, con roadmap claro para evolución futura.
+
+---
+
 ## 🚨 REGLAS OBLIGATORIAS DE REUTILIZACIÓN
 **📅 Establecido: Agosto 2025 (v1.0.1-1.0.3)**
 
@@ -375,22 +441,22 @@ const now = new Date();
 
 ### Prioridad Alta (⭐⭐⭐⭐⭐):
 ```
-🔧 Gestión de productos mejorada (5-7 sem) - En análisis
-- Compra de productos que no existen (auto-creación)
-- Actualizar precio de compra → costo del producto (promedio ponderado)
-- Stock automático que se actualiza con ventas/compras
-- Diferenciación clara precio venta vs costo
-- Campo unificado "Productos/Detalles" para gastos/ingresos/egresos
+🔧 Gestión de productos mejorada (5-7 sem) - Estado: Parcial (rev. 10-dic-2025)
+- ✅ Actualizar precio de compra → costo del producto (promedio ponderado) ya implementado en updateProductPurchasePrice
+- ✅ Stock automático que se actualiza con ventas/compras (ya vigente en movimientos)
+- ❌ Compra de productos que no existen (auto-creación) pendiente
+- ❌ Campo unificado "Productos/Detalles" para gastos/ingresos/egresos pendiente (se sigue usando plantId + detail)
+- ⚠ Diferenciación clara precio venta vs costo: revisar UI para remarcar ambos valores
 ```
 
 ### Prioridad Muy Alta (⭐⭐⭐⭐):
 ```
-💰 Sistema de Pagos Combinados (3-4 sem) - En análisis detallado
-- Permitir pagos mixtos (efectivo + Mercado Pago + transferencia + tarjeta)
-- Ejemplo: $480 compra → $450 efectivo + $30 Mercado Pago
-- UI para división de pagos
-- Migración de datos existentes
-- Reportes actualizados con pagos mixtos
+💰 Sistema de Pagos Combinados (3-4 sem) - Estado: Parcial/usable (rev. 10-dic-2025)
+- ✅ Permitir pagos mixtos (efectivo + Mercado Pago + transferencia + tarjeta) en `PaymentSelector` + `MixedPaymentModal` + validación en `MovementsView`/`mixedPaymentUtils`
+- ✅ UI para división/configuración rápida de pagos (botones rápidos + modal Mixto)
+- ✅ Migración: helpers `migrateAllMovementsToMixedPayments` / `migrateMovementToMixedPayment` listos (requiere ejecución bajo demanda)
+- ⚠ Reportes actualizados con pagos mixtos: utilidades soportan `paymentMethods`, pero revisar vistas de reportes para mostrar distribución detallada
+- ⚠ Pendiente monitorear/ejecutar migración masiva en entornos productivos y validar cortes de caja
 ```
 
 ### Prioridad Alta (⭐⭐⭐):
@@ -402,7 +468,8 @@ const now = new Date();
 - Transparencia total (se ven productos individuales)
 
 📈 Gráficos de ventas mejorados (1 hora) - Pendiente
-🔍 Buscador de movimientos (30 min) - Pendiente
+🔍 Buscador de movimientos (30 min) - Completado (rev. 10-dic-2025)
+- Implementado en `MovementsView` con `searchTerm` filtrando por nombre de producto, detalle, notas, ubicación, tipo y resumen de pago
 🎯 Filtros avanzados (1 hora) - Pendiente
 ```
 
