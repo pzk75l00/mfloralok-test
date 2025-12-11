@@ -171,56 +171,58 @@ const InventoryMovilView = () => {
           +
         </button>
         {showForm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-30">
-            <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow-md">
-              <label className="text-sm font-medium text-gray-700">Nombre</label>
-              <input name="name" value={form.name} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Nombre" required />
-              <label className="text-sm font-medium text-gray-700">Tipo</label>
-              <select name="type" value={form.type} onChange={handleChange} className="border rounded p-2 w-full" required>
-                <option value="">Tipo...</option>
-                {productTypes.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
-              </select>
-              <label className="text-sm font-medium text-gray-700">Stock</label>
-              <SmartInput 
-                name="stock" 
-                variant="stock" 
-                value={form.stock} 
-                onChange={handleChange} 
-                className="border rounded p-2 w-full" 
-                placeholder="Stock" 
-                required 
-              />
-              <label className="text-sm font-medium text-gray-700">Precio de Venta</label>
-              <SmartInput 
-                name="purchasePrice" 
-                variant="price" 
-                value={form.purchasePrice} 
-                onChange={handleChange} 
-                className="border rounded p-2 w-full" 
-                placeholder="Precio de Venta" 
-                required 
-              />
-              <label className="text-sm font-medium text-gray-700">Precio de Compra</label>
-              <SmartInput 
-                name="basePrice" 
-                variant="price" 
-                value={form.basePrice} 
-                onChange={handleChange} 
-                className="border rounded p-2 w-full" 
-                placeholder="Precio de Compra" 
-                required 
-              />
-              <label className="text-sm font-medium text-gray-700">Fecha de Compra</label>
-              <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-2 w-full" />
-              <label className="text-sm font-medium text-gray-700">Proveedor (opcional)</label>
-              <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-2 w-full" placeholder="Proveedor (opcional)" />
-              <div className="fixed left-0 right-0 bottom-0 z-[110] flex gap-2 p-4 bg-white border-t border-gray-300 shadow-lg" style={{height: 70}}>
-                <button type="submit" className="bg-green-600 text-white px-4 py-3 rounded flex-1 text-lg font-semibold shadow">{editingId ? 'Actualizar' : 'Agregar'}</button>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-30 p-4">
+            <div className="bg-white rounded-lg shadow-md w-full max-w-md max-h-[90vh] flex flex-col">
+              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 pb-24">
+                <label className="text-sm font-medium text-gray-700">Nombre</label>
+                <input name="name" value={form.name} onChange={handleChange} className="border rounded p-2 w-full mb-2" placeholder="Nombre" required />
+                <label className="text-sm font-medium text-gray-700">Tipo</label>
+                <select name="type" value={form.type} onChange={handleChange} className="border rounded p-2 w-full mb-2" required>
+                  <option value="">Tipo...</option>
+                  {productTypes.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+                <label className="text-sm font-medium text-gray-700">Stock</label>
+                <SmartInput 
+                  name="stock" 
+                  variant="stock" 
+                  value={form.stock} 
+                  onChange={handleChange} 
+                  className="border rounded p-2 w-full mb-2" 
+                  placeholder="Stock" 
+                  required 
+                />
+                <label className="text-sm font-medium text-gray-700">Precio de Venta</label>
+                <SmartInput 
+                  name="purchasePrice" 
+                  variant="price" 
+                  value={form.purchasePrice} 
+                  onChange={handleChange} 
+                  className="border rounded p-2 w-full mb-2" 
+                  placeholder="Precio de Venta" 
+                  required 
+                />
+                <label className="text-sm font-medium text-gray-700">Precio de Compra</label>
+                <SmartInput 
+                  name="basePrice" 
+                  variant="price" 
+                  value={form.basePrice} 
+                  onChange={handleChange} 
+                  className="border rounded p-2 w-full mb-2" 
+                  placeholder="Precio de Compra" 
+                  required 
+                />
+                <label className="text-sm font-medium text-gray-700">Fecha de Compra</label>
+                <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-2 w-full mb-2" />
+                <label className="text-sm font-medium text-gray-700">Proveedor (opcional)</label>
+                <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-2 w-full mb-2" placeholder="Proveedor (opcional)" />
+              </form>
+              <div className="flex gap-2 p-4 bg-white border-t border-gray-300 shadow-lg">
+                <button type="submit" onClick={handleSubmit} className="bg-green-600 text-white px-4 py-3 rounded flex-1 text-lg font-semibold shadow">{editingId ? 'Actualizar' : 'Agregar'}</button>
                 <button type="button" className="bg-gray-200 text-gray-700 px-4 py-3 rounded flex-1 text-lg font-semibold shadow" onClick={() => { setForm(initialForm); setEditingId(null); setShowForm(false); }}>Cancelar</button>
               </div>
-            </form>
+            </div>
           </div>
         )}
         {viewMode === 'cards' ? (

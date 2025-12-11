@@ -1,8 +1,10 @@
 // Modal reutilizable para crear nuevos productos - responsive móvil/escritorio
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { createNewProduct, validateProductData, suggestBasePrice } from '../../utils/productManagement';
-import SmartInput from './SmartInput';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase/firebaseConfig';
+import { createNewProduct, validateProductData } from '../../utils/productManagement';
+import ProductBaseFormFields from './ProductBaseFormFields';
 
 const NewProductModal = ({ 
   isOpen, 
@@ -17,33 +19,40 @@ const NewProductModal = ({
     basePrice: '', // basePrice = precio de compra
     purchasePrice: '', // purchasePrice = precio de venta
     stock: '0',
-    type: 'insumo' // Por defecto insumo (uso interno)
+    productType: '', // Categoría del producto (macetas, plantas, flores, etc.)
+    isInsumo: false // Por defecto para venta, no uso interno
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [productTypes, setProductTypes] = useState([]);
+
+  // Cargar tipos de productos desde Firebase
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'productTypes'), (snapshot) => {
+      const types = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProductTypes(types);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Inicializar formulario cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
       setFormData({
         name: initialProductName || '',
-        basePrice: initialPurchasePrice || '', // basePrice es precio de compra
-        purchasePrice: initialPurchasePrice ? suggestBasePrice(initialPurchasePrice).toString() : '', // purchasePrice es precio de venta
-        stock: context === 'purchase' ? '1' : '0', // En compras, sugerir 1 unidad
-        type: 'insumo'
+        basePrice: initialPurchasePrice || '',
+        purchasePrice: initialPurchasePrice ? '' : '', // Se auto-calcula en el componente
+        stock: context === 'purchase' ? '1' : '0',
+        productType: '', // Usuario debe seleccionar categoría
+        isInsumo: false // Por defecto para venta (no uso interno)
       });
       setErrors([]);
     }
   }, [isOpen, initialProductName, initialPurchasePrice, context]);
-
-  // Auto-calcular precio de venta cuando cambia precio de compra
-  useEffect(() => {
-    if (formData.basePrice && !isNaN(formData.basePrice)) {
-      const suggested = suggestBasePrice(formData.basePrice);
-      setFormData(prev => ({ ...prev, purchasePrice: suggested.toString() }));
-    }
-  }, [formData.basePrice]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,7 +100,8 @@ const NewProductModal = ({
         basePrice: parseFloat(formData.basePrice) || 0,
         stock: context === 'purchase' ? 0 : (parseInt(formData.stock) || 0),
         intendedQty: context === 'purchase' ? (qtyToPurchase || 1) : undefined,
-        type: formData.type,
+        productType: formData.productType,
+        isInsumo: formData.isInsumo || false,
         image: '',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -125,105 +135,17 @@ const NewProductModal = ({
         </div>
         
         <div className="p-4 space-y-4">
-          {/* Nombre del producto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre del producto *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              onKeyPress={handleKeyPress}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="Ej: Potus Variegado"
-              required
-            />
-          </div>
+          {/* Usar componente reutilizable de campos base */}
+          <ProductBaseFormFields
+            formData={formData}
+            onChange={handleChange}
+            productTypes={productTypes}
+            disabled={isSubmitting}
+            context={context}
+            autoCalculatePrice={true}
+            showStock={true}
+          />
 
-          {/* Precio de compra (basePrice en tu modelo) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Precio de compra
-            </label>
-            <SmartInput
-              name="basePrice"
-              variant="price"
-              value={formData.basePrice}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="0"
-            />
-          </div>
-
-          {/* Precio de venta (purchasePrice en tu modelo) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Precio de venta sugerido
-            </label>
-            <SmartInput
-              name="purchasePrice"
-              variant="price"
-              value={formData.purchasePrice}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Se calcula automáticamente con 2.5x el precio de compra
-            </p>
-          </div>
-
-          {/* Stock inicial */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {context === 'purchase' ? 'Cantidad a comprar' : 'Stock inicial'}
-            </label>
-            <SmartInput
-              name="stock"
-              variant="stock"
-              value={formData.stock}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {context === 'purchase' 
-                ? 'Cantidad de unidades que estás comprando en este movimiento'
-                : 'Cantidad inicial de stock para este producto'
-              }
-            </p>
-          </div>
-
-          {/* Tipo de producto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de producto
-            </label>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="insumo">Insumo (uso interno)</option>
-              <option value="producto">Producto (para venta)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.type === 'insumo' 
-                ? 'Este ítem no aparecerá en ventas (ej: herramientas, bandejas)'
-                : 'Este ítem estará disponible para ventas'
-              }
-            </p>
-          </div>
-
-          {/* Errores */}
           {errors.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
               <ul className="text-sm text-red-600 space-y-1">

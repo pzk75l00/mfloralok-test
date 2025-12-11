@@ -10,7 +10,7 @@ import ProductTypesManager from './ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
 import { isDuplicateProductName } from '../../utils/productManagement';
 
-const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
+const initialForm = { name: '', productType: '', isInsumo: false, stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
 // Inventario de plantas
 // Aquí irá la lógica y UI para listar, agregar, editar y eliminar plantas
@@ -120,7 +120,7 @@ const InventoryView = () => {
     if (!q) return true;
     return (
       plant.name?.toLowerCase().includes(q) ||
-      plant.type?.toLowerCase().includes(q) ||
+      plant.productType?.toLowerCase().includes(q) ||
       String(plant.stock).includes(q) ||
       String(plant.basePrice).includes(q) ||
       String(plant.purchasePrice).includes(q) ||
@@ -215,7 +215,7 @@ const InventoryView = () => {
 
   // Editar planta
   const handleEdit = plant => {
-    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
+    setForm({ name: plant.name, productType: plant.productType || plant.type || '', isInsumo: plant.isInsumo || false, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
     setEditingId(plant.id);
     setEditingImage(plant.image || null);
     setImagePreview(plant.image || null);
@@ -410,79 +410,74 @@ const InventoryView = () => {
           </div>
         )}
         <form ref={formRef} onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-          <div className="w-full grid grid-cols-1 md:grid-cols-8 gap-2 items-end">
-            <div>
+          <div className="w-full flex flex-wrap gap-2 items-end">
+            {/* Nombre */}
+            <div style={{minWidth: '180px', flex: '1 1 180px'}}>
               <label className="block text-xs font-medium">Nombre</label>
               <input name="name" value={form.name} onChange={handleChange} className="border rounded p-1 w-full text-xs" required />
             </div>
-            <div>
+            
+            {/* Tipo */}
+            <div style={{minWidth: '110px', flex: '0 1 110px'}}>
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-medium">Tipo</label>
-                <button
-                  type="button"
-                  onClick={() => setShowTypesManager(true)}
-                  className="text-[11px] text-green-700 underline"
-                >
-                  Gestionar tipos
-                </button>
+                <button type="button" onClick={() => setShowTypesManager(true)} className="text-[11px] text-green-700 underline">Gestionar tipos</button>
               </div>
-              <select name="type" value={form.type} onChange={handleChange} className="border rounded p-1 w-full text-xs" required>
+              <select name="productType" value={form.productType} onChange={handleChange} className="border rounded p-1 w-full text-xs" required>
                 <option value="">Seleccionar...</option>
-                {productTypes.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
+                {productTypes.length > 0 ? productTypes.map(t => <option key={t.id} value={t.name}>{t.name}</option>) : <><option value="planta">Planta</option><option value="maceta">Maceta</option><option value="flores">Flores</option></>}
               </select>
             </div>
-            <div>
+            
+            {/* Stock */}
+            <div style={{minWidth: '70px', flex: '0 1 70px'}}>
               <label className="block text-xs font-medium">Stock</label>
-              <SmartInput 
-                name="stock" 
-                variant="stock" 
-                value={form.stock} 
-                onChange={handleChange} 
-                className="border rounded p-1 w-full text-xs" 
-                style={{maxWidth:'80px'}} 
-                required 
-              />
+              <input name="stock" type="number" value={form.stock} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
             </div>
-            <div>
+            
+            {/* Precio Compra */}
+            <div style={{minWidth: '95px', flex: '0 1 95px'}}>
               <label className="block text-xs font-medium">Precio Compra</label>
-              <SmartInput 
-                name="basePrice" 
-                variant="price" 
-                value={form.basePrice} 
-                onChange={handleChange} 
-                className="border rounded p-1 w-full text-xs" 
-                style={{maxWidth:'100px'}} 
-                required 
-              />
+              <input name="basePrice" type="number" value={form.basePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
             </div>
-            <div>
+            
+            {/* Precio Venta */}
+            <div style={{minWidth: '95px', flex: '0 1 95px'}}>
               <label className="block text-xs font-medium">Precio Venta</label>
-              <SmartInput 
-                name="purchasePrice" 
-                variant="price" 
-                value={form.purchasePrice} 
-                onChange={handleChange} 
-                className="border rounded p-1 w-full text-xs" 
-                style={{maxWidth:'100px'}} 
-                required 
-              />
+              <input name="purchasePrice" type="number" value={form.purchasePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
             </div>
-            <div>
+            
+            {/* Fecha Compra */}
+            <div style={{minWidth: '115px', flex: '0 1 115px'}}>
               <label className="block text-xs font-medium">Fecha Compra</label>
-              <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-1 w-full text-xs" style={{maxWidth:'120px'}} />
+              <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-1 w-full text-xs" />
             </div>
-            <div>
+            
+            {/* Proveedor */}
+            <div style={{minWidth: '110px', flex: '0 1 110px'}}>
               <label className="block text-xs font-medium">Proveedor</label>
-              <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="(opcional)" style={{maxWidth:'120px'}} />
+              <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="(opcional)" />
             </div>
-            <div>
+                        {/* Uso Interno */}
+            <div style={{minWidth: '85px', flex: '0 1 85px'}}>
+              <label className="block text-xs font-medium mb-1">Uso</label>
+              <label className="flex items-center gap-1 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="isInsumo"
+                  checked={form.isInsumo || false}
+                  onChange={(e) => setForm(prev => ({ ...prev, isInsumo: e.target.checked }))}
+                  className="h-3 w-3 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                />
+                <span className="text-[11px]">Interno</span>
+              </label>
+            </div>
+                        {/* Imagen */}
+            <div style={{minWidth: '130px', flex: '0 1 130px'}}>
               <label className="block text-xs font-medium">Imagen</label>
               <button
                 type="button"
-                className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer shadow flex items-center gap-2"
-                style={{ maxWidth: '160px', width: '100%' }}
+                className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer shadow flex items-center gap-2 w-full justify-center"
                 onClick={() => document.getElementById('input-img-producto').click()}
               >
                 <span role="img" aria-label="imagen" className="text-base">🖼️</span>
@@ -497,8 +492,6 @@ const InventoryView = () => {
               />
             </div>
           </div>
-
-          {/* Sección de imagen centrada */}
           <div className="border-t border-gray-200 pt-4 mt-4">
             <div className="flex flex-col items-center gap-3">
               {processingImage && <span className="block text-gray-600 text-[11px]">Optimizando...</span>}
@@ -599,6 +592,7 @@ const InventoryView = () => {
               <tr className="bg-green-100">
                 <th className="p-2">Nombre</th>
                 <th className="p-2">Tipo</th>
+                <th className="p-2">Uso Interno</th>
                 <th className="p-2">Stock</th>
                 <th className="p-2">Precio de Venta</th>
                 <th className="p-2">Precio de Compra</th>
@@ -614,7 +608,8 @@ const InventoryView = () => {
                 .map(plant => (
                   <tr key={plant.id} className="border-t">
                     <td className="p-2">{plant.name}</td>
-                    <td className="p-2">{plant.type}</td>
+                    <td className="p-2">{plant.productType || plant.type}</td>
+                    <td className="p-2 text-center">{plant.isInsumo ? 'Sí' : 'No'}</td>
                     <td className="p-2">{plant.stock}</td>
                     <td className="p-2">${plant.purchasePrice}</td>
                     <td className="p-2">${plant.basePrice}</td>

@@ -107,7 +107,7 @@ const PlantAutocomplete = ({
           <strong>Seleccionado:</strong> {selectedProduct.name}<br />
           <strong>Stock:</strong> {selectedProduct.stock || 0} | 
           <strong> Precio {movementType === 'compra' ? 'de compra' : 'de venta'}:</strong> ${getDisplayPrice(selectedProduct)} |
-          <strong> Tipo:</strong> {selectedProduct.type === 'insumo' ? 'Insumo' : 'Producto'}
+          <strong> Tipo:</strong> {selectedProduct.productType || selectedProduct.type || 'N/A'} {selectedProduct.isInsumo && '(Uso interno)'}
         </div>
       )}
       

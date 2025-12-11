@@ -656,7 +656,17 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
               return;
             }
             const currentStock = plantSnap.data().stock || 0;
-            await updateDoc(plantRef, { stock: currentStock + p.quantity });
+            const plantData = plantSnap.data();
+            
+            // Preparar actualización de stock y fecha
+            const updateData = { stock: currentStock + p.quantity };
+            
+            // Si el producto no tiene purchaseDate (fue creado en caja sin fecha), asignar la fecha del movimiento
+            if (!plantData.purchaseDate || plantData.purchaseDate === '' || plantData.purchaseDate === null) {
+              updateData.purchaseDate = dateUTCISO;
+            }
+            
+            await updateDoc(plantRef, updateData);
             
             // 🆕 ACTUALIZAR PRECIO DE COMPRA Y MANTENER HISTORIAL
             // price ya es precio unitario; NO dividir por la cantidad
@@ -748,8 +758,18 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
             const plantSnap = await getDoc(plantRef);
             if (plantSnap.exists()) {
               const currentStock = plantSnap.data().stock || 0;
+              const plantData = plantSnap.data();
               const newStock = currentStock + Number(form.quantity);
-              await updateDoc(plantRef, { stock: newStock });
+              
+              // Preparar actualización de stock y fecha
+              const updateData = { stock: newStock };
+              
+              // Si el producto no tiene purchaseDate (fue creado en caja sin fecha), asignar la fecha del movimiento
+              if (!plantData.purchaseDate || plantData.purchaseDate === '' || plantData.purchaseDate === null) {
+                updateData.purchaseDate = dateUTCISO;
+              }
+              
+              await updateDoc(plantRef, updateData);
               
               // Actualizar precio de compra y mantener historial
               const purchasePrice = Number(form.price) / Number(form.quantity); // Precio unitario

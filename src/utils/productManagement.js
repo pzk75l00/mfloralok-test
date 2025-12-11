@@ -14,12 +14,18 @@ import { db } from '../firebase/firebaseConfig';
  */
 export const createNewProduct = async (productData) => {
   try {
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
     const productDoc = {
       name: productData.name.trim(),
       basePrice: parseFloat(productData.basePrice) || 0, // precio de compra
       purchasePrice: parseFloat(productData.purchasePrice) || 0, // precio de venta
       stock: parseInt(productData.stock) || 0,
-      type: productData.type || 'insumo', // Por defecto es insumo (uso interno)
+      productType: productData.productType || '',
+      isInsumo: productData.isInsumo || false,
+      type: productData.type || 'insumo', // Por compatibilidad
+      purchaseDate: productData.purchaseDate || todayStr,
+      supplier: productData.supplier || '',
       image: productData.image || '',
       createdAt: new Date(),
       updatedAt: new Date()
