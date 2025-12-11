@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import PlantCard from './PlantCard';
 import PlantForm from './PlantForm';
+import ConfirmModal from '../Shared/ConfirmModal';
+import ErrorModal from '../Shared/ErrorModal';
+import SuccessModal from '../Shared/SuccessModal';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import { logToBackend } from '../../utils/logToBackend';
@@ -12,6 +15,9 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
   const [orderBy, setOrderBy] = useState('name');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' o 'table'
   const [isMobile, setIsMobile] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' });
+  const [successModal, setSuccessModal] = useState({ open: false, message: '' });
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -79,14 +85,25 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
 
   // Vaciar movimientos (caja)
   const handleDeleteAllMovements = async () => {
-    if (!window.confirm('¿Seguro que quieres borrar TODOS los movimientos de caja? Esta acción no se puede deshacer.')) return;
-    const snapshot = await getDocs(collection(db, 'movements'));
-    const batchDeletes = [];
-    snapshot.forEach((d) => {
-      batchDeletes.push(deleteDoc(doc(db, 'movements', String(d.id))));
+    setConfirmModal({
+      open: true,
+      message: '¿Seguro que quieres borrar TODOS los movimientos de caja? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        try {
+          const snapshot = await getDocs(collection(db, 'movements'));
+          const batchDeletes = [];
+          snapshot.forEach((d) => {
+            batchDeletes.push(deleteDoc(doc(db, 'movements', String(d.id))));
+          });
+          await Promise.all(batchDeletes);
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+          setSuccessModal({ open: true, message: 'Movimientos de caja eliminados correctamente.' });
+        } catch (err) {
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+          setErrorModal({ open: true, message: 'Error al eliminar movimientos: ' + err.message });
+        }
+      }
     });
-    await Promise.all(batchDeletes);
-    alert('Movimientos de caja eliminados.');
   };
 
   return (
@@ -194,6 +211,22 @@ const PlantsView = ({ plants, onAddPlant, onUpdatePlant, onDeletePlant }) => {
           </div>
         )
       )}
+      <ConfirmModal
+        open={confirmModal.open}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
+      />
+      <ErrorModal
+        open={errorModal.open}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ open: false, message: '' })}
+      />
+      <SuccessModal
+        open={successModal.open}
+        message={successModal.message}
+        onClose={() => setSuccessModal({ open: false, message: '' })}
+      />
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 export default function ImageZoomModal({ open, image, onClose }) {
-  if (!open) return null;
+  if (!open || !image) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70" onClick={onClose}>
       <div className="relative" onClick={e => e.stopPropagation()}>
@@ -25,6 +25,6 @@ export default function ImageZoomModal({ open, image, onClose }) {
 
 ImageZoomModal.propTypes = {
   open: PropTypes.bool.isRequired,
-  image: PropTypes.string.isRequired,
+  image: PropTypes.string,
   onClose: PropTypes.func.isRequired,
 };

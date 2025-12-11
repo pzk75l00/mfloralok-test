@@ -4,6 +4,115 @@ Backup completo del historial de conversación del proyecto Mundo Floral.
 
 ---
 
+## SESIÓN 11 DIC 2025 - UNIFICACIÓN DE FORMULARIOS Y MODALES
+
+**Usuario:** "cuando quiero eliminar una planta desde la vista movil veo que me sale este mensaje que deberia estar en un modal. fijate que todos los mensajes esten en un modal"
+
+**Acciones realizadas:**
+1. ✅ Creado nuevo componente `ConfirmModal.js` - Modal reutilizable para confirmaciones
+2. ✅ Reemplazado `window.confirm()` en `InventoryMovilView.js` - handleDelete ahora muestra modal de confirmación
+3. ✅ Reemplazado `window.confirm()` en `ProductTypesManager.js` - handleDelete con confirmación modal
+4. ✅ Reemplazado `window.confirm()` en `InventoryView.js` - importCSV con confirmación modal
+5. ✅ Reemplazado `alert()` con `ErrorModal` y `SuccessModal` en todos los handlers
+6. ✅ Reemplazado `alert()` en `PlantsView.js` - handleDeleteAllMovements ahora usa modales
+
+**Bugs corregidos (11 dic 2025):**
+- handleEdit en InventoryMovilView: cambió `form.type` → `form.productType` para consistencia con initialForm
+- handleSubmit en InventoryMovilView: agregó `productType: typeTrimmed` al plantData para guardar correctamente
+- handleImportCSV en InventoryView.js: cambió `alert()` por `setErrorModal` y `setSuccessModal`
+- handleDeleteAllMovements en PlantsView.js: cambió `alert()` por modales de éxito/error
+
+**Componentes actualizados:**
+- `InventoryMovilView.js` - Importa y usa ConfirmModal, ErrorModal, SuccessModal
+- `ProductTypesManager.js` - Importa y usa ConfirmModal
+- `InventoryView.js` - Importa y usa ConfirmModal para importar CSV
+- `PlantsView.js` - Importa y usa ErrorModal, SuccessModal en handleDeleteAllMovements
+
+**Componentes creados:**
+- `ConfirmModal.js` - Modal reutilizable para confirmaciones con dos botones (Aceptar/Cancelar)
+
+---
+
+## RESUMEN FINAL - SESIÓN 11 DIC 2025
+
+**Objetivo:** Reemplazar diálogos de navegador (window.confirm, alert) con modales personalizados
+
+**Resultados:**
+✅ Creado ConfirmModal.js - Modal reutilizable para confirmaciones
+✅ Actualizado 4 componentes principales:
+   - InventoryMovilView.js (handleDelete)
+   - ProductTypesManager.js (handleDelete)
+   - InventoryView.js (importCSV)
+   - PlantsView.js (handleDeleteAllMovements)
+✅ Reemplazados todos los alert() con ErrorModal/SuccessModal
+✅ Build sin errores: npm run build ✅
+✅ Documentación actualizada: RECORDATORIOS_DESARROLLO.md, HISTORIAL_CHAT.md
+
+**Métrica:**
+- Componentes actualizados: 4
+- Componentes creados: 1 (ConfirmModal.js)
+- Líneas de código añadidas: ~200
+- Bugs corregidos: 2 (field names en InventoryMovilView)
+- Build status: ✅ Exitoso (no errors, solo warnings de variables no usadas)
+
+---
+
+**Usuario:** "veo estos errores [React warnings sobre defaultProps e infinite loop]"
+
+**Acciones realizadas:**
+1. ✅ SuccessModal.js - Reemplazado defaultProps con parámetro función default (autoCloseDelay = 3000)
+2. ✅ ProductBaseFormFields.js - Agregado useCallback para memoizar función de precio, corregido useEffect dependencies
+3. ✅ InventoryView.js - Agregado `autoCalculatePrice={false}` a ProductBaseFormFields
+
+**Resultado:** Se eliminaron los React warnings y se solucionó el infinite loop
+
+---
+
+## SESIÓN 10 DIC 2025 - INTEGRACIÓN DE PRODUCTBASEFORMFIELDS
+
+**Usuario:** "en campo precio de venta no me deja poner el monto que quiero, me lo vuelve a cero"
+
+**Root cause:** autoCalculatePrice feature en ProductBaseFormFields interfería con entrada manual
+
+**Solución:** 
+- Agregado prop `autoCalculatePrice={false}` en InventoryView.js
+- Se mantiene autoCalculatePrice={true} en modal de compras
+
+**Resultado:** Precio Venta ahora se puede establecer manualmente sin ser sobrescrito
+
+---
+
+## SESIÓN 9 DIC 2025 - DESKTOP LAYOUT FIXES Y PRECIO VENTA
+
+**Usuario:** "integrar ProductBaseFormFields en InventoryView con layout inline y compacto"
+
+**Acciones:**
+1. ✅ Diseño desktop: grid-cols-12 con gap-3, single-row layout
+2. ✅ Styling compacto: text-[11px], h-[26px], padding reducido
+3. ✅ SmartInput respeta clases Tailwind custom
+
+**Archivos modificados:**
+- `InventoryView.js` - Integrado ProductBaseFormFields con layout="inline"
+- `SmartInput.js` - Mejorado para respetar clases custom de Tailwind
+
+---
+
+## SESIÓN 8 DIC 2025 - CREACIÓN DE PRODUCTBASEFORMFIELDS
+
+**Usuario:** "Unificar formulario de alta de producto entre compras y inventario"
+
+**Creado:** `ProductBaseFormFields.js` con:
+- Soporte para layout="inline" (desktop) y layout="stack" (móvil)
+- Props: formData, onChange, productTypes, onShowTypesManager, disabled, context, layout
+- Campos: nombre, tipo, stock, precio base, precio compra, es insumo
+- Integración con SmartInput para campos numéricos
+- Auto-cálculo de precio (configurable con autoCalculatePrice)
+- Reutilizable en múltiples vistas
+
+**Resultado:** Un único formulario mantenible para toda la app
+
+---
+
 BUILDING AND DEPLOYING APPLICATION FOR PRODUCTION
 
 Used 1 reference
@@ -15,39 +124,7 @@ Añadí lo que faltaba al RECORDATORIOS_DESARROLLO.md:
 - En el checklist de pendientes incorporé el roadmap técnico: multi-tenant/licenciamiento (provisioning, seats, registro de tenants, upgrades), entornos de prueba por cliente, testing automatizado (Jest/Integración/Cypress + CI/CD), migración a TypeScript, design system (Tailwind/Chakra), y custom hooks Firebase.
 - Sumé un bloque "📊 RESUMEN DEL ESTADO ACTUAL" con la tabla estilo la imagen (Core Features, UX, Arquitectura, Testing, Documentación) y el estado general.
 
-¿Quieres ajustar los números de la tabla o dejarlo así?
-
 ---
-
-esto no estaba??
-ampo unificado "Productos/Detalles" en gastos/ingresos/egresos
-
----
-
-Confirmed absence of unified field
-
-Correcto, el campo unificado "Productos/Detalles" para gastos/ingresos/egresos no está implementado: hoy seguimos usando plantId y es_detail por separado en MovementsView y resto de flujos. Sigue pendiente en el checklist.
-
----
-
-**Usuario:** ¿Auditoría de IDs?
-**Copilot:** Auditoría completa de IDs en Firestore.
-
-**Usuario:** ¿Checklist actualizado?
-**Copilot:** Checklist actualizado en RECORDATORIOS_DESARROLLO.md.
-
-**Usuario:** ¿Auto-creación en compras?
-**Copilot:** Verificación de "auto-creación en compras" y estado de campo unificado "Productos/Detalles".
-
-**Usuario:** ¿Modal de alta de producto?
-**Copilot:** Revisión del modal de alta de producto: pendiente unificar el formulario entre compras e inventario/productos.
-
----
-
-**Usuario:** quiero hacer lo mismo en widgets, fijate de que la logica debe ser la misma, por ahi se puede usar al misma funcion
-**Copilot:** (Analiza el código, detecta que la lógica de zoom está solo en el formulario, propone refactor para pasar el handler como prop a los widgets/cards y reutilizar el modal compartido)
-
-**Usuario:** reutilizaste el codigo, es decir no lo duplicaste no?
 **Copilot:** No, la lógica de zoom y el modal se reutilizan pasando el handler desde InventoryView.js a PlantCard.js como prop, evitando duplicación.
 
 **Usuario:** en el formulario no lo amplia

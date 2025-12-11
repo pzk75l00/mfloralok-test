@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 
-export default function SuccessModal({ open, message, onClose, autoCloseDelay }) {
+export default function SuccessModal({ open, message, onClose, autoCloseDelay = 3000 }) {
   useEffect(() => {
     if (!open) return undefined;
     const timer = setTimeout(onClose, autoCloseDelay);
@@ -32,8 +32,4 @@ SuccessModal.propTypes = {
   message: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   autoCloseDelay: PropTypes.number,
-};
-
-SuccessModal.defaultProps = {
-  autoCloseDelay: 3000,
 };

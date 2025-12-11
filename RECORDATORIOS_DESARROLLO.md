@@ -4,9 +4,15 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 
 ---
 
-## ✅/❌ Checklist de estado (rev. 10-dic-2025)
+## ✅/❌ Checklist de estado (rev. 11-dic-2025 23:45)
+- **Formularios & Modales ✅ COMPLETADO:**
+  - Unificar formulario de alta de producto ✅ (ProductBaseFormFields, reutilizado en InventoryView y InventoryMovilView)
+  - Reemplazar window.confirm() con ConfirmModal ✅ (InventoryMovilView, ProductTypesManager, InventoryView importCSV)
+  - Reemplazar alert() con ErrorModal/SuccessModal ✅ (PlantsView handleDeleteAllMovements, InventoryView importCSV)
+  - Campo `productType` en initialForm ✅ (consistencia con form.productType en handleSubmit/handleEdit)
+  - Build sin errores ✅ (npm run build limpio, solo warnings de variables no usadas)
+  
 - **Productos (pendiente):**
-    - Unificar formulario de alta de producto: el modal que aparece al crear producto nuevo desde compras debe ser exactamente el mismo formulario que se usa en inventario/productos (misma UI, validaciones y campos). Pendiente de revisión y refactor.
   - Campo unificado "Productos/Detalles" en gastos/ingresos/egresos
   - Resaltar diferencia precio venta vs costo en UI
   - Migrar nomenclatura `plant` → `producto` en UI/servicios
@@ -26,10 +32,13 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 - Pagos mixtos funcionando en `PaymentSelector` + `MixedPaymentModal` con validación en `MovementsView`/`mixedPaymentUtils`; helpers de migración listos.
 - Costo promedio ponderado en compras (`updateProductPurchasePrice`), stock automático en ventas/compras, UI muestra "Costo Promedio".
 - Buscador de movimientos activo en `MovementsView` (filtra por producto, detalle, notas, ubicación, tipo y resumen de pago).
+- Respuestas del asistente en español latino por defecto (política vigente).
+- Unificar formulario de alta de producto ✅ (ProductBaseFormFields, reutilizado en desktop InventoryView y móvil InventoryMovilView con layouts inline/stack)
+- Reemplazar diálogos de navegador ✅ (ConfirmModal para confirmaciones, ErrorModal para errores, SuccessModal para éxitos)
 
 ---
 
-## ✅ COMPLETADO (Versión 1.0.3 actual)
+## ✅ COMPLETADO (Versión 1.0.4 - 11 Dic 2025)
 **Funcionalidades implementadas:**
 - Sistema de gestión de movimientos (ventas, compras, ingresos, egresos, gastos)
 - Formularios móviles y escritorio con diseño responsivo
@@ -47,14 +56,21 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 - Deploy automático en Vercel
 - Real-time sync con Firebase Firestore
 - Conversión String(ID) en todas las operaciones Firestore (auditado 10-Dic-2025)
+- **✅ NUEVO 11-DIC-2025:** Formulario unificado de productos (ProductBaseFormFields) - Reutilizable en desktop e móvil
+- **✅ NUEVO 11-DIC-2025:** Modal de confirmación (ConfirmModal) - Reemplaza window.confirm()
+- **✅ NUEVO 11-DIC-2025:** Modales de éxito/error - Reemplaza alert() en todos los handlers
+- **✅ NUEVO 11-DIC-2025:** Fix autoCalculatePrice en InventoryView - Permite editar precio manual
+- **✅ NUEVO 11-DIC-2025:** Fix field names consistency - form.productType en InventoryMovilView
+- **✅ NUEVO 11-DIC-2025:** Fix React warnings - defaultProps deprecation, useEffect infinite loop
 
 **Patrones establecidos:**
-- Estructura de componentes React estándar
-- Naming conventions consistentes
+- Estructura de componentes React estándar (hooks, effects, handlers, render)
+- Naming conventions consistentes (handle*, is*, show*, set*)
 - Mobile-first design
 - Reutilización de código (/utils/ y /Shared/)
-- Manejo de errores con try/catch y ErrorModal
-- Validaciones de stock y formularios
+- Manejo de errores con try/catch, ErrorModal y ConfirmModal
+- Validaciones de stock, formularios y nombres duplicados
+- Modales personalizados en lugar de diálogos del navegador
 
 ---
 
@@ -96,9 +112,12 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 ### Componentes compartidos:
 - `SmartInput.js` - Input inteligente con auto-select (variants: price, quantity, stock)
 - `ErrorModal.js` - Modal de errores consistente
+- `SuccessModal.js` - Modal de éxito con auto-cierre configurable
+- `ConfirmModal.js` - Modal de confirmación con dos botones (Aceptar/Cancelar) ✅ NUEVO 11-DIC-2025
 - `PlantAutocomplete.js` - Autocompletado de productos con creación inline
 - `NewProductModal.js` - Modal de creación de productos
-- `PaymentMethodsManager.js` - Gestor de métodos de pago
+- `ProductTypesManager.js` - Gestor de métodos de pago
+- `ProductBaseFormFields.js` - Formulario reutilizable para alta de productos (layout='inline'|'stack') ✅ NUEVO
 
 ---
 
@@ -332,8 +351,11 @@ const now = new Date();
 ---
 
 ## 📝 Cambios Recientes & Estado
-**📅 Última actualización: 10-Dic-2025**
+**📅 Última actualización: 11-Dic-2025**
 
+- **Habilitación condicional en caja (escritorio/móvil)**: botones de Agregar producto y Registrar venta/compra/movimiento se deshabilitan hasta cumplir condiciones (producto seleccionado, producto agregado, monto válido) y durante envío.
+- **Reset de estado y fecha al cambiar tipo de movimiento**: al cambiar entre venta/compra/gasto/ingreso/egreso se limpian products/productForm/paymentMethods, se borra error y se resetea fecha a la hora local actual para evitar montos/fechas heredadas.
+- **SuccessModal informativo**: el modal de éxito queda solo como aviso (sin bloqueo ni confirmación) para feedback de guardados; no usar para errores.
 - **Última auditoría IDs**: 2025-12-10 — todos los archivos con Firestore ops auditados ✅
 - **Validación duplicados**: implementada en InventoryView, InventoryMovilView, PlantAutocomplete ✅
 - **Imagen optimización**: implementada en InventoryView con preview/aprobación ✅

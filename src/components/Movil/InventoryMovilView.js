@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import ErrorModal from '../Shared/ErrorModal';
+import SuccessModal from '../Shared/SuccessModal';
+import ConfirmModal from '../Shared/ConfirmModal';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import ProductTypesManager from '../Inventory/ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
+import ProductBaseFormFields from '../Shared/ProductBaseFormFields';
 import { isDuplicateProductName } from '../../utils/productManagement';
 
-const initialForm = { name: '', type: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
+const initialForm = { name: '', productType: '', stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
 
 const InventoryMovilView = () => {
   const [plants, setPlants] = useState([]);
@@ -17,7 +20,9 @@ const InventoryMovilView = () => {
   const [search, setSearch] = useState("");
   const [showTypesManager, setShowTypesManager] = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: '' });
+  const [successModal, setSuccessModal] = useState({ open: false, message: '' });
   const [productTypes, setProductTypes] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'producto'), (snapshot) => {
@@ -41,15 +46,18 @@ const InventoryMovilView = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.name.trim() || !form.type.trim() || form.stock < 0 || form.basePrice < 0 || form.purchasePrice < 0) {
-      setErrorModal({ open: true, message: 'Todos los campos son obligatorios y deben ser válidos.' });
+    const nameTrimmed = (form.name || '').trim();
+    const typeTrimmed = (form.productType || '').trim();
+    const validationMessage = 'Los campos Nombre, Tipo, Stock, Precio de compra y Precio de venta son obligatorios y deben ser válidos.';
+    if (!nameTrimmed || !typeTrimmed || form.stock < 0 || form.basePrice < 0 || form.purchasePrice < 0) {
+      setErrorModal({ open: true, message: validationMessage });
       return;
     }
     if (form.basePrice > form.purchasePrice) {
       setErrorModal({ open: true, message: 'El precio de compra no puede ser mayor al precio de venta.' });
       return;
     }
-    if (isDuplicateProductName(plants, form.name, editingId)) {
+    if (isDuplicateProductName(plants, nameTrimmed, editingId)) {
       setErrorModal({ open: true, message: 'Ya existe un producto con ese nombre.' });
       return;
     }
@@ -61,19 +69,25 @@ const InventoryMovilView = () => {
     const nextId = editingId ? Number(editingId) : Math.max(0, ...plants.map(p => Number(p.id) || 0)) + 1;
     const plantData = {
       id: nextId,
-      name: form.name,
-      type: form.type,
+      name: nameTrimmed,
+      type: typeTrimmed,
+      productType: typeTrimmed,
       stock: form.stock,
       basePrice: form.basePrice,
       purchasePrice: form.purchasePrice,
       purchaseDate: form.purchaseDate || todayStr,
       supplier: form.supplier || ''
     };
+    const wasEditing = Boolean(editingId);
     try {
       await setDoc(doc(collection(db, 'producto'), String(plantData.id)), plantData);
       setForm(initialForm);
       setEditingId(null);
       setShowForm(false);
+      setSuccessModal({
+        open: true,
+        message: wasEditing ? 'Producto actualizado correctamente.' : 'Producto agregado correctamente.'
+      });
     } catch (err) {
       let errorMsg = '';
       if (err) {
@@ -104,19 +118,36 @@ const InventoryMovilView = () => {
           message={errorModal.message}
           onClose={() => setErrorModal({ open: false, message: '' })}
         />
+        <SuccessModal
+          open={successModal.open}
+          message={successModal.message}
+          onClose={() => setSuccessModal({ open: false, message: '' })}
+        />
       </>
     );
   };
 
   const handleEdit = plant => {
-    setForm({ name: plant.name, type: plant.type, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
+    setForm({ name: plant.name, productType: plant.productType || plant.type || '', isInsumo: plant.isInsumo || false, stock: plant.stock, basePrice: plant.basePrice, purchasePrice: plant.purchasePrice, purchaseDate: plant.purchaseDate, supplier: plant.supplier });
     setEditingId(plant.id);
     setShowForm(true);
   };
 
   const handleDelete = async id => {
-    if (!window.confirm('¿Eliminar esta planta?')) return;
-    await deleteDoc(doc(collection(db, 'producto'), String(id)));
+    setConfirmModal({
+      open: true,
+      message: '¿Eliminar esta planta?',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(collection(db, 'producto'), String(id)));
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+          setSuccessModal({ open: true, message: 'Producto eliminado correctamente.' });
+        } catch (err) {
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+          setErrorModal({ open: true, message: 'Error eliminando el producto: ' + (err?.message || 'Error desconocido') });
+        }
+      }
+    });
   };
 
   // Filtro de plantas según búsqueda
@@ -174,45 +205,16 @@ const InventoryMovilView = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-30 p-4">
             <div className="bg-white rounded-lg shadow-md w-full max-w-md max-h-[90vh] flex flex-col">
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 pb-24">
-                <label className="text-sm font-medium text-gray-700">Nombre</label>
-                <input name="name" value={form.name} onChange={handleChange} className="border rounded p-2 w-full mb-2" placeholder="Nombre" required />
-                <label className="text-sm font-medium text-gray-700">Tipo</label>
-                <select name="type" value={form.type} onChange={handleChange} className="border rounded p-2 w-full mb-2" required>
-                  <option value="">Tipo...</option>
-                  {productTypes.map(t => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
-                  ))}
-                </select>
-                <label className="text-sm font-medium text-gray-700">Stock</label>
-                <SmartInput 
-                  name="stock" 
-                  variant="stock" 
-                  value={form.stock} 
-                  onChange={handleChange} 
-                  className="border rounded p-2 w-full mb-2" 
-                  placeholder="Stock" 
-                  required 
+                <ProductBaseFormFields
+                  formData={form}
+                  onChange={handleChange}
+                  productTypes={productTypes}
+                  onShowTypesManager={() => setShowTypesManager(true)}
+                  disabled={false}
+                  context="general"
+                  layout="stack"
                 />
-                <label className="text-sm font-medium text-gray-700">Precio de Venta</label>
-                <SmartInput 
-                  name="purchasePrice" 
-                  variant="price" 
-                  value={form.purchasePrice} 
-                  onChange={handleChange} 
-                  className="border rounded p-2 w-full mb-2" 
-                  placeholder="Precio de Venta" 
-                  required 
-                />
-                <label className="text-sm font-medium text-gray-700">Precio de Compra</label>
-                <SmartInput 
-                  name="basePrice" 
-                  variant="price" 
-                  value={form.basePrice} 
-                  onChange={handleChange} 
-                  className="border rounded p-2 w-full mb-2" 
-                  placeholder="Precio de Compra" 
-                  required 
-                />
+
                 <label className="text-sm font-medium text-gray-700">Fecha de Compra</label>
                 <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-2 w-full mb-2" />
                 <label className="text-sm font-medium text-gray-700">Proveedor (opcional)</label>
@@ -284,6 +286,22 @@ const InventoryMovilView = () => {
           </div>
         )}
       </div>
+      <ErrorModal
+        open={errorModal.open}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ open: false, message: '' })}
+      />
+      <SuccessModal
+        open={successModal.open}
+        message={successModal.message}
+        onClose={() => setSuccessModal({ open: false, message: '' })}
+      />
+      <ConfirmModal
+        open={confirmModal.open}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 };

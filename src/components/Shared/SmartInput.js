@@ -45,10 +45,13 @@ const SmartInput = ({
 
   const variantProps = getVariantProps();
   
-  // Clases base comunes
-  const baseClasses = 'border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500';
+  // Clases base comunes - sin padding/altura para que pueda pasarse via className
+  const baseClasses = 'border rounded focus:outline-none focus:ring-2 focus:ring-blue-500';
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
-  const finalClassName = `${baseClasses} ${disabledClasses} ${className}`.trim();
+  // Si className no contiene px/py/h, agregar defaults; si los contiene, dejar que tome precedencia
+  const hasCustomSizing = className.includes('px-') || className.includes('py-') || className.includes('h-');
+  const defaultPadding = !hasCustomSizing ? 'px-2 py-1' : '';
+  const finalClassName = `${baseClasses} ${defaultPadding} ${disabledClasses} ${className}`.trim();
 
   return (
     <input

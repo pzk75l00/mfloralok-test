@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, setDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import PropTypes from 'prop-types';
+import ConfirmModal from '../Shared/ConfirmModal';
 
 const ProductTypesManager = ({ onClose }) => {
   const [types, setTypes] = useState([]);
   const [newType, setNewType] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'productTypes'), snap => {
@@ -38,8 +40,19 @@ const ProductTypesManager = ({ onClose }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este tipo?')) return;
-    await deleteDoc(doc(db, 'productTypes', String(id)));
+    setConfirmModal({
+      open: true,
+      message: '¿Eliminar este tipo?',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'productTypes', String(id)));
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+        } catch (err) {
+          console.error('Error eliminando tipo:', err);
+          setConfirmModal({ open: false, message: '', onConfirm: null });
+        }
+      }
+    });
   };
 
   return (
@@ -77,6 +90,12 @@ const ProductTypesManager = ({ onClose }) => {
         </ul>
         <button onClick={onClose} className="bg-gray-200 text-gray-700 px-3 py-1 rounded w-full mt-2">Cerrar</button>
       </div>
+      <ConfirmModal
+        open={confirmModal.open}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 };

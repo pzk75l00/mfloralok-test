@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ErrorModal from '../Shared/ErrorModal';
 import ImageZoomModal from '../Shared/ImageZoomModal';
+import SuccessModal from '../Shared/SuccessModal';
+import ConfirmModal from '../Shared/ConfirmModal';
 import { collection, onSnapshot, setDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
 import InventoryMovilView from '../Movil/InventoryMovilView';
@@ -8,6 +10,7 @@ import PlantCard from './PlantCard';
 import LoadPlantsToFirestore from '../Base/LoadPlantsToFirestore';
 import ProductTypesManager from './ProductTypesManager';
 import SmartInput from '../Shared/SmartInput';
+import ProductBaseFormFields from '../Shared/ProductBaseFormFields';
 import { isDuplicateProductName } from '../../utils/productManagement';
 
 const initialForm = { name: '', productType: '', isInsumo: false, stock: 0, basePrice: 0, purchasePrice: 0, purchaseDate: '', supplier: '' };
@@ -38,7 +41,9 @@ const InventoryView = () => {
   const [reloadFlag, setReloadFlag] = useState(0);
   const [showTypesManager, setShowTypesManager] = useState(false);
   const [errorModal, setErrorModal] = useState({ open: false, message: '' });
+  const [successModal, setSuccessModal] = useState({ open: false, message: '' });
   const [productTypes, setProductTypes] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, message: '', onConfirm: null });
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -141,15 +146,18 @@ const InventoryView = () => {
   // Guardar o actualizar planta
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.name.trim() || !form.type.trim() || form.stock < 0 || form.basePrice < 0 || form.purchasePrice < 0) {
-      alert('Todos los campos son obligatorios y deben ser válidos.');
+    const nameTrimmed = (form.name || '').trim();
+    const typeTrimmed = ((form.productType || form.type) || '').trim();
+    const validationMessage = 'Los campos Nombre, Tipo, Stock, Precio de compra y Precio de venta son obligatorios y deben ser válidos.';
+    if (!nameTrimmed || !typeTrimmed || form.stock < 0 || form.basePrice < 0 || form.purchasePrice < 0) {
+      setErrorModal({ open: true, message: validationMessage });
       return;
     }
     if (form.basePrice > form.purchasePrice) {
-      alert('El precio de compra no puede ser mayor al precio de venta.');
+      setErrorModal({ open: true, message: 'El precio de compra no puede ser mayor al precio de venta.' });
       return;
     }
-    if (isDuplicateProductName(plants, form.name, editingId)) {
+    if (isDuplicateProductName(plants, nameTrimmed, editingId)) {
       setErrorModal({ open: true, message: 'Ya existe un producto con ese nombre.' });
       return;
     }
@@ -162,14 +170,16 @@ const InventoryView = () => {
     const nextId = editingId ? Number(editingId) : Math.max(0, ...plants.map(p => Number(p.id) || 0)) + 1;
     const plantData = {
       id: nextId,
-      name: form.name,
-      type: form.type,
+      name: nameTrimmed,
+      type: typeTrimmed,
+      productType: typeTrimmed,
       stock: form.stock,
       basePrice: form.basePrice,
       purchasePrice: form.purchasePrice,
       purchaseDate: form.purchaseDate || todayStr,
       supplier: form.supplier || ''
     };
+    const wasEditing = Boolean(editingId);
     try {
       let imageToSave = editingImage || null;
       if (imageFile) {
@@ -191,6 +201,10 @@ const InventoryView = () => {
       setImageInfo(null);
       setImageApproved(false);
       setEditingImage(null);
+      setSuccessModal({
+        open: true,
+        message: wasEditing ? 'Producto actualizado correctamente.' : 'Producto agregado correctamente.'
+      });
     } catch (err) {
       let errorMsg = '';
       if (err) {
@@ -375,18 +389,29 @@ const InventoryView = () => {
                     });
                     return obj;
                   });
-                  if (!window.confirm('¿Sobrescribir todas las plantas actuales con las importadas?')) return;
-                  // Borra todas las plantas actuales
-                  for (const plant of plants) {
-                    await deleteDoc(doc(collection(db, 'producto'), String(plant.id)));
-                  }
-                  // Agrega las importadas
-                  for (const plant of imported) {
-                    await setDoc(doc(collection(db, 'producto'), String(plant.id)), plant);
-                  }
-                  alert('Importación completada. Recargue la página para ver los cambios.');
+                  setConfirmModal({
+                    open: true,
+                    message: '¿Sobrescribir todas las plantas actuales con las importadas?',
+                    onConfirm: async () => {
+                      try {
+                        // Borra todas las plantas actuales
+                        for (const plant of plants) {
+                          await deleteDoc(doc(collection(db, 'producto'), String(plant.id)));
+                        }
+                        // Agrega las importadas
+                        for (const plant of imported) {
+                          await setDoc(doc(collection(db, 'producto'), String(plant.id)), plant);
+                        }
+                        setConfirmModal({ open: false, message: '', onConfirm: null });
+                        setSuccessModal({ open: true, message: 'Importación completada. Recargue la página para ver los cambios.' });
+                      } catch (err) {
+                        setConfirmModal({ open: false, message: '', onConfirm: null });
+                        setErrorModal({ open: true, message: 'Error al importar CSV: ' + err.message });
+                      }
+                    }
+                  });
                 } catch (err) {
-                  alert('Error al importar CSV: ' + err.message);
+                  setErrorModal({ open: true, message: 'Error al importar CSV: ' + err.message });
                 }
               }}
             />
@@ -410,78 +435,57 @@ const InventoryView = () => {
           </div>
         )}
         <form ref={formRef} onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-          <div className="w-full flex flex-wrap gap-2 items-end">
-            {/* Nombre */}
-            <div style={{minWidth: '180px', flex: '1 1 180px'}}>
-              <label className="block text-xs font-medium">Nombre</label>
-              <input name="name" value={form.name} onChange={handleChange} className="border rounded p-1 w-full text-xs" required />
+          {/* UNA SOLA FILA: todos los campos con sus labels y inputs juntos */}
+          <div className="w-full grid grid-cols-12 gap-3 items-end">
+            <ProductBaseFormFields
+              formData={form}
+              onChange={handleChange}
+              productTypes={productTypes}
+              onShowTypesManager={() => setShowTypesManager(true)}
+              disabled={loading}
+              context="general"
+              layout="inline"
+              autoCalculatePrice={false}
+            />
+
+            {/* Fecha Compra: 1 col */}
+            <div className="col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-700">Fecha Compra</label>
+              <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded px-1.5 py-0.5 w-full text-[11px] h-[26px]" />
             </div>
-            
-            {/* Tipo */}
-            <div style={{minWidth: '110px', flex: '0 1 110px'}}>
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-medium">Tipo</label>
-                <button type="button" onClick={() => setShowTypesManager(true)} className="text-[11px] text-green-700 underline">Gestionar tipos</button>
-              </div>
-              <select name="productType" value={form.productType} onChange={handleChange} className="border rounded p-1 w-full text-xs" required>
-                <option value="">Seleccionar...</option>
-                {productTypes.length > 0 ? productTypes.map(t => <option key={t.id} value={t.name}>{t.name}</option>) : <><option value="planta">Planta</option><option value="maceta">Maceta</option><option value="flores">Flores</option></>}
-              </select>
+
+            {/* Proveedor: 1 col */}
+            <div className="col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-700">Proveedor</label>
+              <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded px-1.5 py-0.5 w-full text-[11px] h-[26px]" placeholder="(opcional)" />
             </div>
-            
-            {/* Stock */}
-            <div style={{minWidth: '70px', flex: '0 1 70px'}}>
-              <label className="block text-xs font-medium">Stock</label>
-              <input name="stock" type="number" value={form.stock} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
-            </div>
-            
-            {/* Precio Compra */}
-            <div style={{minWidth: '95px', flex: '0 1 95px'}}>
-              <label className="block text-xs font-medium">Precio Compra</label>
-              <input name="basePrice" type="number" value={form.basePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
-            </div>
-            
-            {/* Precio Venta */}
-            <div style={{minWidth: '95px', flex: '0 1 95px'}}>
-              <label className="block text-xs font-medium">Precio Venta</label>
-              <input name="purchasePrice" type="number" value={form.purchasePrice} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="0" required />
-            </div>
-            
-            {/* Fecha Compra */}
-            <div style={{minWidth: '115px', flex: '0 1 115px'}}>
-              <label className="block text-xs font-medium">Fecha Compra</label>
-              <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} className="border rounded p-1 w-full text-xs" />
-            </div>
-            
-            {/* Proveedor */}
-            <div style={{minWidth: '110px', flex: '0 1 110px'}}>
-              <label className="block text-xs font-medium">Proveedor</label>
-              <input name="supplier" value={form.supplier} onChange={handleChange} className="border rounded p-1 w-full text-xs" placeholder="(opcional)" />
-            </div>
-                        {/* Uso Interno */}
-            <div style={{minWidth: '85px', flex: '0 1 85px'}}>
-              <label className="block text-xs font-medium mb-1">Uso</label>
-              <label className="flex items-center gap-1 text-xs cursor-pointer">
+
+            {/* Uso: 1 col */}
+            <div className="col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-700">Uso</label>
+              <div className="flex items-center justify-start h-[26px]">
                 <input
                   type="checkbox"
+                  id="isInsumo"
                   name="isInsumo"
                   checked={form.isInsumo || false}
-                  onChange={(e) => setForm(prev => ({ ...prev, isInsumo: e.target.checked }))}
-                  className="h-3 w-3 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  onChange={(e) => handleChange({ target: { name: 'isInsumo', value: e.target.checked } })}
+                  className="h-3 w-3 text-green-600"
                 />
-                <span className="text-[11px]">Interno</span>
-              </label>
+                <span className="ml-1 text-[11px] text-gray-700">Interno</span>
+              </div>
             </div>
-                        {/* Imagen */}
-            <div style={{minWidth: '130px', flex: '0 1 130px'}}>
-              <label className="block text-xs font-medium">Imagen</label>
+
+            {/* Imagen: 2 col */}
+            <div className="col-span-2">
+              <label className="block text-[11px] font-semibold text-gray-700">Imagen</label>
               <button
                 type="button"
-                className="px-2 py-1 rounded text-xs bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer shadow flex items-center gap-2 w-full justify-center"
+                className="px-1.5 py-0.5 rounded text-[11px] bg-green-600 hover:bg-green-700 text-white border border-green-700 cursor-pointer shadow flex items-center gap-1 w-full justify-center h-[26px]"
                 onClick={() => document.getElementById('input-img-producto').click()}
               >
-                <span role="img" aria-label="imagen" className="text-base">🖼️</span>
-                Buscar imagen
+                <span role="img" aria-label="imagen" className="text-sm">🖼️</span>
+                <span>Buscar imagen</span>
               </button>
               <input
                 id="input-img-producto"
@@ -492,6 +496,7 @@ const InventoryView = () => {
               />
             </div>
           </div>
+
           <div className="border-t border-gray-200 pt-4 mt-4">
             <div className="flex flex-col items-center gap-3">
               {processingImage && <span className="block text-gray-600 text-[11px]">Optimizando...</span>}
@@ -671,6 +676,17 @@ const InventoryView = () => {
         open={errorModal.open}
         message={errorModal.message}
         onClose={() => setErrorModal({ open: false, message: '' })}
+      />
+      <SuccessModal
+        open={successModal.open}
+        message={successModal.message}
+        onClose={() => setSuccessModal({ open: false, message: '' })}
+      />
+      <ConfirmModal
+        open={confirmModal.open}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
       />
     </div>
   );
