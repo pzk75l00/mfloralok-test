@@ -82,7 +82,7 @@ const CashDesktopForm = ({ form, handleChange, onSubmit, errorMsg, isSubmitting 
         
         <button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || !(Number(form.price) > 0)}
           className="bg-green-600 hover:bg-green-700 text-white rounded-md px-6 py-3 font-medium w-full disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           {isSubmitting ? 'Procesando...' : 'Registrar movimiento'}

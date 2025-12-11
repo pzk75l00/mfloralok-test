@@ -198,7 +198,20 @@ const MovementsView = ({ plants: propPlants, hideForm, showOnlyForm, renderTotal
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'type') {
+      // Limpiar estado cuando cambias tipo de movimiento para evitar conflictos de validación
+      setForm(prev => ({ 
+        ...prev, 
+        [name]: value, 
+        paymentMethods: { efectivo: 0, mercadoPago: 0 },
+        date: getInitialLocalDateTime() // Resetear fecha a hora local actual
+      }));
+      setProducts([]);
+      setProductForm({ plantId: '', quantity: 1, price: '' });
+      setErrorMsg('');
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // Calcular saldos actuales de caja antes del submit (compatible con pagos combinados)

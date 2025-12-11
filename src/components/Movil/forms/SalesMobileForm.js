@@ -33,7 +33,14 @@ const SalesMobileForm = ({
       movementType={form.type}
       disabled={isSubmitting} 
     />
-    <button type="button" onClick={handleAddProduct} disabled={isSubmitting} className="bg-blue-500 text-white rounded px-2 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed">Agregar producto</button>
+    <button 
+      type="button" 
+      onClick={handleAddProduct} 
+      disabled={isSubmitting || !productForm?.plantId} 
+      className="bg-blue-500 text-white rounded px-2 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
+    >
+      Agregar producto
+    </button>
     <ProductTable products={products} handleRemoveProduct={handleRemoveProduct} disabled={isSubmitting} />
     <div className="font-bold text-right">Total: ${ventaTotal}</div>
     
@@ -54,7 +61,7 @@ const SalesMobileForm = ({
     {/* Botón de submit con protección anti-accidental */}
     <button 
       type="submit" 
-      disabled={isSubmitting}
+      disabled={isSubmitting || !(products && products.length > 0)}
       onDoubleClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

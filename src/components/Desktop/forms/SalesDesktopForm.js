@@ -41,7 +41,14 @@ const SalesDesktopForm = ({
           onCreateAndAdd={onCreateAndAdd}
           movementType={form.type}
         />
-        <button type="button" onClick={handleAddProduct} className="bg-blue-500 text-white rounded px-2 py-1">Agregar producto</button>
+        <button 
+          type="button" 
+          onClick={handleAddProduct} 
+          className="bg-blue-500 text-white rounded px-2 py-1 disabled:bg-gray-400 disabled:cursor-not-allowed" 
+          disabled={isSubmitting || !productForm?.plantId}
+        >
+          Agregar producto
+        </button>
       </div>
       <div className="flex-1 min-w-0">
         <ProductTable products={products} handleRemoveProduct={handleRemoveProduct} />
@@ -75,7 +82,7 @@ const SalesDesktopForm = ({
         {errorMsg && <div className="text-red-500 text-xs">{errorMsg}</div>}
         <button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || !(products && products.length > 0)}
           className={`${buttonColor} text-white rounded px-4 py-2 font-bold w-full disabled:bg-gray-400 disabled:cursor-not-allowed`}
         >
           {isSubmitting ? submittingText : buttonText}

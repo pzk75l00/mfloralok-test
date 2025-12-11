@@ -414,3 +414,56 @@ Correcto, el campo unificado "Productos/Detalles" para gastos/ingresos/egresos n
 **Commit hash:** 687952d4
 **Archivos modificados:** 8 archivos, 526 insertiones(+), 223 eliminaciones(-)
 
+---
+
+## HABILITACIÓN CONDICIONAL DE BOTONES EN CAJA (11-dic-2025)
+
+**Usuario:** en la parte de caja de escritorio, se observa Habilitado el boton Agregar producto, ese boton se debe habilitar cuando se agrega un producto o se crea un produto nuevo que no existia.
+
+**Copilot:** ✅ Deshabilitación condicional implementada en escritorio:
+- `SalesDesktopForm.js`: Botón "Agregar producto" deshabilitado hasta seleccionar/crear producto (`!productForm.plantId`)
+- `SalesDesktopForm.js`: Botón "Registrar venta/compra" deshabilitado hasta agregar al menos un producto (`products.length === 0`)
+- `CashDesktopForm.js`: Botón "Registrar movimiento" deshabilitado hasta ingresar monto válido (`Number(form.price) <= 0`)
+- Todos los botones deshabilitados durante envío (`isSubmitting`)
+
+**Usuario:** lo valido ahora en escritorio pero los botones estan habilitados
+
+**Copilot:** Replicado en móvil (`SalesMobileForm.js`): misma lógica de deshabilitación para "Agregar producto" (`!productForm.plantId`)
+
+---
+
+## BUG FIX: ESTADO CONFLICTIVO AL CAMBIAR TIPO DE MOVIMIENTO (11-dic-2025)
+
+**Usuario:** encontre un bug, estoy haciendo una venta en escritorio, agrego un producto, sin registrar la venta, me cambie a gasto ingreso los datos del gasto y seleccion registrar gasto. al hacerlo me sale un mensaje como el de la imagen, pero al quere registra la venta me sale el mensaje de la imagen2
+
+**Copilot:** ✅ Bug identificado y corregido en `MovementsView.js`:
+- Problema: Al cambiar tipo de movimiento (venta → gasto → venta), los estados de `products`, `productForm` y `paymentMethods` no se limpiaban, causando conflictos de validación con montos totales.
+- Solución: Modificado `handleChange()` para resetear automáticamente:
+  - `products[]` (lista de productos)
+  - `productForm` (datos del producto en edición)
+  - `paymentMethods` (reseta a `{ efectivo: 0, mercadoPago: 0 }`)
+  - `errorMsg` (limpia mensajes de error previos)
+  - `date` (resetea a hora local actual con `getInitialLocalDateTime()`)
+- Esto aplica a **todas las combinaciones** de tipos de movimiento (venta → compra, compra → egreso, ingreso → gasto, etc.)
+
+**Usuario:** tambien veo que hay un problema con las fechas, de un cambio a otro se pone la fecha del servidor y no la local, como en este caso de la imagen
+
+**Copilot:** ✅ Bug de fecha corregido en `handleChange()`:
+- Cuando cambias `form.type`, la fecha se resetea automáticamente a `getInitialLocalDateTime()` que genera la **hora local actual** del navegador en formato `YYYY-MM-DDTHH:mm`
+- Evita que la fecha quede "congelada" o con hora de servidor al cambiar entre tipos de movimiento
+- Se aplica a todas las combinaciones de cambios de tipo
+
+**Archivos modificados:**
+- `src/components/Base/MovementsView.js` (mejorado `handleChange()`)
+- `src/components/Desktop/forms/SalesDesktopForm.js` (deshabilitación condicional)
+- `src/components/Desktop/forms/CashDesktopForm.js` (deshabilitación condicional)
+- `src/components/Movil/forms/SalesMobileForm.js` (deshabilitación condicional)
+
+**Usuario:** deberiamos aplicar lo que hicimos en escritorio para mobile. tema de Habilitacion de botones y esto ultimo
+
+**Copilot:** ✅ Aplicado en móvil:
+- `CashMobileForm.js`: Botón "Registrar movimiento" deshabilitado si `Number(form.price) <= 0` o `isSubmitting`
+- `SalesMobileForm.js`: Botón "Confirmar venta" deshabilitado si `products.length === 0` o `isSubmitting`
+- Fix de estado/fecha (`handleChange`) ya aplica automáticamente a móvil (controlado por padre `MovementsView`)
+- Consistencia total entre escritorio y móvil para habilitación condicional de botones y limpieza de estado al cambiar tipo de movimiento
+
