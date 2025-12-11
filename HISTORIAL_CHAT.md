@@ -33,6 +33,30 @@ Backup completo del historial de conversación del proyecto Mundo Floral.
 
 ---
 
+## SESIÓN 11 DIC 2025 - MÓDULO USUARIOS MÓVIL Y NAVEGACIÓN
+
+**Usuario:** "no se ve el componente de Usuarios" / "que botón falta?"
+
+**Acciones realizadas:**
+1. ✅ Home móvil: agregado tile “Usuarios” visible solo para admin/owner (NavigationMovil → HomeMovilView modulesConfig)
+2. ✅ UsersMovilView: panel de administración con dos botones grandes (Registrar Usuario / Usuarios Registrados) en lugar de tabs
+3. ✅ Navegación: header contextual “← Volver” que vuelve al panel de administración si estás dentro de una subvista; “← Inicio” si estás en el panel
+4. ✅ Control de subvista desde NavigationMovil (usersActiveTab) sincronizado con UsersMovilView
+5. ✅ Botón interno de volver removido de las sub-vistas (se usa solo el header)
+
+**Usuario:** "Warning: Failed prop type: onConfirm es requerido en ConfirmModal" / "prop-types faltantes en UsersMovilView"
+
+**Acciones realizadas:**
+6. ✅ ConfirmModal en InventoryMovilView: handler por defecto para evitar warning cuando onConfirm es null
+7. ✅ UsersMovilView: añadidas PropTypes para activeTab y setActiveTab (lint resuelto)
+
+**Observaciones:**
+- Mensajes 400 de Firestore: se mantienen como warnings de conexión/session; no bloquean la UI
+
+**Estado:** UI móvil de Usuarios visible y navegable; build y lint limpios tras correcciones.
+
+---
+
 ## RESUMEN FINAL - SESIÓN 11 DIC 2025
 
 **Objetivo:** Reemplazar diálogos de navegador (window.confirm, alert) con modales personalizados

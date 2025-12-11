@@ -299,7 +299,7 @@ const InventoryMovilView = () => {
       <ConfirmModal
         open={confirmModal.open}
         message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
+        onConfirm={confirmModal.onConfirm || (() => setConfirmModal({ open: false, message: '', onConfirm: null }))}
         onCancel={() => setConfirmModal({ open: false, message: '', onConfirm: null })}
       />
     </div>

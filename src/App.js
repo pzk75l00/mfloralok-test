@@ -49,13 +49,12 @@ const App = () => {
   // Aquí debería ir la lógica real de autenticación y carga de user/userData
   // Por ahora, se deja como null para evitar errores de los consumidores
 
-  // En móvil usamos el mismo flujo de autenticación (Google). No aplicamos binding de escritorio.
+  // En móvil usamos el mismo flujo de autenticación (Google). Proveemos UserContext para que NavigationMovil conozca el rol.
   if (isMobile) {
     return (
       <AuthProvider enforceDesktopBinding={false}>
         <AuthGate>
-          <NavigationMovil />
-          <DebugPanel />
+          <AuthInnerMobile />
         </AuthGate>
       </AuthProvider>
     );
@@ -112,3 +111,14 @@ AuthInner.propTypes = {
 };
 
 export default App;
+
+// Componente interno para móvil que vive dentro de AuthProvider/AuthGate y provee UserContext
+const AuthInnerMobile = () => {
+  const { user, userData } = useAuth() || {};
+  return (
+    <UserContext.Provider value={{ user, userData }}>
+      <NavigationMovil />
+      <DebugPanel />
+    </UserContext.Provider>
+  );
+};

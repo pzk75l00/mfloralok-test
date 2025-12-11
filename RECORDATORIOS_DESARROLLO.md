@@ -4,13 +4,16 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 
 ---
 
-## ✅/❌ Checklist de estado (rev. 11-dic-2025 23:45)
+## ✅/❌ Checklist de estado (rev. 11-dic-2025 23:59)
 - **Formularios & Modales ✅ COMPLETADO:**
   - Unificar formulario de alta de producto ✅ (ProductBaseFormFields, reutilizado en InventoryView y InventoryMovilView)
   - Reemplazar window.confirm() con ConfirmModal ✅ (InventoryMovilView, ProductTypesManager, InventoryView importCSV)
   - Reemplazar alert() con ErrorModal/SuccessModal ✅ (PlantsView handleDeleteAllMovements, InventoryView importCSV)
   - Campo `productType` en initialForm ✅ (consistencia con form.productType en handleSubmit/handleEdit)
   - Build sin errores ✅ (npm run build limpio, solo warnings de variables no usadas)
+  - Panel Usuarios móvil ✅ (tile visible solo admin, panel con dos botones, back al panel antes de home)
+  - ConfirmModal seguro ✅ (fallback onConfirm en InventoryMovilView para evitar warnings)
+  - PropTypes UsersMovilView ✅ (activeTab/setActiveTab validados)
   
 - **Productos (pendiente):**
   - Campo unificado "Productos/Detalles" en gastos/ingresos/egresos
@@ -62,6 +65,10 @@ Documento central con acuerdos, patrones y validaciones consensuados durante el 
 - **✅ NUEVO 11-DIC-2025:** Fix autoCalculatePrice en InventoryView - Permite editar precio manual
 - **✅ NUEVO 11-DIC-2025:** Fix field names consistency - form.productType en InventoryMovilView
 - **✅ NUEVO 11-DIC-2025:** Fix React warnings - defaultProps deprecation, useEffect infinite loop
+- **✅ NUEVO 11-DIC-2025:** Módulo Usuarios móvil - panel de administración con dos botones (Registrar, Usuarios registrados), visibilidad solo admin/owner, back al panel antes de Inicio
+- **✅ NUEVO 11-DIC-2025:** Navegación móvil Usuarios - header con back contextual (subvista→panel, panel→home)
+- **✅ NUEVO 11-DIC-2025:** ConfirmModal InventoryMovilView - handler por defecto para evitar warning de prop requerido
+- **✅ NUEVO 11-DIC-2025:** PropTypes UsersMovilView - activeTab/setActiveTab tipados para lint
 
 **Patrones establecidos:**
 - Estructura de componentes React estándar (hooks, effects, handlers, render)
