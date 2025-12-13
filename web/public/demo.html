@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Demo - Mundo Floral</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>Mundo Floral</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/demo.html">Demo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h2>Demo interactivo</h2>
+    <p>Seleccioná tu rubro para ver productos de ejemplo y pedí acceso al demo del tenant.</p>
+
+    <section class="panel">
+      <label for="rubro">Rubro</label>
+      <select id="rubro">
+        <option value="flores">Flores</option>
+        <option value="macetas">Macetas</option>
+        <option value="">General</option>
+      </select>
+      <button id="loadProducts">Ver productos</button>
+
+      <div id="products" class="products"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Solicitar demo</h3>
+      <form id="demoForm">
+        <label>Nombre</label>
+        <input name="name" required />
+        <label>Email</label>
+        <input name="email" type="email" required />
+        <label>Rubro</label>
+        <select name="rubro">
+          <option value="flores">Flores</option>
+          <option value="macetas">Macetas</option>
+          <option value="">General</option>
+        </select>
+        <label>Mensaje (opcional)</label>
+        <textarea name="message"></textarea>
+        <button type="submit">Solicitar demo</button>
+      </form>
+      <div id="demoResult" class="notice"></div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <small>© Mundo Floral</small>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>
